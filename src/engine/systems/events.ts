@@ -3,11 +3,13 @@ import { applyOps, fill, registerSpecial, type Ctx, type Op } from '../ops';
 import { chance, pickWeighted, rand, shuffle } from '../rng';
 import type { GameState } from '../types';
 import { clamp } from '../util';
-import { completeCoalition } from './elections';
-import { proposeCoalition } from './government';
 import { changeAttitude, changeTrust } from './relationships';
 import { log } from './report';
 import { recomputeAp } from './staff';
+import { changeSatisfaction, recomputeStability } from './coalition';
+import { appointPlayerMinister, ministryTitle } from './government';
+import { fireFromMinistry, resignMinistry } from './ministry';
+import { addNews } from './news';
 
 export function currentEvent(s: GameState): { ev: GameEvent; ctx: Ctx } | null {
   while (s.eventQueue.length) {
@@ -81,22 +83,6 @@ registerSpecial('wants_list', (s) => {
   return 'נרשמת כמועמד/ת. עכשיו צריך לגייס תמיכה במטה המפלגה.';
 });
 
-registerSpecial('coalition_accept', (s) => {
-  const coal = String(s.flags.pendingCoalition ?? '').split(',').filter(Boolean);
-  delete s.flags.pendingCoalition;
-  completeCoalition(s, coal.length ? coal : proposeCoalition(s));
-  s.player.capital += 10;
-  s.player.reputation = clamp(s.player.reputation + 3, 0, 100);
-  return 'המפלגה שלך חלק מהממשלה.';
-});
-
-registerSpecial('coalition_decline', (s) => {
-  delete s.flags.pendingCoalition;
-  completeCoalition(s, proposeCoalition(s, s.player.partyId ? [s.player.partyId] : []));
-  s.player.consistency = clamp(s.player.consistency + 5, 0, 100);
-  return 'נשארת באופוזיציה. הבוחרים מעריכים עקביות.';
-});
-
 registerSpecial('become_chair', (s) => {
   const c = s.committees.find((x) => s.player.committees.includes(x.id));
   if (!c) return;
@@ -147,4 +133,35 @@ registerSpecial('rebels', (s) => {
     changeTrust(s, n.id, 12);
   }
   return 'שלושה ח"כים בסיעה מתקרבים אליך.';
+});
+
+// ---- שלב 2 ----
+registerSpecial('take_ministry', (s) => {
+  const mid = Object.entries(s.ministers).find(([m, id]) => m !== 'pm' && s.npcs[id]?.partyId === s.player.partyId)?.[0];
+  if (!mid) return;
+  const prev = s.npcs[s.ministers[mid]];
+  if (prev) changeAttitude(s, prev.id, -40);
+  appointPlayerMinister(s, mid);
+  addNews(s, `${s.player.name} מונה/תה ל${ministryTitle(mid, s.player.gender)}`, 'good', true);
+  return `מונית ל${ministryTitle(mid, s.player.gender)}!`;
+});
+registerSpecial('fired', (s) => {
+  fireFromMinistry(s);
+  return 'פוטרת מהממשלה.';
+});
+registerSpecial('resign', (s) => resignMinistry(s));
+registerSpecial('partner_give', (s, ctx) => {
+  changeSatisfaction(s, ctx.party, 15);
+  recomputeStability(s);
+});
+registerSpecial('partner_job', (s, ctx) => {
+  changeSatisfaction(s, ctx.party, 8);
+  recomputeStability(s);
+});
+registerSpecial('partner_refuse', (s, ctx) => {
+  changeSatisfaction(s, ctx.party, -15);
+  recomputeStability(s);
+});
+registerSpecial('ministry_perf', (s) => {
+  if (s.ministryState) s.ministryState.performance = clamp(s.ministryState.performance + 5, 0, 100);
 });

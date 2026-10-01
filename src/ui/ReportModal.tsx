@@ -100,7 +100,11 @@ export function ElectionModal() {
     .map((p) => ({ p, seats: e.seats[p.id] ?? 0, pct: ((e.votes[p.id] ?? 0) / total) * 100 }))
     .sort((a, b) => b.seats - a.seats || b.pct - a.pct);
   const pm = g.coalition.pmId === 'player' ? g.player.name : g.npcs[g.coalition.pmId]?.name;
-  const close = () => act((s) => delete s.flags.showElection);
+  const open = useStore((s) => s.open);
+  const close = () => {
+    act((s) => delete s.flags.showElection);
+    if (g.negotiation) open({ kind: 'negotiation' });
+  };
   return (
     <div className="event-overlay">
       <div className="event-card">
@@ -142,13 +146,13 @@ export function ElectionModal() {
             <p className="small muted">לא התמודדת בבחירות האלה.</p>
           )}
         </div>
-        {pm && !g.eventQueue.some((q) => q.eventId === 'coalition_offer') && (
+        {pm && !g.negotiation && (
           <p className="small" style={{ marginTop: 10 }}>
             הממשלה החדשה: <b>{pm}</b> עם {g.coalition.parties.map((c) => g.parties[c].short).join(', ')}.
           </p>
         )}
         <button className="btn primary block" style={{ marginTop: 12 }} onClick={close}>
-          המשך
+          {g.negotiation ? 'למשא ומתן הקואליציוני ←' : 'המשך'}
         </button>
       </div>
     </div>

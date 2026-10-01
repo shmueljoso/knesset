@@ -30,5 +30,9 @@ export function refreshPresence(s: GameState) {
     });
     presence[loc] = [...new Set(list)].slice(0, 7);
   }
+  // קריית הממשלה: שרים
+  const ministers = Object.entries(s.ministers).filter(([m, id]) => m !== 'pm' && s.npcs[id]).map(([, id]) => id);
+  presence.pmo = [s.coalition.pmId, ...ministers.filter(() => rand(s) < 0.35)].filter((id) => s.npcs[id]).slice(0, 6);
+  presence.finance = [s.ministers.finance].filter((id) => id && s.npcs[id]);
   s.presence = presence;
 }

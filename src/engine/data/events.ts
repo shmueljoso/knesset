@@ -57,15 +57,6 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'coalition_offer', queued: true, icon: '🤝',
-    title: 'הצעה להצטרף לקואליציה',
-    body: 'המועמד/ת לראשות הממשלה מזמין/ה את {party} למשא ומתן. בתמורה: תקציבים לנושאים שלך, ראשות ועדה ומעמד. מנגד – הבוחרים שלך עלולים לראות בזה התקפלות.',
-    choices: [
-      { label: 'להצטרף לממשלה', ops: [{ op: 'special', id: 'coalition_accept', label: 'הון פוליטי +10, השפעה בממשלה' }] },
-      { label: 'להישאר באופוזיציה', ops: [{ op: 'special', id: 'coalition_decline', label: 'עקביות +5, ייתכנו בחירות חוזרות' }] },
-    ],
-  },
-  {
     id: 'debt_collect', queued: true, icon: '🧾',
     title: '{npc} גובה את החוב',
     body: '"זוכר שעזרתי לך? עכשיו אני צריך אותך. מחר יש לי הצבעה חשובה בסיעה ובמליאה, ואני מצפה שתתייצב לצדי – גם אם זה לא נוח לך."',
@@ -394,6 +385,106 @@ export const EVENTS: GameEvent[] = [
     ],
   },
 ];
+
+
+// ---------- שלב 2: ממשלה וקואליציה ----------
+const pmIsNpc = (s: GameState) => s.coalition.pmId !== 'player' && !!s.npcs[s.coalition.pmId];
+const supportPM = (d: number): Op[] => [{ op: 'att', who: '@pm', d }, { op: 'stability', d: 2 }];
+const opposePM = (d: number): Op[] => [{ op: 'att', who: '@pm', d: -d }, { op: 'stability', d: -3 }, { op: 'consistency', d: 2 }];
+
+const GOV_EVENTS: GameEvent[] = [
+  {
+    id: 'cab_wages', queued: true, icon: '🏛️', title: 'ישיבת ממשלה: הקפאת שכר במגזר הציבורי',
+    body: 'האוצר מבקש להקפיא את שכר עובדי המדינה לשנתיים כדי לצמצם את הגירעון. ההסתדרות מאיימת בשביתה.',
+    choices: [
+      { label: 'להצביע בעד', ops: [...supportPM(5), { op: 'stance', lean: { econ: 50 }, d: 1.5 }, { op: 'world', key: 'economy', d: 2, weeks: 10 }] },
+      { label: 'להצביע נגד', ops: [...opposePM(8), { op: 'stance', lean: { econ: -50 }, d: 1.5 }] },
+    ],
+  },
+  {
+    id: 'cab_emergency', queued: true, icon: '🚨', title: 'ישיבת ממשלה: הארכת תקנות שעת חירום',
+    body: 'מערכת הביטחון מבקשת להאריך תקנות חירום שמרחיבות את סמכויות המעקב. ארגוני זכויות האדם זועקים.',
+    choices: [
+      { label: 'לתמוך בהארכה', ops: [...supportPM(5), { op: 'stance', lean: { security: 70, judiciary: 30 }, d: 1.5 }, { op: 'world', key: 'security', d: 1.5, weeks: 6 }] },
+      { label: 'להתנגד', ops: [...opposePM(8), { op: 'stance', lean: { security: -40, judiciary: -50 }, d: 1.5 }, { op: 'world', key: 'trust', d: 1, weeks: 4 }] },
+    ],
+  },
+  {
+    id: 'cab_appoint', queued: true, icon: '📇', title: 'ישיבת ממשלה: מינוי שנוי במחלוקת',
+    body: 'ראש הממשלה מבקש לאשר מינוי של מקורב לראשות חברה ממשלתית. נציבות שירות המדינה מסתייגת.',
+    choices: [
+      { label: 'לאשר', ops: [...supportPM(7), { op: 'reputation', d: -2 }, { op: 'world', key: 'trust', d: -1.5, weeks: 4 }] },
+      { label: 'להתנגד בתוקף', ops: [...opposePM(10), { op: 'reputation', d: 3 }, { op: 'fame', d: 1.5 }] },
+    ],
+  },
+  {
+    id: 'cab_settle', queued: true, icon: '🗺️', title: 'ישיבת ממשלה: הקמת שכונה מעבר לקו הירוק',
+    body: 'שרי הימין דוחפים לאשר בנייה, ובוושינגטון מזהירים מפגיעה ביחסים.',
+    choices: [
+      { label: 'לאשר', ops: [...supportPM(3), { op: 'stance', lean: { security: 80 }, d: 2 }, { op: 'world', key: 'cohesion', d: -1.5, weeks: 4 }] },
+      { label: 'להתנגד', ops: [...opposePM(5), { op: 'stance', lean: { security: -60 }, d: 2 }] },
+    ],
+  },
+  {
+    id: 'cab_haredi', queued: true, icon: '📚', title: 'ישיבת ממשלה: תקציב לישיבות',
+    body: 'השותפות החרדיות מתנות את המשך הקואליציה בתוספת תקציב למוסדות תורניים.',
+    choices: [
+      { label: 'לאשר את התוספת', ops: [...supportPM(4), { op: 'stability', d: 6 }, { op: 'stance', lean: { religion: 70 }, d: 1.5 }, { op: 'world', key: 'economy', d: -1, weeks: 8 }] },
+      { label: 'להתנגד', ops: [...opposePM(6), { op: 'stability', d: -5 }, { op: 'stance', lean: { religion: -60 }, d: 1.5 }] },
+    ],
+  },
+  {
+    id: 'reshuffle_offer', icon: '🎖️', weight: 3, cooldown: 40,
+    title: 'הצעה להיכנס לממשלה',
+    body: '{leader} מזמין/ה אותך ללשכה: "אחד השרים שלנו לא מתפקד. אני רוצה אותך במקומו. זה תיק – לא מתנה."',
+    when: (s) => s.player.isMK && !s.player.ministry && !s.player.defector && isCoalition(s, s.player.partyId) && s.player.partyStanding >= 60 && s.player.reputation >= 50 && pmIsNpc(s) && s.parties[s.player.partyId!].leaderId !== 'player' && Object.entries(s.ministers).some(([m, id]) => m !== 'pm' && s.npcs[id]?.partyId === s.player.partyId),
+    choices: [
+      { label: 'לקבל את התיק', ops: [{ op: 'special', id: 'take_ministry', label: 'מתמנה לשר/ה!' }, { op: 'debt', who: '@leader', dir: 'player_owes', reason: 'מינוי לשר' }] },
+      { label: 'לסרב – עוד לא הזמן', ops: [{ op: 'att', who: '@leader', d: -5 }, { op: 'consistency', d: 2 }] },
+    ],
+  },
+  {
+    id: 'pm_fires', icon: '✂️', weight: 10, cooldown: 10,
+    title: 'ראש הממשלה מאבד/ת סבלנות',
+    body: 'אחרי שוב ושוב שיצאת נגדו/ה, {pm} שוקל/ת לפטר אותך מהממשלה. השמועה כבר בכותרות.',
+    when: (s) => !!s.player.ministry && pmIsNpc(s) && s.npcs[s.coalition.pmId].attitude <= -35,
+    choices: [
+      { label: 'ללכת לפייס', requires: (s) => (s.player.ap >= 2 ? null : 'צריך 2 זמן'), chance: { p: (s) => 0.3 + s.player.skills.negotiation / 150, fail: [{ op: 'special', id: 'fired' }], failText: 'זה לא עזר. פוטרת.' }, ops: [{ op: 'ap', d: -2 }, { op: 'att', who: '@pm', d: 25 }], result: 'הצלחת לשקם את היחסים. בינתיים.' },
+      { label: 'להתפטר בהצהרה חריפה', ops: [{ op: 'special', id: 'resign' }, { op: 'fame', d: 4 }, { op: 'att', who: '@pm', d: -15 }] },
+      { label: 'לחכות לגזר הדין', chance: { p: () => 0.3, fail: [{ op: 'special', id: 'fired' }], failText: 'פוטרת מהממשלה.' }, ops: [], result: 'הסערה חלפה בלי פיטורים.' },
+    ],
+  },
+  {
+    id: 'partner_demand', icon: '📣', weight: 7, cooldown: 4,
+    title: '{party} דורשת',
+    body: '{npc}, יו"ר {party}, מודיע/ה: "בלי תקציב לבוחרים שלנו עד סוף החודש – אנחנו לא מצביעים עם הקואליציה."',
+    when: (s) => s.coalition.pmId === 'player' && s.coalition.parties.length > 1,
+    ctx: (s) => {
+      const partners = s.coalition.parties.filter((p) => s.parties[p].leaderId !== 'player');
+      if (!partners.length) return null;
+      const party = pick(s, partners);
+      return { party, npc: s.parties[party].leaderId };
+    },
+    choices: [
+      { label: 'לתת את הכסף', ops: [{ op: 'special', id: 'partner_give', label: 'שביעות רצון +15' }, { op: 'world', key: 'economy', d: -1, weeks: 8 }, { op: 'capital', d: -2 }] },
+      { label: 'להציע תפקיד לאחד מהח"כים שלהם', ops: [{ op: 'special', id: 'partner_job', label: 'שביעות רצון +8' }, { op: 'partyStanding', d: -3 }] },
+      { label: 'לסרב', ops: [{ op: 'special', id: 'partner_refuse', label: 'שביעות רצון -15' }, { op: 'consistency', d: 2 }] },
+    ],
+  },
+  {
+    id: 'ministry_crisis', icon: '🔥', weight: 4, cooldown: 12,
+    title: 'משבר במשרד',
+    body: 'תקלה חמורה במערכות המשרד שלך משביתה שירות לציבור. התקשורת מחפשת אשמים.',
+    when: (s) => !!s.player.ministry,
+    choices: [
+      { label: 'לנהל את המשבר אישית', requires: (s) => (s.player.ap >= 1 ? null : 'אין זמן'), ops: [{ op: 'ap', d: -1 }, { op: 'special', id: 'ministry_perf', label: 'ביצועי המשרד +6' }, { op: 'fame', d: 1 }] },
+      { label: 'להאשים את הקודם בתפקיד', ops: [{ op: 'fame', d: 1 }, { op: 'reputation', d: -2 }] },
+      { label: 'לפטר את הממונה', ops: [{ op: 'special', id: 'ministry_perf', label: 'ביצועי המשרד +3' }, { op: 'reputation', d: 1 }] },
+    ],
+  },
+];
+EVENTS.push(...GOV_EVENTS);
+export const CABINET_EVENTS = GOV_EVENTS.filter((e) => e.id.startsWith('cab_')).map((e) => e.id);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id);
 

@@ -1,3 +1,4 @@
+import { ministryTitle } from '../engine/systems/government';
 import type { GameState } from '../engine/types';
 
 export function g2(g: GameState, m: string, f: string) {
@@ -5,6 +6,15 @@ export function g2(g: GameState, m: string, f: string) {
 }
 
 export function careerTitle(g: GameState): string {
+  const p = g.player;
+  const party = p.partyId ? g.parties[p.partyId] : null;
+  const leads = party?.leaderId === 'player' && g.coalition.pmId !== 'player';
+  if (leads && p.rank === 'mk') return `${g2(g, 'ח"כ', 'ח"כ')} · יו"ר ${party!.name}`;
+  const t = rankTitle(g);
+  return leads ? `${t} · יו"ר ${party!.short}` : t;
+}
+
+function rankTitle(g: GameState): string {
   const p = g.player;
   const party = p.partyId ? g.parties[p.partyId] : null;
   switch (p.rank) {
@@ -23,7 +33,8 @@ export function careerTitle(g: GameState): string {
       return `${g2(g, 'ח"כ', 'ח"כ')} · יו"ר ${c?.name.replace('ועדת ', '') ?? 'ועדה'}`;
     }
     case 'minister':
-      return g.coalition.pmId === 'player' ? g2(g, 'ראש הממשלה', 'ראשת הממשלה') : g2(g, 'שר', 'שרה');
+      if (g.coalition.pmId === 'player') return g2(g, 'ראש הממשלה', 'ראשת הממשלה');
+      return p.ministry ? ministryTitle(p.ministry, p.gender) : g2(g, 'שר', 'שרה');
   }
 }
 

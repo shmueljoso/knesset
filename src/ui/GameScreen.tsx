@@ -1,6 +1,7 @@
 import { useGame, useStore, type Panel } from '../store';
 import type { LocationId } from '../engine/types';
 import { Dashboard } from './Dashboard';
+import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
 import { Hud, TabBar } from './Hud';
 import { BillBuilder, BillSheet, LegislationView, VoteSheet } from './Legislation';
@@ -32,6 +33,12 @@ function PanelView({ p }: { p: Panel }) {
       return <SettingsSheet />;
     case 'help':
       return <HelpSheet />;
+    case 'coalition':
+      return <CoalitionSheet />;
+    case 'ministry':
+      return <MinistrySheet />;
+    case 'negotiation':
+      return <NegotiationSheet />;
   }
 }
 
@@ -69,6 +76,7 @@ export function GameScreen() {
       {tab === 'laws' && <LegislationView />}
       {tab === 'news' && <NewsView />}
       <TabBar />
+      {tab === 'map' && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
       {g.flags.showElection ? <ElectionModal /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 ? <EventModal /> : null}
       <Toasts />

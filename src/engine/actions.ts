@@ -5,14 +5,17 @@ import { chance, pick, rand } from './rng';
 import { isCoalition, partyMKs } from './systems/government';
 import { addNews } from './systems/news';
 import { takeStance } from './systems/opinion';
-import { recruitCandidate } from './systems/parties';
+import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
+import { threatenQuit, tryNoConfidence } from './systems/coalition';
+import { askBudget } from './systems/ministry';
+import { CABINET_EVENTS } from './data/events';
 import { changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
 import { staffBonus } from './systems/staff';
 import type { GameState, Ideology, LocationId } from './types';
 import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_NAMES, clamp, leanAlignment } from './util';
 
-export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills';
+export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry';
 
 export interface ActionResult {
   text: string;
@@ -349,6 +352,107 @@ export const ACTIONS: ActionDef[] = [
     id: 'periphery', loc: 'field', icon: '🚗', label: 'סיור בפריפריה', ap: 2,
     desc: 'עיירות פיתוח, מושבים וכפרים. התקשורת אוהבת את זה.',
     run: (s) => run(s, [{ op: 'approval', sector: 'traditional', d: 2.5 }, { op: 'approval', sector: 'olim', d: 1.5 }, { op: 'approval', sector: 'arab', d: 1 }, { op: 'fame', d: 2 }], 'סיור ארוך ומתיש – והתמונות מצוינות.'),
+  },
+  // ---------- שלב 2: ממשלה וקואליציה ----------
+  {
+    id: 'no_confidence', loc: 'plenum', icon: '🗳️', label: 'הצעת אי-אמון', ap: 1,
+    desc: 'אי-אמון קונסטרוקטיבי: עובר רק אם 61 ח"כים תומכים בממשלה חלופית.',
+    avail: all(needMK, needSession, (s) => (isCoalition(s, s.player.partyId) ? 'אתה בקואליציה' : null), (s) => (s.week - Number(s.flags.nocWeek ?? -99) < 4 ? 'הגשת לאחרונה – חכה כמה שבועות' : null)),
+    run: (s) => {
+      s.flags.nocWeek = s.week;
+      s.player.fame = clamp(s.player.fame + 2, 0, 100);
+      const r = tryNoConfidence(s);
+      if (!r.passed) addNews(s, `הצעת האי-אמון של ${s.player.name} נדחתה`, 'neutral', true);
+      return { text: r.text, good: r.passed };
+    },
+  },
+  {
+    id: 'cabinet', loc: 'pmo', icon: '🏛️', label: 'ישיבת ממשלה', ap: 1,
+    desc: 'החלטות שמחייבות את כל השרים. להצביע עם ראש הממשלה – או לא.',
+    avail: (s) => (s.player.ministry || s.coalition.pmId === 'player' ? null : 'רק לשרים'),
+    run: (s) => {
+      const recent = (id: string) => s.week - (s.eventsFired[id] ?? -99) < 10;
+      const pool = CABINET_EVENTS.filter((id) => !recent(id));
+      const id = pool.length ? pick(s, pool) : pick(s, CABINET_EVENTS);
+      s.eventsFired[id] = s.week;
+      s.eventQueue.push({ eventId: id, ctx: {} });
+      return { text: 'הישיבה נפתחה. על השולחן: החלטה קשה.' };
+    },
+  },
+  {
+    id: 'coalition_panel', loc: 'pmo', icon: '🤝', label: 'ניהול הקואליציה', ap: 0,
+    desc: 'שביעות רצון השותפות, ההסכם הקואליציוני ופגישות.',
+    run: () => ({ text: '', open: 'coalition' }),
+  },
+  {
+    id: 'threaten', loc: 'pmo', icon: '😤', label: 'לאיים בפרישה מהממשלה', ap: 1,
+    desc: 'כראש מפלגה שותפה: לחץ שמביא הטבות לבוחרים שלך – ומרגיז את ראש הממשלה.',
+    avail: (s) => {
+      const p = s.player.partyId ? s.parties[s.player.partyId] : null;
+      if (!p || p.leaderId !== 'player' || !isCoalition(s, p.id) || s.coalition.pmId === 'player') return 'רק לראש מפלגה שותפה';
+      return s.week - Number(s.flags.threatWeek ?? -99) < 8 ? 'איימת לא מזמן – זה יישחק' : null;
+    },
+    run: (s) => ({ text: threatenQuit(s), good: true }),
+  },
+  {
+    id: 'coalition_funds', loc: 'finance', icon: '💰', label: 'לדרוש כספים קואליציוניים', ap: 2,
+    desc: 'תקציב ייעודי לבוחרים שלך. ככל שהקואליציה רעועה – כוח המיקוח שלך גדול יותר.',
+    avail: (s) =>
+      !s.player.isMK || !isCoalition(s, s.player.partyId)
+        ? 'רק לח"כ בקואליציה'
+        : s.flags.fundsYear === Math.floor(s.week / 52)
+          ? 'כבר קיבלת השנה'
+          : null,
+    run: (s) => {
+      s.flags.fundsYear = Math.floor(s.week / 52);
+      const fin = s.npcs[s.ministers.finance];
+      const p = clamp(0.25 + s.player.skills.negotiation / 200 + s.player.partyStanding / 300 + (60 - s.coalition.stability) / 150 + (s.coalition.pmId === 'player' ? 0.4 : 0), 0.05, 0.92);
+      if (rand(s) < p) {
+        const sec = [...SECTORS].sort((a, b) => leanAlignment(SECTOR_IDEOLOGY[b], s.player.ideology) - leanAlignment(SECTOR_IDEOLOGY[a], s.player.ideology))[0];
+        if (fin) changeAttitude(s, fin.id, -5);
+        return run(s, [{ op: 'approval', sector: sec, d: 3.5 }, { op: 'capital', d: 2 }, { op: 'world', key: 'economy', d: -0.5, weeks: 8 }], `הוקצו 300 מיליון ₪ ל${SECTOR_NAMES[sec]} – בזכותך.`);
+      }
+      if (fin) changeAttitude(s, fin.id, -3);
+      return { text: `${fin?.name ?? 'האוצר'}: "אין שקל אחד מיותר". נדחית.`, good: false };
+    },
+  },
+  {
+    id: 'ministry_budget', loc: 'finance', icon: '📑', label: 'מו"מ על תקציב המשרד', ap: 1,
+    desc: 'לבקש תוספת לתקציב התכניות של המשרד שלך.',
+    avail: (s) => (!s.ministryState ? 'רק לשרים' : s.week - s.ministryState.budgetAskedWeek < 26 ? 'כבר ביקשת בחצי השנה האחרונה' : null),
+    run: (s) => {
+      const r = askBudget(s);
+      return { text: r.text, good: r.ok };
+    },
+  },
+  {
+    id: 'ministry_panel', loc: 'ministry', icon: '🗂️', label: 'לשכת השר/ה', ap: 0,
+    desc: 'תכניות דגל, מינוי מנכ"ל ותקציב.',
+    run: () => ({ text: '', open: 'ministry' }),
+  },
+  {
+    id: 'ministry_tour', loc: 'ministry', icon: '🚶', label: 'סיור באגפי המשרד', ap: 1,
+    desc: 'להכיר את הפקידות, לשמוע בעיות ולשפר ביצועים.',
+    avail: (s) => (s.ministryState ? null : 'רק לשרים'),
+    run: (s) => {
+      s.ministryState!.performance = clamp(s.ministryState!.performance + 2.5, 0, 100);
+      return run(s, [{ op: 'skill', skill: 'organization', d: 1.5 }, { op: 'fame', d: 0.5 }], 'העובדים התרשמו שהשר/ה מגיע/ה לשטח.');
+    },
+  },
+  {
+    id: 'gov_bill', loc: 'ministry', icon: '📜', label: 'תזכיר חוק ממשלתי', ap: 0,
+    desc: 'הצעת חוק של הממשלה: מדלגת על הקריאה הטרומית אם ועדת השרים מאשרת.',
+    avail: (s) => (s.player.ministry ? null : 'רק לשרים'),
+    run: () => ({ text: '', open: 'billBuilder' }),
+  },
+  {
+    id: 'leadership', loc: 'partyhq', icon: '👑', label: 'להתמודד על ראשות המפלגה', ap: 2,
+    desc: 'להדיח את היו"ר. ניצחון = הדרך לראשות הממשלה. הפסד = אויב בצמרת.',
+    avail: (s) => leadershipBlocked(s),
+    run: (s) => {
+      const r = challengeLeader(s);
+      return { text: r.text, good: r.ok };
+    },
   },
 ];
 

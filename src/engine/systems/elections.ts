@@ -2,6 +2,7 @@ import { rand } from '../rng';
 import type { GameState } from '../types';
 import { clamp } from '../util';
 import { spawnCandidate } from '../newGame';
+import { startFormateur, startPartner } from './coalition';
 import { formGovernment, proposeCoalition } from './government';
 import { addNews } from './news';
 import { log } from './report';
@@ -79,8 +80,8 @@ export function playerListScore(s: GameState): number {
 export function buildLists(s: GameState) {
   for (const party of Object.values(s.parties)) {
     if (party.playerFounded) continue;
-    const cands = party.list.filter((id) => id !== 'player' && s.npcs[id]);
     const leader = party.leaderId;
+    const cands = party.list.filter((id) => id !== 'player' && s.npcs[id]);
     const scored = cands
       .filter((id) => id !== leader)
       .map((id) => {
@@ -92,6 +93,11 @@ export function buildLists(s: GameState) {
     if (playerIn && s.player.defector && party.inOutgoingKnesset) blocked = true;
     if (playerIn && !blocked) scored.push({ id: 'player', score: playerListScore(s) });
     scored.sort((a, b) => b.score - a.score);
+    if (leader === 'player') {
+      party.list = ['player', ...scored.filter((x) => x.id !== 'player').map((x) => x.id)];
+      s.player.listPosition = 1;
+      continue;
+    }
     party.list = [leader, ...scored.map((x) => x.id)];
     if (playerIn) {
       const pos = party.list.indexOf('player');
@@ -189,13 +195,15 @@ export function runElection(s: GameState) {
   const below = Object.values(s.parties).filter((p) => seats[p.id] === 0);
   if (below.length) addNews(s, `מתחת לאחוז החסימה: ${below.map((p) => p.name).join(', ')}`, 'neutral');
 
-  // הקמת ממשלה
+  // הקמת ממשלה: השחקן כפורמטור, כשותפה, או הקמה אוטומטית
   const playerParty = s.player.partyId ? s.parties[s.player.partyId] : null;
-  const coalition = proposeCoalition(s);
-  if (playerParty?.playerFounded && coalition.includes(playerParty.id)) {
-    s.flags.pendingCoalition = coalition.join(',');
-    s.eventQueue.unshift({ eventId: 'coalition_offer', ctx: { party: playerParty.id } });
-  } else completeCoalition(s, coalition);
+  const plan = proposeCoalition(s);
+  const lead = [...plan].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
+  if (playerParty && playerParty.leaderId === 'player' && s.player.isMK && playerParty.seats > 0) {
+    if (lead === playerParty.id) startFormateur(s);
+    else if (plan.includes(playerParty.id)) startPartner(s, lead);
+    else completeCoalition(s, plan);
+  } else completeCoalition(s, plan);
 
   s.electionWeek = s.week + 208;
   s.primariesWeek = s.electionWeek - 12;

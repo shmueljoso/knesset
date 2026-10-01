@@ -9,6 +9,7 @@ import { Hemicycle, HemicycleLegend, LineChart } from './Charts';
 import { Meter } from './common';
 import { g2 } from './labels';
 import { NextWeekButton } from './MapView';
+import { GovernmentCard } from './Government';
 
 const LADDER: { rank: string; label: string }[] = [
   { rank: 'activist', label: 'פעיל' },
@@ -16,7 +17,8 @@ const LADDER: { rank: string; label: string }[] = [
   { rank: 'candidate', label: 'מועמד' },
   { rank: 'mk', label: 'ח"כ' },
   { rank: 'chair', label: 'יו"ר ועדה' },
-  { rank: 'minister', label: 'שר / רה"מ' },
+  { rank: 'minister', label: 'שר' },
+  { rank: 'pm', label: 'רה"מ' },
 ];
 const RANK_IDX: Record<string, number> = { citizen: -1, activist: 0, aide: 1, candidate: 2, mk: 3, chair: 4, minister: 5 };
 
@@ -24,7 +26,7 @@ export function Dashboard() {
   const g = useGame();
   const open = useStore((s) => s.open);
   const p = g.player;
-  const idx = RANK_IDX[p.rank];
+  const idx = g.coalition.pmId === 'player' ? 6 : RANK_IDX[p.rank];
   const toElection = g.electionWeek - g.week;
   const toPrimaries = g.primariesWeek - g.week;
 
@@ -48,9 +50,13 @@ export function Dashboard() {
   else if (!p.isMK && !p.wantsList && toPrimaries > 0) goal = `הגש/י מועמדות לרשימה במטה המפלגה (הרשימות נסגרות בעוד ${toPrimaries} שבועות).`;
   else if (!p.isMK && p.wantsList && toPrimaries > 0) goal = 'בנה/י תמיכה לקראת הרכבת הרשימה: כנסי מתפקדים, קמפיין, ותמיכת ח"כים בכירים.';
   else if (!p.isMK) goal = `הבחירות בעוד ${toElection} שבועות. כל נקודת תדמית חשובה.`;
+  else if (g.negotiation) goal = 'משא ומתן קואליציוני בעיצומו – פתח/י אותו מהמפה.';
+  else if (g.coalition.pmId === 'player') goal = 'לשמור על הקואליציה, להעביר את סעיפי ההסכם ואת התקציב – ולשרוד עד הבחירות.';
+  else if (p.ministry) goal = 'להשיק תכניות דגל, להעלות את ביצועי המשרד – ולבנות בסיס לראשות המפלגה.';
   else if (!g.bills.some((b) => b.sponsor === 'player')) goal = 'הגש/י הצעת חוק ראשונה – באגף הלשכות.';
   else if (!p.achievements.includes('first_law')) goal = 'העבר/י חוק בשלוש קריאות. גייס/י תומכים לפני כל הצבעה.';
-  else goal = 'בנה/י כוח: ראשות ועדה, מעמד בסיעה – ואולי מפלגה משלך.';
+  else if (g.player.partyId && g.parties[g.player.partyId].leaderId === 'player') goal = 'כיו"ר מפלגה: להגדיל את המפלגה בסקרים – הגדולה בגוש מקבלת את המנדט להרכיב ממשלה.';
+  else goal = 'בנה/י כוח: ראשות ועדה, תיק בממשלה, ובסוף – התמודדות על ראשות המפלגה (במטה).';
 
   return (
     <div className="scroll">
@@ -96,6 +102,8 @@ export function Dashboard() {
             ★ = קואליציה. {p.partyId ? (isCoalition(g, p.partyId) ? 'המפלגה שלך בקואליציה.' : 'המפלגה שלך באופוזיציה.') : ''}
           </p>
         </div>
+
+        <GovernmentCard />
 
         <div className="card">
           <div className="card-title">

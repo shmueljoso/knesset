@@ -1,5 +1,5 @@
 import { actionBlocked, actionsAt, performAction } from '../engine';
-import { LOCATIONS } from '../engine/data/locations';
+import { LOCATIONS, locationLock } from '../engine/data/locations';
 import { describeOps } from '../engine/ops';
 import { attitudeColor } from '../engine/systems/relationships';
 import type { LocationId } from '../engine/types';
@@ -16,12 +16,13 @@ export function LocationSheet({ id }: { id: LocationId }) {
   const loc = LOCATIONS[id];
   const people = (g.presence[id] ?? []).map((nid) => g.npcs[nid]).filter(Boolean);
 
-  if (loc.locked) {
+  const lock = locationLock(g, id);
+  if (lock) {
     return (
       <Sheet title={loc.name} icon={<span style={{ fontSize: 30 }}>{loc.icon}</span>} sub={loc.desc}>
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 40 }}>🔒</div>
-          <p className="muted">{loc.locked}</p>
+          <p className="muted">{lock}</p>
           <p className="small faint">המבנה מופיע במפה כדי שתדע לאן אתה שואף להגיע.</p>
         </div>
       </Sheet>

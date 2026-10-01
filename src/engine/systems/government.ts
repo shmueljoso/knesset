@@ -1,5 +1,6 @@
 import { COMMITTEE_DEFS } from '../data/committees';
-import type { Committee, GameState, Npc } from '../types';
+import { MINISTRY_DEFS } from '../data/ministries';
+import type { AgreementItem, Committee, GameState, Npc } from '../types';
 import { ideologyDistance } from '../util';
 
 export const MINISTRIES: { id: string; m: string; f: string }[] = [
@@ -17,7 +18,7 @@ export const MINISTRIES: { id: string; m: string; f: string }[] = [
   { id: 'religion', m: 'השר לשירותי דת', f: 'השרה לשירותי דת' },
 ];
 
-const MINISTRY_PREFS: Record<string, string[]> = {
+export const MINISTRY_PREFS: Record<string, string[]> = {
   yahadut: ['housing', 'health', 'religion'],
   shomrim: ['interior', 'religion', 'welfare', 'health'],
   emuna: ['defense', 'finance', 'justice', 'housing'],
@@ -83,15 +84,42 @@ const nonPlayerMKs = (s: GameState, partyId: string) =>
     .map((id) => s.npcs[id])
     .sort((a, b) => b.influence - a.influence);
 
+export interface GovOptions {
+  /** חלוקת תיקים שסוכמה במשא ומתן: משרד → מפלגה */
+  ministries?: Record<string, string>;
+  /** ראשויות ועדות שסוכמו: ועדה → מפלגה */
+  chairs?: Record<string, string>;
+  agreement?: AgreementItem[];
+  satisfaction?: Record<string, number>;
+}
+
+export const ministryTitle = (mid: string, gender: 'm' | 'f') => {
+  const def = MINISTRIES.find((m) => m.id === mid);
+  return def ? (gender === 'm' ? def.m : def.f) : '';
+};
+
+/** האם השחקן ראוי לתיק כשהמפלגה שלו נכנסת לממשלה */
+function playerMinisterEligible(s: GameState, partyId: string): boolean {
+  const p = s.player;
+  if (!p.isMK || p.defector || p.partyId !== partyId) return false;
+  if (s.parties[partyId].leaderId === 'player') return true;
+  return p.partyStanding >= 60 && p.reputation >= 50 || !!s.flags.promisedMinistry;
+}
+
 /** הקמת ממשלה: חלוקת תיקים, יו"ר כנסת, יו"ר ועדות וחברות בוועדות. */
-export function formGovernment(s: GameState, coalition: string[]) {
+export function formGovernment(s: GameState, coalition: string[], opts: GovOptions = {}) {
   for (const n of Object.values(s.npcs)) {
     n.title = undefined;
     n.ministry = undefined;
   }
-  const lead = [...coalition].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
+  s.player.ministry = null;
+  const lead = s.negotiation?.formateurParty && coalition.includes(s.negotiation.formateurParty)
+    ? s.negotiation.formateurParty
+    : [...coalition].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
   const pmId = s.parties[lead].leaderId;
-  s.coalition = { parties: coalition, pmId, stability: 70, formedWeek: s.week };
+  const satisfaction: Record<string, number> = {};
+  for (const p of coalition) satisfaction[p] = opts.satisfaction?.[p] ?? 68;
+  s.coalition = { parties: coalition, pmId, stability: 70, formedWeek: s.week, satisfaction, agreement: opts.agreement ?? [], minoritySince: null };
   s.ministers = { pm: pmId };
   if (pmId === 'player') {
     s.player.rank = 'minister';
@@ -102,28 +130,46 @@ export function formGovernment(s: GameState, coalition: string[]) {
     pm.ministry = 'pm';
   }
 
+  // הקצאת תיקים: קודם מה שסוכם, ואת השאר לפי גודל (D'Hondt) והעדפות
+  const alloc: Record<string, string> = { ...(opts.ministries ?? {}) };
   const counts: Record<string, number> = Object.fromEntries(coalition.map((p) => [p, p === lead ? 1 : 0]));
-  const remaining = MINISTRIES.map((m) => m.id);
+  for (const party of Object.values(alloc)) if (counts[party] !== undefined) counts[party] += 1;
+  const remaining = MINISTRIES.map((m) => m.id).filter((m) => !alloc[m]);
   while (remaining.length) {
-    const party = [...coalition].sort(
-      (a, b) => s.parties[b].seats / (counts[b] + 1) - s.parties[a].seats / (counts[a] + 1),
-    )[0];
+    const party = opts.ministries
+      ? lead
+      : [...coalition].sort((a, b) => s.parties[b].seats / (counts[b] + 1) - s.parties[a].seats / (counts[a] + 1))[0];
     const prefs = MINISTRY_PREFS[party] ?? [];
     const mid = prefs.find((p) => remaining.includes(p)) ?? remaining[0];
-    const cand = nonPlayerMKs(s, party).find((n) => !n.ministry);
     remaining.splice(remaining.indexOf(mid), 1);
     counts[party] += 1;
-    if (!cand) continue;
-    const def = MINISTRIES.find((m) => m.id === mid)!;
-    cand.ministry = mid;
-    cand.title = cand.gender === 'm' ? def.m : def.f;
-    s.ministers[mid] = cand.id;
+    alloc[mid] = party;
   }
+  // השחקן כשר: מנהיג מפלגה מקבל את התיק הבכיר, ח"כ בכיר – תיק נוסף של המפלגה
+  let playerMinistry: string | null = null;
+  const pp = s.player.partyId;
+  if (pp && coalition.includes(pp) && pmId !== 'player' && playerMinisterEligible(s, pp)) {
+    const mine = MINISTRIES.map((m) => m.id).filter((m) => alloc[m] === pp);
+    if (mine.length) playerMinistry = s.parties[pp].leaderId === 'player' ? mine[0] : mine[mine.length - 1];
+  }
+  for (const m of MINISTRIES) {
+    const party = alloc[m.id];
+    if (m.id === playerMinistry) {
+      appointPlayerMinister(s, m.id);
+      continue;
+    }
+    const cand = nonPlayerMKs(s, party).find((n) => !n.ministry);
+    if (!cand) continue;
+    cand.ministry = m.id;
+    cand.title = cand.gender === 'm' ? m.m : m.f;
+    s.ministers[m.id] = cand.id;
+  }
+  delete s.flags.promisedMinistry;
 
   const speaker = nonPlayerMKs(s, lead).find((n) => !n.ministry);
   if (speaker) {
     speaker.ministry = 'speaker';
-    speaker.title = speaker.gender === 'm' ? 'יו"ר הכנסת' : 'יו"ר הכנסת';
+    speaker.title = 'יו"ר הכנסת';
   }
   const opposition = Object.values(s.parties)
     .filter((p) => p.seats > 0 && !coalition.includes(p.id))
@@ -132,10 +178,36 @@ export function formGovernment(s: GameState, coalition: string[]) {
     const ol = s.npcs[opposition.leaderId];
     if (ol) ol.title = ol.gender === 'm' ? 'יו"ר האופוזיציה' : 'יו"רית האופוזיציה';
   }
-  assignCommittees(s);
+  assignCommittees(s, opts.chairs);
 }
 
-export function assignCommittees(s: GameState) {
+/** מינוי השחקן לשר (מחליף את מי שהחזיק בתיק). */
+export function appointPlayerMinister(s: GameState, mid: string) {
+  const prev = s.ministers[mid];
+  if (prev && s.npcs[prev]) {
+    s.npcs[prev].ministry = undefined;
+    s.npcs[prev].title = undefined;
+  }
+  s.ministers[mid] = 'player';
+  s.player.ministry = mid;
+  s.player.rank = 'minister';
+  s.player.committees = [];
+  for (const c of s.committees) c.members = c.members.filter((m) => m !== 'player');
+  const def = MINISTRY_DEFS.find((m) => m.id === mid);
+  s.ministryState = {
+    id: mid,
+    budget: def?.budget ?? 2,
+    performance: 50,
+    dgId: null,
+    dgType: null,
+    programs: [],
+    budgetAskedWeek: -99,
+    since: s.week,
+  };
+  if (!s.player.achievements.includes('minister')) s.player.achievements.push('minister');
+}
+
+export function assignCommittees(s: GameState, chairs: Record<string, string> = {}) {
   const coalition = s.coalition.parties;
   const committees: Committee[] = [];
   const chairCount: Record<string, number> = {};
@@ -155,7 +227,7 @@ export function assignCommittees(s: GameState) {
     }
     const members: string[] = [];
     for (const p of seated) {
-      const pool = partyMKs(s, p.id).filter((id) => id === 'player' || !s.npcs[id].ministry);
+      const pool = partyMKs(s, p.id).filter((id) => (id === 'player' ? !s.player.ministry : !s.npcs[id].ministry));
       const prio = pool.sort((a, b) => {
         const pa = a === 'player' ? (s.player.committees.includes(def.id) ? -1 : 1) : 0;
         const pb = b === 'player' ? (s.player.committees.includes(def.id) ? -1 : 1) : 0;
@@ -168,9 +240,11 @@ export function assignCommittees(s: GameState) {
     }
     // יו"ר
     const chairPartyPool = def.oppositionChair ? seated.filter((p) => !coalition.includes(p.id)) : seated.filter((p) => coalition.includes(p.id));
-    const chairParty = [...chairPartyPool].sort(
-      (a, b) => b.seats / ((chairCount[b.id] ?? 0) + 1) - a.seats / ((chairCount[a.id] ?? 0) + 1),
-    )[0];
+    const agreed = chairs[def.id] ? s.parties[chairs[def.id]] : undefined;
+    const chairParty =
+      agreed && agreed.seats > 0
+        ? agreed
+        : [...chairPartyPool].sort((a, b) => b.seats / ((chairCount[b.id] ?? 0) + 1) - a.seats / ((chairCount[a.id] ?? 0) + 1))[0];
     chairCount[chairParty.id] = (chairCount[chairParty.id] ?? 0) + 1;
     let chair: Npc | undefined = nonPlayerMKs(s, chairParty.id).find((n) => !n.ministry && !used.has(n.id) && s.parties[chairParty.id].leaderId !== n.id);
     if (!chair) chair = nonPlayerMKs(s, chairParty.id).find((n) => !n.ministry);
@@ -189,5 +263,6 @@ export function assignCommittees(s: GameState) {
   s.committees = committees;
   if (s.player.isMK) {
     s.player.committees = committees.filter((c) => c.members.includes('player')).map((c) => c.id);
+    if (s.player.rank === 'chair' && !committees.some((c) => c.chairId === 'player')) s.player.rank = 'mk';
   }
 }

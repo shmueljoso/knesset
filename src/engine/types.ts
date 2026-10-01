@@ -19,6 +19,7 @@ export type LocationId =
   | 'field'
   | 'pmo'
   | 'finance'
+  | 'ministry'
   | 'court';
 
 export type CareerRank = 'citizen' | 'activist' | 'aide' | 'candidate' | 'mk' | 'chair' | 'minister';
@@ -132,6 +133,8 @@ export interface Bill {
   sessionPending: boolean;
   votedThisWeek: boolean;
   lastVote?: VoteResult;
+  government?: boolean; // הצעת חוק ממשלתית
+  agreementParty?: string; // סעיף בהסכם הקואליציוני
   history: { week: number; text: string }[];
 }
 
@@ -174,6 +177,7 @@ export interface Player {
   partyId: string | null;
   employerId: string | null;
   isMK: boolean;
+  ministry: string | null;
   committees: string[];
   staff: Staff[];
   debts: Debt[];
@@ -264,7 +268,9 @@ export interface GameState {
   news: NewsItem[];
   eventQueue: PendingEvent[];
   eventsFired: Record<string, number>;
-  coalition: { parties: string[]; pmId: string; stability: number; formedWeek: number };
+  coalition: Coalition;
+  negotiation: Negotiation | null;
+  ministryState: MinistryState | null;
   ministers: Record<string, string>;
   electionWeek: number;
   primariesWeek: number;
@@ -278,4 +284,63 @@ export interface GameState {
   flags: Record<string, number | string | boolean>;
   counter: number;
   gameOver: string | null;
+}
+
+// ---------- קואליציה וממשלה ----------
+export type Demand =
+  | { kind: 'ministry'; ref: string }
+  | { kind: 'chair'; ref: string }
+  | { kind: 'budget'; amount: number; sector: Sector }
+  | { kind: 'bill'; ref: string }
+  | { kind: 'veto'; ref: string };
+
+export interface AgreementItem {
+  id: string;
+  partyId: string;
+  demand: Demand;
+  status: 'pending' | 'done' | 'broken';
+  dueWeek: number;
+}
+
+export interface Coalition {
+  parties: string[];
+  pmId: string;
+  stability: number;
+  formedWeek: number;
+  satisfaction: Record<string, number>;
+  agreement: AgreementItem[];
+  minoritySince: number | null;
+}
+
+export interface PartnerTalk {
+  partyId: string;
+  demands: Demand[];
+  weights: number[];
+  granted: boolean[];
+  base: number;
+  signed: boolean;
+  walkedOut: boolean;
+  attempts: number;
+}
+
+export interface Negotiation {
+  mode: 'formateur' | 'partner';
+  formateurParty: string;
+  startWeek: number;
+  deadline: number;
+  extended: boolean;
+  talks: PartnerTalk[];
+  budgetPool: number;
+  log: string[];
+}
+
+export interface MinistryState {
+  id: string;
+  budget: number; // מיליארדי ₪ לתכניות
+  performance: number; // 0-100
+  dgId: string | null;
+  dgType: 'loyal' | 'pro' | 'crony' | null;
+  programs: { id: string; week: number }[];
+  budgetAskedWeek: number;
+  since: number;
 }

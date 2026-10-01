@@ -5,6 +5,7 @@ import { registerSpecial, type Ctx } from '../ops';
 import { chance, rand } from '../rng';
 import type { Bill, BillStage, GameState } from '../types';
 import { SECTORS, clamp, leanAlignment, newId } from '../util';
+import { onBillPassed } from './coalition';
 import { isCoalition } from './government';
 import { addNews } from './news';
 import { addWorldEffect, changeApproval } from './opinion';
@@ -32,7 +33,7 @@ export const committeeName = (id: string) => COMMITTEE_DEFS.find((c) => c.id ===
 
 /** האם השחקן יכול להגיש הצעות חוק – כח"כ, או כעוזר בשם הח"כ שמעסיק אותו. */
 export function legislativeRole(s: GameState): { canPropose: boolean; sponsor: string | null; reason?: string } {
-  if (s.player.isMK) return { canPropose: true, sponsor: 'player' };
+  if (s.player.isMK || s.player.ministry) return { canPropose: true, sponsor: 'player' };
   if (s.player.employerId && s.npcs[s.player.employerId]?.isMK)
     return { canPropose: true, sponsor: s.player.employerId };
   return { canPropose: false, sponsor: null, reason: 'רק חברי כנסת (או עוזרים בשמם) יכולים להגיש הצעות חוק' };
@@ -41,10 +42,13 @@ export function legislativeRole(s: GameState): { canPropose: boolean; sponsor: s
 export const activeBills = (s: GameState) => s.bills.filter((b) => b.stage !== 'passed' && b.stage !== 'failed');
 export const isPlayerBill = (s: GameState, b: Bill) => b.sponsor === 'player' || b.sponsor === s.player.employerId;
 
-export function createBill(s: GameState, templateId: string, scope: 1 | 2 | 3): Bill | string {
+export function createBill(s: GameState, templateId: string, scope: 1 | 2 | 3, opts: { government?: boolean } = {}): Bill | string {
   const role = legislativeRole(s);
+  const gov = !!opts.government;
+  if (gov && !s.player.ministry && s.coalition.pmId !== 'player') return 'רק שר/ה יכול/ה להגיש הצעת חוק ממשלתית';
   if (!role.canPropose || !role.sponsor) return role.reason ?? 'לא ניתן להגיש';
-  if (activeBills(s).filter((b) => isPlayerBill(s, b)).length >= 3) return 'יש כבר 3 הצעות פעילות – התמקד בהן';
+  const mine = activeBills(s).filter((b) => isPlayerBill(s, b) && !b.agreementParty && !!b.government === gov);
+  if (mine.length >= 3) return 'יש כבר 3 הצעות פעילות מהסוג הזה – התמקד בהן';
   if (activeBills(s).some((b) => b.templateId === templateId && isPlayerBill(s, b))) return 'כבר הגשת הצעה בנושא הזה';
   const t = templateById(templateId);
   const b: Bill = {
@@ -55,7 +59,7 @@ export function createBill(s: GameState, templateId: string, scope: 1 | 2 | 3): 
     scope,
     stage: 'tabled',
     stageWeek: s.week,
-    waitUntil: s.week + 7, // 45 יום
+    waitUntil: s.week + (gov ? 3 : 7), // תזכיר חוק: 21 יום להערות הציבור; הצעה פרטית: 45 יום
     exemption: false,
     govPosition: null,
     committeeId: t.committee,
@@ -65,10 +69,16 @@ export function createBill(s: GameState, templateId: string, scope: 1 | 2 | 3): 
     pushWeek: -1,
     sessionPending: false,
     votedThisWeek: false,
-    history: [{ week: s.week, text: 'ההצעה הונחה על שולחן הכנסת. תקופת המתנה של 45 יום.' }],
+    government: gov || undefined,
+    history: [
+      {
+        week: s.week,
+        text: gov ? 'תזכיר החוק פורסם להערות הציבור (21 יום).' : 'ההצעה הונחה על שולחן הכנסת. תקופת המתנה של 45 יום.',
+      },
+    ],
   };
   s.bills.push(b);
-  log(s, `הוגשה הצעת חוק: ${t.title}`, 'action');
+  log(s, `הוגשה ${gov ? 'הצעת חוק ממשלתית' : 'הצעת חוק'}: ${t.title}`, 'action');
   return b;
 }
 
@@ -96,6 +106,10 @@ export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose'
   let score = coalAlign * 0.9;
   score += justice && b.sponsor === 'player' ? justice.attitude / 250 : 0;
   score += sp && isCoalition(s, sp) ? 0.2 : -0.4;
+  if (b.government) score += 0.3;
+  if (b.agreementParty) score += 1;
+  // וטו של שותפה בהסכם הקואליציוני
+  if (s.coalition.agreement.some((a) => a.status === 'pending' && a.demand.kind === 'veto' && a.demand.ref === b.templateId)) score -= 1;
   score -= templateById(b.templateId).cost * SCOPE_FACTOR[b.scope] * 0.04;
   if (s.flags[`minlobby_${b.id}`]) score += 0.25;
   if (score > 0.35) return 'support';
@@ -144,6 +158,13 @@ export function tickLegislation(s: GameState) {
     } else if (b.stage === 'ministerial' && s.week > b.stageWeek) {
       b.govPosition = ministerialDecision(s, b);
       const pos = GOV_POS_NAMES[b.govPosition];
+      if (b.government) {
+        // הצעת חוק ממשלתית מדלגת על הקריאה הטרומית – אבל רק אם ועדת השרים מאשרת
+        if (b.govPosition === 'support') setStage(s, b, 'first', 'ועדת השרים אישרה את הצעת החוק הממשלתית. היא מונחת לקריאה ראשונה.');
+        else setStage(s, b, 'failed', 'ועדת השרים לא אישרה את הצעת החוק הממשלתית.');
+        if (isPlayerBill(s, b)) addNews(s, `ועדת השרים ${b.govPosition === 'support' ? 'אישרה' : 'דחתה'} את "${b.title}"`, b.govPosition === 'support' ? 'good' : 'bad', true);
+        continue;
+      }
       setStage(s, b, 'preliminary', `ועדת השרים החליטה: ${pos}. ההצעה מוכנה לקריאה טרומית.`);
       if (isPlayerBill(s, b)) {
         addNews(s, `ועדת השרים לחקיקה: ${pos} ב"${b.title}"`, b.govPosition === 'support' ? 'good' : b.govPosition === 'oppose' ? 'bad' : 'neutral', true);
@@ -208,6 +229,7 @@ export function bringToVote(s: GameState, b: Bill) {
   else if (stage === 'final') {
     setStage(s, b, 'passed', `אושרה בקריאה שנייה ושלישית (${tally})! החוק ייכנס לתוקף.`);
     onPassed(s, b);
+    onBillPassed(s, b);
   }
   if (stage !== 'final') addNews(s, `"${b.title}" עברה ב${STAGE_NAMES[stage]} (${tally})`, 'good', true);
   log(s, `"${b.title}" עברה ב${STAGE_NAMES[stage]} (${tally})`, 'vote');

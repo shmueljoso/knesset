@@ -122,6 +122,12 @@ function BillCard({ b }: { b: Bill }) {
       </div>
       <div className="tiny muted">{nextStepHint(g, b)}</div>
       {b.sponsor !== 'player' && <div className="tiny faint">מגיש/ה: {g.npcs[b.sponsor]?.name}</div>}
+      {(b.government || b.agreementParty) && (
+        <div className="chips" style={{ marginTop: 6 }}>
+          {b.government && <span className="chip gold">ממשלתית</span>}
+          {b.agreementParty && <span className="chip">סעיף בהסכם עם {g.parties[b.agreementParty]?.short}</span>}
+        </div>
+      )}
     </button>
   );
 }
@@ -339,6 +345,8 @@ export function BillBuilder() {
   const toast = useStore((s) => s.toast);
   const [tid, setTid] = useState(BILL_TEMPLATES[0].id);
   const [scope, setScope] = useState<1 | 2 | 3>(2);
+  const canGov = !!g.player.ministry || g.coalition.pmId === 'player';
+  const [gov, setGov] = useState(canGov);
   const t = templateById(tid);
   const role = legislativeRole(g);
 
@@ -346,17 +354,17 @@ export function BillBuilder() {
     const fake: Bill = {
       id: 'preview', templateId: tid, title: t.title, sponsor: role.sponsor ?? 'player', scope, stage: 'preliminary', stageWeek: g.week, waitUntil: g.week,
       exemption: false, govPosition: null, committeeId: t.committee, committeeProgress: 0, committeeNeeded: 2, amendments: 0, pushWeek: -1,
-      sessionPending: false, votedThisWeek: false, history: [],
+      sessionPending: false, votedThisWeek: false, history: [], government: gov || undefined,
     };
     fake.govPosition = ministerialDecision(g, fake);
     const f = forecast(g, fake);
     return { gov: fake.govPosition, eFor: f.eFor, eAgainst: f.eAgainst, impact: billImpact(fake) };
-  }, [g, tid, scope, t, role.sponsor]);
+  }, [g, tid, scope, t, role.sponsor, gov]);
 
   const submit = () => {
     if (g.player.ap < 2) return toast('צריך 2 זמן כדי לנסח ולהגיש', 'bad');
     const res = act((s) => {
-      const r = createBill(s, tid, scope);
+      const r = createBill(s, tid, scope, { government: gov });
       if (typeof r !== 'string') s.player.ap -= 2;
       return typeof r === 'string' ? r : r.id;
     });
@@ -368,7 +376,18 @@ export function BillBuilder() {
   };
 
   return (
-    <Sheet title="✍️ ניסוח הצעת חוק" sub={role.sponsor && role.sponsor !== 'player' ? `בשם ${g.npcs[role.sponsor].name}` : 'הצעת חוק פרטית'}>
+    <Sheet title="✍️ ניסוח הצעת חוק" sub={role.sponsor && role.sponsor !== 'player' ? `בשם ${g.npcs[role.sponsor].name}` : gov ? 'הצעת חוק ממשלתית' : 'הצעת חוק פרטית'}>
+      {canGov && (
+        <div className="seg" style={{ marginBottom: 10 }}>
+          <button className={gov ? 'on' : ''} onClick={() => setGov(true)}>
+            🏛️ ממשלתית
+          </button>
+          <button className={!gov ? 'on' : ''} onClick={() => setGov(false)}>
+            👤 פרטית
+          </button>
+        </div>
+      )}
+      {gov && <p className="tiny gold" style={{ marginTop: 0 }}>תזכיר חוק (21 יום) ← ועדת שרים ← ישר לקריאה ראשונה. אם ועדת השרים לא מאשרת – ההצעה נגנזת.</p>}
       <div className="filter-row">
         {BILL_TEMPLATES.map((x) => (
           <button key={x.id} className={tid === x.id ? 'on' : ''} onClick={() => setTid(x.id)}>
@@ -420,7 +439,7 @@ export function BillBuilder() {
       <div className="section-label">תחזית פוליטית (כרגע)</div>
       <div className="card">
         <div className="spread small">
-          <span>ועדת השרים צפויה: <b className={preview.gov === 'support' ? 'good' : preview.gov === 'oppose' ? 'bad' : 'warn'}>{GOV_POS_NAMES[preview.gov!]}</b></span>
+          <span>{gov ? 'ועדת השרים (ממשלתית):' : 'ועדת השרים צפויה:'} <b className={preview.gov === 'support' ? 'good' : preview.gov === 'oppose' ? 'bad' : 'warn'}>{GOV_POS_NAMES[preview.gov!]}</b></span>
           <span>
             טרומית: <span className="good">{Math.round(preview.eFor)}</span> / <span className="bad">{Math.round(preview.eAgainst)}</span>
           </span>

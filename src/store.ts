@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createGame, endWeek, type GameState, type NewGameOptions } from './engine';
 import type { OpenPanel } from './engine/actions';
+import { migrate } from './engine/migrate';
 
 export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
 export type Panel =
@@ -10,6 +11,7 @@ export type Panel =
   | { kind: 'vote'; id: string }
   | { kind: 'settings' }
   | { kind: 'help' }
+  | { kind: 'negotiation' }
   | { kind: OpenPanel };
 
 export interface Toast {
@@ -34,7 +36,7 @@ export function loadSaved(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const g = JSON.parse(raw) as GameState;
-    return g.version === 1 ? g : null;
+    return g.version === 1 ? migrate(g) : null;
   } catch {
     return null;
   }

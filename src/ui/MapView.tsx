@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { dateLabel, SESSION_NAMES, sessionOf } from '../engine/calendar';
-import { LOCATIONS } from '../engine/data/locations';
+import { LOCATIONS, locationLock } from '../engine/data/locations';
 import type { LocationId } from '../engine/types';
 import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
@@ -159,6 +159,16 @@ const SITES: Site[] = [
     render: () => <Box x={19.5} y={1.5} w={3.2} d={3.6} h={2.8} color="#a8b0b8" detail="windows" />,
   },
   {
+    id: 'ministry',
+    label: [21, -0.8, 3.4],
+    render: () => (
+      <g>
+        <Box x={19.5} y={-2.5} w={3.2} d={3.2} h={2.6} color="#b7c4cf" detail="windows" />
+        <Box x={20.3} y={-1.7} w={1.6} d={1.6} h={0.4} z={2.6} color="#94a3b8" />
+      </g>
+    ),
+  },
+  {
     id: 'finance',
     label: [21, 8, 3.2],
     render: () => <Box x={19.5} y={6.3} w={3.2} d={3.2} h={2.4} color="#c2b59b" detail="windows" />,
@@ -210,14 +220,14 @@ function lineP(x1: number, y1: number, z1: number, x2: number, y2: number, z2: n
 function Ground() {
   return (
     <g>
-      <polygon points={pts([[-1, -1, 0], [25, -1, 0], [25, 25, 0], [-1, 25, 0]])} fill="#2b4a37" />
+      <polygon points={pts([[-1, -3, 0], [25, -3, 0], [25, 25, 0], [-1, 25, 0]])} fill="#2b4a37" />
       <polygon points={pts([[-1, 25, 0], [25, 25, 0], [25, 25, -0.6], [-1, 25, -0.6]])} fill="#1d3226" />
-      <polygon points={pts([[25, -1, 0], [25, 25, 0], [25, 25, -0.6], [25, -1, -0.6]])} fill="#16271d" />
+      <polygon points={pts([[25, -3, 0], [25, 25, 0], [25, 25, -0.6], [25, -3, -0.6]])} fill="#16271d" />
       {/* קמפוס */}
       <Flat x={3.5} y={-0.5} w={14.5} d={14.5} color="#3b6147" />
       {/* כבישים */}
       <Flat x={-1} y={15} w={26} d={1.4} color="#3c4250" />
-      <Flat x={18.3} y={-1} w={0.9} d={16} color="#3c4250" />
+      <Flat x={18.3} y={-3} w={0.9} d={18} color="#3c4250" />
       <Flat x={6.2} y={15} w={1.1} d={10} color="#3c4250" />
       {[0, 3, 6, 9, 12, 15, 18, 21, 24].map((x) => (
         <Flat key={x} x={x} y={15.6} w={1.2} d={0.18} color="#cbd5e1" opacity={0.5} />
@@ -241,8 +251,9 @@ function sortKey(site: Site) {
   return site.label[0] + site.label[1];
 }
 
-export function MapScene({ interactive, onPick, here, counts, alerts }: {
+export function MapScene({ interactive, onPick, here, counts, alerts, locks }: {
   interactive?: boolean;
+  locks?: Partial<Record<LocationId, string | null>>;
   onPick?: (id: LocationId) => void;
   here?: LocationId;
   counts?: Partial<Record<LocationId, number>>;
@@ -255,12 +266,13 @@ export function MapScene({ interactive, onPick, here, counts, alerts }: {
       {TREES.filter(([x, y]) => x + y < 14).map(([x, y, s], i) => <Tree key={`t${i}`} x={x} y={y} s={s ?? 1} />)}
       {ordered.map((site) => {
         const loc = LOCATIONS[site.id];
+        const locked = locks ? !!locks[site.id] : !!loc.locked;
         const lp = P(...site.label);
         const n = counts?.[site.id] ?? 0;
         return (
           <g
             key={site.id}
-            className={`bld ${loc.locked ? 'locked' : ''}`}
+            className={`bld ${locked ? 'locked' : ''}`}
             onClick={interactive ? () => onPick?.(site.id) : undefined}
             role={interactive ? 'button' : undefined}
             aria-label={loc.name}
@@ -270,10 +282,10 @@ export function MapScene({ interactive, onPick, here, counts, alerts }: {
               <g transform={`translate(${lp.x},${lp.y - 6})`}>
                 {alerts?.[site.id] && <circle r="20" cy="-4" fill="#e8c37a" className="glow" opacity="0.5" />}
                 <text className="bld-label" textAnchor="middle" y="0">
-                  {loc.locked ? '🔒 ' : ''}
+                  {locked ? '🔒 ' : ''}
                   {loc.name}
                 </text>
-                {n > 0 && !loc.locked && (
+                {n > 0 && !locked && (
                   <g transform="translate(0,12)">
                     <rect x="-15" y="-8" width="30" height="16" rx="8" fill="rgba(10,19,34,0.85)" stroke="#29405f" />
                     <text textAnchor="middle" y="4" fontSize="11" fill="#e9eef6" fontFamily="Heebo">👤{n}</text>
@@ -325,8 +337,11 @@ export function MapView() {
   }, []);
 
   const h = view.w * aspect;
+  const alertsInit: Partial<Record<LocationId, boolean>> = {};
+  const locks = Object.fromEntries((Object.keys(LOCATIONS) as LocationId[]).map((id) => [id, locationLock(g, id)]));
+  if (g.ministryState && g.ministryState.budget >= 0.5) alertsInit.ministry = true;
   const counts = Object.fromEntries(Object.entries(g.presence).map(([k, v]) => [k, v?.length ?? 0]));
-  const alerts: Partial<Record<LocationId, boolean>> = {};
+  const alerts: Partial<Record<LocationId, boolean>> = alertsInit;
   if (g.bills.some((b) => ['preliminary', 'first', 'final'].includes(b.stage) && (b.sponsor === 'player' || b.sponsor === g.player.employerId))) alerts.plenum = true;
   if (g.player.employerId && g.presence.offices?.includes(g.player.employerId)) alerts.offices = true;
 
@@ -382,7 +397,7 @@ export function MapView() {
 
   const pick = (id: LocationId) => {
     if (drag.current.moved > 10) return;
-    if (!LOCATIONS[id].locked && g.player.location !== id) act((s) => (s.player.location = id));
+    if (!locationLock(g, id) && g.player.location !== id) act((s) => (s.player.location = id));
     open({ kind: 'location', id });
   };
 
@@ -390,7 +405,7 @@ export function MapView() {
   return (
     <div className="map-wrap" ref={wrapRef} onPointerDown={onDown} onWheel={onWheel}>
       <svg viewBox={`${view.cx - view.w / 2} ${view.cy - h / 2} ${view.w} ${h}`} preserveAspectRatio="xMidYMid meet">
-        <MapScene interactive onPick={pick} here={g.player.location} counts={counts} alerts={alerts} />
+        <MapScene interactive onPick={pick} here={g.player.location} counts={counts} alerts={alerts} locks={locks} />
       </svg>
       <div className="map-hint">
         <span className="pill">📅 {dateLabel(g)} · {SESSION_NAMES[session]}</span>

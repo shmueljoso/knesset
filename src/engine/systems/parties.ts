@@ -82,7 +82,7 @@ export function leaveParty(s: GameState): Result {
 /** ח"כים בסיעה שמוכנים ללכת אחרי השחקן, ומספר הנדרשים לפילוג חוקי (שליש). */
 export function splitInfo(s: GameState): { followers: Npc[]; needed: number; seats: number } {
   const p = s.player;
-  if (!p.isMK || !p.partyId) return { followers: [], needed: 0, seats: 0 };
+  if (!p.isMK || !p.partyId || s.parties[p.partyId].leaderId === 'player') return { followers: [], needed: 0, seats: 0 };
   const party = s.parties[p.partyId];
   const followers = partyMKs(s, party.id)
     .filter((id) => id !== 'player' && id !== party.leaderId)
@@ -151,6 +151,7 @@ export function splitFaction(s: GameState, name: string, color: string): Result 
 export function defect(s: GameState): Result {
   const p = s.player;
   if (!p.isMK || !p.partyId) return { ok: false, text: 'רק ח"כ בסיעה יכול לפרוש' };
+  if (s.parties[p.partyId].leaderId === 'player') return { ok: false, text: 'את/ה יו"ר הסיעה – אי אפשר לפרוש ממנה' };
   const old = s.parties[p.partyId];
   partyPenalty(s, old.id, 1.6);
   p.reputation = clamp(p.reputation - 18, 0, 100);
@@ -201,4 +202,49 @@ export function recruitCandidate(s: GameState): Result {
   party.list.push(target.id);
   changeAttitude(s, target.id, 15);
   return { ok: true, text: `${target.name} מצטרף/ת לרשימה במקום ה-${party.list.length}!` };
+}
+
+/** התמודדות על ראשות המפלגה מול היו"ר המכהן. */
+export function leadershipBlocked(s: GameState): string | null {
+  const p = s.player;
+  const party = p.partyId ? s.parties[p.partyId] : null;
+  if (!party) return 'צריך מפלגה';
+  if (party.leaderId === 'player') return 'את/ה כבר יו"ר המפלגה';
+  if (!p.isMK) return 'רק ח"כ יכול להתמודד על ראשות המפלגה';
+  if (p.partyStanding < 60) return 'נדרש מעמד במפלגה 60+';
+  if (p.fame < 30) return 'נדרשת מוכרות 30+';
+  if (p.money < 60) return 'קמפיין פנימי עולה 60 אלף ₪';
+  return null;
+}
+
+export function challengeLeader(s: GameState): Result {
+  const blocked = leadershipBlocked(s);
+  if (blocked) return { ok: false, text: blocked };
+  const p = s.player;
+  const party = s.parties[p.partyId!];
+  const leader = s.npcs[party.leaderId];
+  p.money -= 60;
+  const supporters = partyMKs(s, party.id).filter((id) => id !== 'player' && s.npcs[id] && s.npcs[id].attitude >= 40).length;
+  const mine = p.partyStanding * 0.5 + p.fame * 0.3 + p.reputation * 0.2 + supporters * 2 + rand(s) * 15;
+  const theirs = 45 + (leader?.influence ?? 50) * 0.25 + (s.coalition.pmId === leader?.id ? 10 : 0) + rand(s) * 15;
+  if (mine > theirs) {
+    party.leaderId = 'player';
+    party.list = ['player', ...party.list.filter((id) => id !== 'player')];
+    p.listPosition = 1;
+    p.partyStanding = 95;
+    p.fame = clamp(p.fame + 8, 0, 100);
+    if (leader) {
+      changeAttitude(s, leader.id, -70);
+      leader.influence = clamp(leader.influence - 20, 0, 100);
+    }
+    if (!p.achievements.includes('leader')) p.achievements.push('leader');
+    addNews(s, `רעידת אדמה ב${party.name}: ${p.name} ניצח/ה את ${leader?.name ?? 'היו"ר'} ונבחר/ה ליו"ר`, 'good', true);
+    log(s, `נבחרת ליו"ר ${party.name}!`, 'career');
+    return { ok: true, text: `ניצחת! את/ה יו"ר ${party.name}. בבחירות הבאות – מועמד/ת לראשות הממשלה.` };
+  }
+  p.partyStanding = clamp(p.partyStanding - 25, 0, 100);
+  p.reputation = clamp(p.reputation - 5, 0, 100);
+  if (leader) changeAttitude(s, leader.id, -45);
+  addNews(s, `${leader?.name ?? 'היו"ר'} הביס/ה את ${p.name} בהתמודדות על ראשות ${party.short}`, 'bad', true);
+  return { ok: false, text: 'הפסדת. היו"ר לא ישכח את הניסיון.' };
 }

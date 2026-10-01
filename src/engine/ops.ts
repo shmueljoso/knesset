@@ -157,6 +157,10 @@ export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {
         break;
       }
       case 'stability':
+        // יציבות נגזרת משביעות הרצון של השותפות – משנים את כולן
+        for (const p of s.coalition.parties) {
+          if (s.coalition.satisfaction[p] !== undefined) s.coalition.satisfaction[p] = clamp(s.coalition.satisfaction[p] + o.d, 0, 100);
+        }
         s.coalition.stability = clamp(s.coalition.stability + o.d, 0, 100);
         break;
       case 'news':

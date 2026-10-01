@@ -1,17 +1,19 @@
 import { isBudgetDeadline } from './calendar';
-import { chance, pick, rand } from './rng';
+import { chance, pick } from './rng';
+import { onBudgetPassed, tickCoalition, tickNegotiation } from './systems/coalition';
 import { buildLists, callEarlyElections, runElection } from './systems/elections';
+import { resetMinistryBudget, tickMinistry } from './systems/ministry';
 import { rollEvents } from './systems/events';
 import { isCoalition } from './systems/government';
 import { tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
-import { govSatisfaction, pollSeats, tickWorld, updatePolls } from './systems/opinion';
+import { pollSeats, tickWorld, updatePolls } from './systems/opinion';
 import { refreshPresence } from './systems/presence';
 import { decayRelationships } from './systems/relationships';
 import { log, snapshot } from './systems/report';
 import { recomputeAp, tickStaff } from './systems/staff';
 import type { GameState } from './types';
-import { avgApproval, clamp } from './util';
+import { avgApproval } from './util';
 
 const QUOTES = [
   'הממשלה הזו מנותקת מהעם',
@@ -65,18 +67,16 @@ export function endWeek(s: GameState) {
   updatePolls(s);
   tickLegislation(s);
 
-  // יציבות קואליציה
-  const gov = govSatisfaction(s);
-  s.coalition.stability = clamp(s.coalition.stability + gov * 1.2 + (55 - s.coalition.stability) * 0.02 + (rand(s) - 0.55) * 3, 0, 100);
-  if (s.coalition.stability <= 4) {
-    callEarlyElections(s, 'הקואליציה קרסה');
-    s.coalition.stability = 30;
-  }
-  if (isBudgetDeadline(s)) {
+  // קואליציה, משא ומתן ומשרד
+  tickNegotiation(s);
+  if (!s.negotiation) tickCoalition(s);
+  tickMinistry(s);
+  if (isBudgetDeadline(s) && !s.negotiation) {
     if (s.coalition.stability < 25) callEarlyElections(s, 'חוק התקציב לא עבר במועד');
     else {
-      s.coalition.stability = clamp(s.coalition.stability + 6, 0, 100);
       addNews(s, 'הכנסת אישרה את תקציב המדינה בקריאה שנייה ושלישית', 'neutral');
+      onBudgetPassed(s);
+      resetMinistryBudget(s);
       if (p.isMK && isCoalition(s, p.partyId)) p.capital += 2;
     }
   }
@@ -95,7 +95,7 @@ export function endWeek(s: GameState) {
     buildLists(s);
     addNews(s, 'נסגרו הרשימות לכנסת. הקמפיינים יוצאים לדרך', 'neutral');
   }
-  if (s.week === s.electionWeek) {
+  if (s.week === s.electionWeek && !s.negotiation) {
     runElection(s);
     s.flags.showElection = true;
   }
