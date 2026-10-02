@@ -2,7 +2,7 @@
 // וכך אפשר גם להציג לשחקן "השפעה צפויה" לפני שהוא בוחר.
 import { addNews } from './systems/news';
 import { WORLD_NAMES, addWorldEffect, changeApproval, takeStance } from './systems/opinion';
-import { addDebt, changeAttitude, changeTrust, clearDebt, revealTrait, TRAIT_INFO } from './systems/relationships';
+import { addDebt, addMemory, changeAttitude, changeTrust, clearDebt, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
 import type { Debt, GameState, Ideology, NewsItem, Sector, Skill, WorldKey } from './types';
 import { SECTOR_NAMES, clamp, fmtDelta } from './util';
@@ -26,7 +26,8 @@ export type Op =
   | { op: 'flag'; key: string; v: number | string | boolean }
   | { op: 'reveal'; who: string }
   | { op: 'special'; id: string; label?: string }
-  | { op: 'log'; text: string };
+  | { op: 'log'; text: string }
+  | { op: 'memory'; who: string; text: string; d?: number };
 
 export const STAT_NAMES: Record<StatKey, string> = {
   fame: 'מוכרות',
@@ -188,6 +189,9 @@ export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {
       }
       case 'log':
         log(s, fill(s, o.text, ctx), 'event');
+        break;
+      case 'memory':
+        for (const id of resolveWho(s, o.who, ctx)) addMemory(s, id, fill(s, o.text, ctx), o.d ?? 0);
         break;
     }
   }

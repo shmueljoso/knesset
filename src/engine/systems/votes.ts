@@ -5,6 +5,7 @@ import { AXES, leanAlignment, sigmoid } from '../util';
 import { isCoalition } from './government';
 import { debtsWith } from './relationships';
 import { requiredMajority } from './issues';
+import { caucusBonus } from './influence';
 
 export type Line = 'for' | 'against' | 'free';
 export const LINE_NAMES: Record<Line, string> = { for: 'בעד', against: 'נגד', free: 'חופש הצבעה' };
@@ -66,6 +67,7 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
     score += (n.attitude / 100) * 0.9;
     if (n.pledges.includes(b.id)) score += n.traits.includes('loyal') ? 3 : n.traits.includes('opportunist') ? 1.2 : 2;
     if (debtsWith(s, n.id, 'owes_player').length) score += 0.4;
+    score += caucusBonus(s, n.id, b.templateId);
   }
   let absent = ABSENT_BASE[b.stage] ?? 0.2;
   // ח"כ קואליציה שתומך אבל הממשלה מתנגדת – יעדיף להיעדר מאשר להפר משמעת

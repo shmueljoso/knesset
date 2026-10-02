@@ -1,6 +1,6 @@
 import { rand } from '../rng';
-import type { Debt, GameState, Npc, Trait } from '../types';
-import { clamp, ideologyDistance, newId } from '../util';
+import type { Debt, GameState, Ideology, Npc, Trait } from '../types';
+import { clamp, ideologyDistance, leanAlignment, newId } from '../util';
 
 export const TRAIT_INFO: Record<Trait, { name: string; desc: string }> = {
   loyal: { name: 'נאמן', desc: 'עומד בהתחייבויות, סולח לאט אבל זוכר טוב.' },
@@ -98,4 +98,41 @@ export const npcIsPresent = (s: GameState, id: string) => (s.presence[s.player.l
 
 export function isLeader(s: GameState, n: Npc) {
   return !!n.partyId && s.parties[n.partyId]?.leaderId === n.id;
+}
+
+/** זיכרון של דמות על השחקן (נשמרים 6 אחרונים) */
+export function addMemory(s: GameState, id: string, text: string, d = 0) {
+  const n = s.npcs[id];
+  if (!n) return;
+  n.memory = [...(n.memory ?? []), { week: s.week, text, d }].slice(-6);
+}
+
+/** דמויות מגיבות לחוק שהשחקן העביר: מי שזה "הנושא שלו" – מתלהב; מי שמתנגד – זוכר */
+export function reactToLaw(s: GameState, templateId: string, lean: Partial<Ideology>, title: string) {
+  for (const n of Object.values(s.npcs)) {
+    if (!n.notable && !(n.partyId && s.parties[n.partyId]?.leaderId === n.id)) continue;
+    if (n.agenda === templateId) {
+      changeAttitude(s, n.id, 15, { spread: false });
+      addMemory(s, n.id, `העבירה את "${title}" – החוק שחלמתי עליו`, 15);
+      continue;
+    }
+    if (!Object.keys(lean).length) continue;
+    const a = leanAlignment(n.ideology, lean);
+    if (a > 0.6) changeAttitude(s, n.id, 4, { spread: false });
+    else if (a < -0.4) {
+      changeAttitude(s, n.id, -6, { spread: false });
+      addMemory(s, n.id, `העבירה את "${title}" נגד עמדתי`, -6);
+    }
+  }
+}
+
+/** תגובה קטנה של דמויות בולטות לעמדה פומבית חזקה */
+export function reactToStance(s: GameState, lean: Partial<Ideology>, magnitude: number) {
+  if (Math.abs(magnitude) < 2 || !Object.keys(lean).length) return;
+  for (const n of Object.values(s.npcs)) {
+    if (!n.notable || !n.isMK) continue;
+    const a = leanAlignment(n.ideology, lean);
+    if (a > 0.5) n.attitude = clamp(n.attitude + 1, -100, 100);
+    else if (a < -0.5) n.attitude = clamp(n.attitude - 1, -100, 100);
+  }
 }

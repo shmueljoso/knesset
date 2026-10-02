@@ -7,6 +7,7 @@ import { formGovernment } from './systems/government';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3 } from './migrate';
+import { checkMissions } from './systems/missions';
 import type {
   AvatarSpec,
   BackgroundId,
@@ -292,6 +293,8 @@ export function createGame(opts: NewGameOptions): GameState {
   refreshPresence(s);
   s.pollHistory.push({ week: 0, polls: Object.fromEntries(Object.values(parties).map((p) => [p.id, p.poll])) });
   s.weekStart = snapshot(s);
+  s.missions = [];
+  checkMissions(s);
   s.news.push({
     id: 'w0',
     week: 0,

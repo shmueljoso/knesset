@@ -3,6 +3,7 @@ import type { GameState } from '../types';
 import { clamp } from '../util';
 import { spawnCandidate } from '../newGame';
 import { startFormateur, startPartner } from './coalition';
+import { applyRecruits } from './influence';
 import { formGovernment, proposeCoalition } from './government';
 import { addNews } from './news';
 import { log } from './report';
@@ -78,6 +79,7 @@ export function playerListScore(s: GameState): number {
 
 /** בניית רשימות לקראת הבחירות; השחקן מוצב לפי הציון שלו. */
 export function buildLists(s: GameState) {
+  applyRecruits(s);
   for (const party of Object.values(s.parties)) {
     if (party.playerFounded) continue;
     const leader = party.leaderId;
@@ -137,6 +139,7 @@ export function runElection(s: GameState) {
     p.seats = seats[p.id];
     while (p.list.length < p.seats) spawnCandidate(s, p.id);
     const elected = p.list.slice(0, p.seats);
+    for (const id of p.list) if (id !== 'player' && s.npcs[id]) s.npcs[id].partyId = p.id;
     for (const id of elected) {
       if (id === 'player') s.player.isMK = true;
       else {

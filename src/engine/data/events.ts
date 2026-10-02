@@ -6,6 +6,7 @@ import { isCoalition } from '../systems/government';
 import { debtsWith } from '../systems/relationships';
 import { isHot } from '../systems/issues';
 import type { GameState, Npc } from '../types';
+import { BILL_TEMPLATES } from './bills';
 
 export interface EventChoice {
   label: string;
@@ -77,6 +78,7 @@ export const EVENTS: GameEvent[] = [
         ops: [
           { op: 'att', who: '@ctx', d: -28 },
           { op: 'trust', who: '@ctx', d: -25 },
+          { op: 'memory', who: '@ctx', text: 'לא החזיר/ה לי את החוב', d: -28 },
           { op: 'reputation', d: -5 },
           { op: 'clearDebt', who: '@ctx', dir: 'player_owes' },
         ],
@@ -606,6 +608,62 @@ const LAW_EVENTS: GameEvent[] = [
   },
 ];
 EVENTS.push(...LAW_EVENTS);
+
+
+// ---------- יוזמות של דמויות ----------
+const NPC_EVENTS: GameEvent[] = [
+  {
+    id: 'npc_alliance', icon: '🤝', weight: 4, cooldown: 14,
+    title: '{npc} מציע/ה ברית',
+    body: '{npc} ({npcParty}) מושך/ת אותך הצידה במזנון: "אני רואה לאן את/ה הולך/ת. בוא/י נעבוד ביחד – אני תומך/ת בהצעות שלך, את/ה מגבה אותי כשצריך."',
+    when: (s) => s.player.fame >= 25 || s.player.isMK,
+    ctx: (s) => pickNpc(s, Object.values(s.npcs).filter((n) => n.isMK && n.notable && (n.traits.includes('opportunist') || n.traits.includes('pragmatic')) && n.attitude >= 10 && n.attitude < 60)),
+    choices: [
+      { label: 'לכרות ברית', ops: [{ op: 'att', who: '@ctx', d: 15 }, { op: 'trust', who: '@ctx', d: 10 }, { op: 'special', id: 'alliance', label: 'יתחייב לתמוך בהצעות שלך' }, { op: 'debt', who: '@ctx', dir: 'player_owes', reason: 'ברית פוליטית' }, { op: 'memory', who: '@ctx', text: 'כרתנו ברית', d: 15 }] },
+      { label: 'לשמור מרחק', ops: [{ op: 'att', who: '@ctx', d: -5 }] },
+    ],
+  },
+  {
+    id: 'npc_cosponsor', icon: '✍️', weight: 5, cooldown: 10,
+    title: '{npc} מבקש/ת שתצטרף/י כמגיש/ה',
+    body: '{npc} עובד/ת כבר שנים על "{agendaTitle}". "תחתום/י איתי על ההצעה – ביחד יש לנו סיכוי להעביר אותה. וכשתעבור, גם את/ה תקבל/י קרדיט."',
+    when: (s) => s.player.isMK,
+    ctx: (s) => {
+      const cands = Object.values(s.npcs).filter((n) => n.isMK && n.notable && n.attitude >= 0 && !s.flags[`cosp_${n.id}`] && !s.lawsPassed.some((l) => l.templateId === n.agenda));
+      if (!cands.length) return null;
+      const n = pick(s, cands);
+      return { npc: n.id, agenda: n.agenda, agendaTitle: BILL_TEMPLATES.find((t) => t.id === n.agenda)!.title };
+    },
+    choices: [
+      { label: 'לחתום כמגיש/ה נוסף/ת', dyn: (_s, ctx) => [{ op: 'att', who: '@ctx', d: 12 }, { op: 'special', id: 'cosponsor', label: 'קרדיט אם יעבור' }, { op: 'stance', lean: BILL_TEMPLATES.find((t) => t.id === ctx.agenda)!.lean, d: 1.2 }, { op: 'memory', who: '@ctx', text: 'חתם/ה איתי על ההצעה', d: 12 }] },
+      { label: 'לסרב בנימוס', ops: [{ op: 'att', who: '@ctx', d: -4 }] },
+    ],
+  },
+  {
+    id: 'plot_warning', queued: true, icon: '🕵️', title: '{npc2} מזהיר/ה אותך',
+    body: '{npc2} לוחש/ת לך: "תיזהר/י. {npc} אוסף/ת חומרים נגדך ומתכנן/ת להדליף אותם לתקשורת בשבוע הבא. חשבתי שאת/ה צריך/ה לדעת."',
+    choices: [
+      {
+        label: 'לעמת את {npc} בארבע עיניים', hint: 'סיכוי לפי משא ומתן',
+        chance: { p: (s) => 0.3 + s.player.skills.negotiation / 150, fail: [{ op: 'special', id: 'plot_go' }, { op: 'att', who: '@ctx', d: -5 }], failText: 'העימות רק הרגיז/ה אותו/ה. ההדלפה בדרך.' },
+        ops: [{ op: 'att', who: '@ctx', d: 20 }, { op: 'memory', who: '@ctx', text: 'עימת/ה אותי – והגענו להבנות', d: 20 }],
+        result: 'הגעתם להבנה. המזימה בוטלה.',
+      },
+      { label: 'להקדים תרופה למכה בתקשורת', ops: [{ op: 'fame', d: 2 }, { op: 'att', who: '@ctx', d: -10 }, { op: 'reputation', d: -1 }] },
+      { label: 'להתעלם', ops: [{ op: 'special', id: 'plot_go' }] },
+    ],
+  },
+  {
+    id: 'plot_strike', queued: true, icon: '💣', title: '{npc} הדליף/ה נגדך',
+    body: 'בכותרת הראשית: "מקורבים ל{player}: מאחורי הקלעים – סחר בטובות ודילים". המקור? אף אחד לא מופתע שזה {npc}.',
+    choices: [
+      { label: 'להכחיש בתוקף', chance: { p: (s) => 0.35 + s.player.skills.media / 150, fail: [{ op: 'approval', sector: 'all', d: -3 }, { op: 'reputation', d: -3 }], failText: 'ההכחשה לא שכנעה איש.' }, ops: [{ op: 'fame', d: 1 }], result: 'הסיפור נחלש.' },
+      { label: 'להודות ולהתנצל', ops: [{ op: 'approval', sector: 'all', d: -1.5 }, { op: 'reputation', d: 1 }, { op: 'partyStanding', d: -3 }] },
+      { label: 'להחזיר מכה', ops: [{ op: 'fame', d: 3 }, { op: 'approval', sector: 'all', d: -1 }, { op: 'att', who: '@ctx', d: -15 }, { op: 'memory', who: '@ctx', text: 'החזיר/ה לי מכה בתקשורת', d: -15 }] },
+    ],
+  },
+];
+EVENTS.push(...NPC_EVENTS);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id);
 

@@ -8,15 +8,17 @@ import { takeStance } from './systems/opinion';
 import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { askBudget } from './systems/ministry';
+import { pressFactor } from './systems/influence';
+import { checkMissions } from './systems/missions';
 import { scheduleEvent, strikeChance } from './systems/issues';
 import { CABINET_EVENTS } from './data/events';
-import { changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
+import { addMemory, changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
 import { staffBonus } from './systems/staff';
 import type { GameState, Ideology, LocationId } from './types';
 import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_NAMES, clamp, leanAlignment } from './util';
 
-export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry';
+export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus';
 
 export interface ActionResult {
   text: string;
@@ -61,7 +63,7 @@ function run(s: GameState, ops: Op[], text: string, good = true): ActionResult {
   return { text, lines, good };
 }
 
-const mediaPower = (s: GameState) => 1 + staffBonus(s, 'spokesperson') * 0.12 + s.player.skills.media / 200;
+const mediaPower = (s: GameState) => (1 + staffBonus(s, 'spokesperson') * 0.12 + s.player.skills.media / 200) * pressFactor(s);
 
 export const ACTIONS: ActionDef[] = [
   // ---------- מליאה ----------
@@ -455,6 +457,54 @@ export const ACTIONS: ActionDef[] = [
       return { text: r.text, good: r.ok };
     },
   },
+  // ---------- שלב 3: פעולות נוספות ----------
+  {
+    id: 'rally', loc: 'field', icon: '🎉', label: 'עצרת המונים', ap: 2, money: 30,
+    desc: 'אלפי תומכים, במה ודגלים. מוכרות, מעמד במפלגה ועמדה ברורה.',
+    avail: needParty,
+    run: (s) => {
+      takeStance(s, signatureLean(s), 2.5);
+      return run(s, [{ op: 'fame', d: 3 * mediaPower(s) }, { op: 'partyStanding', d: 2 }], 'הכיכר התמלאה. התמונות מהרחפן בכל מקום.');
+    },
+  },
+  {
+    id: 'digital', loc: 'studio', icon: '🎯', label: 'קמפיין דיגיטלי ממומן', ap: 1, money: 25,
+    desc: 'פרסום ממוקד בקהל הקרוב אליך ברשתות.',
+    run: (s) => {
+      const sec = [...SECTORS].sort((a, b) => leanAlignment(SECTOR_IDEOLOGY[b], s.player.ideology) - leanAlignment(SECTOR_IDEOLOGY[a], s.player.ideology))[0];
+      return run(s, [{ op: 'approval', sector: sec, d: 2.5 }, { op: 'fame', d: 1 }], `הקמפיין רץ בקרב ${SECTOR_NAMES[sec]}.`);
+    },
+  },
+  {
+    id: 'press_dinner', loc: 'cafeteria', icon: '🍷', label: 'ארוחת שישי עם עיתונאים', ap: 1, money: 5,
+    desc: 'שיחות רקע. עיתונאים ידידותיים מגבירים כל הופעה שלך בתקשורת.',
+    run: (s) => {
+      for (const n of Object.values(s.npcs)) if (n.role === 'journalist') changeAttitude(s, n.id, 5, { spread: false });
+      return { text: 'הכתבים הפוליטיים יצאו עם "חומר רקע" – ויחס חם יותר.', good: true };
+    },
+  },
+  {
+    id: 'delegation', loc: 'offices', icon: '✈️', label: 'משלחת פרלמנטרית לחו"ל', ap: 3,
+    desc: 'שבוע בבירה זרה עם ח"כים מכל הסיעות. רק בפגרה.',
+    avail: all(needMK, (s) => (inSession(s) ? 'רק בפגרה' : null)),
+    run: (s) => {
+      const mks = Object.values(s.npcs).filter((n) => n.isMK);
+      const lines: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const n = pick(s, mks);
+        changeAttitude(s, n.id, 8, { spread: false });
+        addMemory(s, n.id, 'יצאנו יחד למשלחת', 8);
+        lines.push(n.name);
+      }
+      return run(s, [{ op: 'reputation', d: 1 }], `התגבשת עם ${lines.join(', ')}.`);
+    },
+  },
+  {
+    id: 'caucus', loc: 'committees', icon: '🧩', label: 'שדולות בכנסת', ap: 0,
+    desc: 'להקים שדולה חוצת-סיעות לנושא – ולגייס תמיכה קבועה בהצבעות.',
+    avail: needMK,
+    run: () => ({ text: '', open: 'caucus' }),
+  },
   // ---------- שלב 3: בית המשפט ----------
   {
     id: 'petition', loc: 'court', icon: '📄', label: 'להגיש עתירה נגד חוק', ap: 1, money: 20,
@@ -508,9 +558,12 @@ export function performAction(s: GameState, id: string): ActionResult {
   const blocked = actionBlocked(s, a);
   if (blocked) return { text: blocked, good: false };
   s.player.ap -= a.ap;
+  s.counters[`act_${a.id}`] = (s.counters[`act_${a.id}`] ?? 0) + 1;
   if (a.money) s.player.money -= a.money;
   if (a.capital) s.player.capital -= a.capital;
   const res = a.run(s);
+  const done = checkMissions(s);
+  if (done.length) res.lines = [...(res.lines ?? []), ...done.map((d) => `✅ משימה הושלמה: ${d}`)];
   if (res.text && !res.open) log(s, `${a.label}: ${res.text}`, 'action');
   return res;
 }

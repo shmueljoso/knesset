@@ -63,7 +63,7 @@ export function EventModal() {
           const chips = describeOps(g, choiceOps(g, c, ctx), ctx);
           return (
             <button key={i} className="choice" disabled={!!blocked} onClick={() => choose(i)}>
-              <b>{c.label}</b>
+              <b>{fill(g, c.label, ctx)}</b>
               {(blocked || c.hint) && <span className="small muted">{blocked ?? c.hint}</span>}
               {c.chance && <span className="small warn">סיכון: יש סיכוי שזה ייכשל</span>}
               <Chips chips={chips} />

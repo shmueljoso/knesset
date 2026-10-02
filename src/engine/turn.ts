@@ -6,9 +6,11 @@ import { resetMinistryBudget, tickMinistry } from './systems/ministry';
 import { rollEvents } from './systems/events';
 import { isCoalition } from './systems/government';
 import { releaseScheduled, tickIssues } from './systems/issues';
+import { tickNpcs } from './systems/npcs';
+import { checkMissions } from './systems/missions';
 import { tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
-import { pollSeats, tickWorld, updatePolls } from './systems/opinion';
+import { WORLD_NAMES, pollSeats, tickWorld, updatePolls } from './systems/opinion';
 import { refreshPresence } from './systems/presence';
 import { decayRelationships } from './systems/relationships';
 import { log, snapshot } from './systems/report';
@@ -64,10 +66,26 @@ export function endWeek(s: GameState) {
 
   p.money += weeklyIncome(s);
   tickStaff(s);
+  // "למה זה קרה": מה הזיז את מצב המדינה השבוע
+  const agg: Record<string, number> = {};
+  for (const e of s.effects) {
+    if (s.week < e.startWeek || e.weeksLeft <= 0) continue;
+    const k = `${e.source === 'event' ? 'אירועים' : e.source}|${e.key}`;
+    agg[k] = (agg[k] ?? 0) + e.perWeek;
+  }
+  const drivers = Object.entries(agg)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 5)
+    .filter(([, v]) => Math.abs(v) >= 0.05)
+    .map(([k, v]) => {
+      const [src, key] = k.split('|');
+      return `${src}: ${WORLD_NAMES[key as keyof typeof WORLD_NAMES]} ${v > 0 ? '+' : ''}${v.toFixed(1)}`;
+    });
   tickWorld(s);
   updatePolls(s);
   tickLegislation(s);
   tickIssues(s);
+  tickNpcs(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);
@@ -89,6 +107,7 @@ export function endWeek(s: GameState) {
   }
 
   decayRelationships(s);
+  checkMissions(s);
   releaseScheduled(s);
   rollEvents(s);
   worldNews(s);
@@ -119,6 +138,7 @@ export function endWeek(s: GameState) {
     entries: s.log.filter((l) => l.week === s.week - 1 || (l.week === s.week && l.kind !== 'action')),
     worldBefore,
     worldAfter: { ...s.world },
+    drivers,
   };
   s.weekStart = after;
   if (p.money < -50 && !s.flags.debtWarned) {

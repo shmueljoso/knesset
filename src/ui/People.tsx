@@ -8,6 +8,9 @@ import { AXES, AXIS_NAMES } from '../engine/util';
 import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Meter, PartyTag, Sheet } from './common';
+import { CATCHPHRASES, greeting } from '../engine/data/personality';
+import { templateById } from '../engine/data/bills';
+import { npcBenefits } from '../engine/systems/influence';
 
 type Filter = 'notable' | 'mine' | 'coalition' | 'opposition' | 'allies' | 'rivals' | 'gov' | 'media' | 'all';
 const FILTERS: { id: Filter; label: string }[] = [
@@ -122,9 +125,39 @@ export function NpcSheet({ id }: { id: string }) {
       }
       icon={<Avatar spec={n.avatar} size={56} ring={party?.color ?? '#64748b'} />}
     >
-      <p className="small muted" style={{ marginTop: 0 }}>
-        {n.bio} {chairOf && `יו"ר ${chairOf.name}.`}
-      </p>
+      <div className="card" style={{ borderInlineStart: `4px solid ${party?.color ?? 'var(--line)'}` }}>
+        <div className="small">
+          💬 "{greeting(n.attitude)} {n.knownTraits.length ? CATCHPHRASES[n.knownTraits[0]][n.id.length % 3] : ''}"
+        </div>
+        <div className="tiny muted" style={{ marginTop: 6 }}>
+          {n.bio} {chairOf && `יו"ר ${chairOf.name}.`}
+        </div>
+        {n.agenda && (
+          <div className="tiny" style={{ marginTop: 6 }}>
+            📌 הנושא שלו/ה: <b>{templateById(n.agenda).title}</b> · שאפתנות {n.ambition >= 70 ? 'גבוהה' : n.ambition >= 40 ? 'בינונית' : 'נמוכה'}
+          </div>
+        )}
+      </div>
+      {n.memory?.length > 0 && (
+        <>
+          <div className="section-label">זוכר/ת עליך</div>
+          <div className="card">
+            {[...n.memory].reverse().map((m, i) => (
+              <div key={i} className="small" style={{ padding: '3px 0' }}>
+                {m.d > 0 ? '🟢' : m.d < 0 ? '🔴' : '⚪'} {m.text} <span className="tiny faint">· שבוע {m.week + 1}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="section-label">מה הוא/היא יכול/ה לעשות בשבילך</div>
+      <div className="card">
+        {npcBenefits(g, n).map((b, i) => (
+          <div key={i} className="small" style={{ padding: '3px 0', opacity: b.active ? 1 : 0.6 }}>
+            {b.active ? '✅' : '▫️'} {b.text}
+          </div>
+        ))}
+      </div>
       <div className="card">
         <div className="spread" style={{ marginBottom: 8 }}>
           <b style={{ color: attitudeColor(n.attitude) }}>

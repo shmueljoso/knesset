@@ -236,6 +236,7 @@ export interface WeekReport {
   entries: LogEntry[];
   worldBefore: World;
   worldAfter: World;
+  drivers?: string[];
 }
 
 export interface LogEntry {

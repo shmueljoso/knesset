@@ -194,3 +194,18 @@ registerSpecial('override_vote', (s, ctx) => {
   }
   return 'לקואליציה אין רוב לחקיקה מחדש. הפסיקה נשארת.';
 });
+
+// ---- שלב 3: דמויות ----
+registerSpecial('alliance', (s, ctx) => {
+  const n = s.npcs[ctx.npc];
+  if (!n) return;
+  for (const b of s.bills) if ((b.sponsor === 'player' || b.sponsor === s.player.employerId) && b.stage !== 'passed' && b.stage !== 'failed' && !n.pledges.includes(b.id)) n.pledges.push(b.id);
+  s.flags[`ally_${n.id}`] = true;
+  return `${n.name} יתמוך/תתמוך בהצעות החוק שלך.`;
+});
+registerSpecial('cosponsor', (s, ctx) => {
+  s.flags[`cosp_${ctx.npc}`] = ctx.agenda;
+});
+registerSpecial('plot_go', (s, ctx) => {
+  scheduleEvent(s, 'plot_strike', 1, { npc: ctx.npc });
+});

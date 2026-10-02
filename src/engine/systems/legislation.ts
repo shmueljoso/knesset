@@ -10,7 +10,7 @@ import { onLawPassed } from './issues';
 import { isCoalition } from './government';
 import { addNews } from './news';
 import { addWorldEffect, changeApproval } from './opinion';
-import { addDebt, changeAttitude } from './relationships';
+import { addDebt, changeAttitude, reactToLaw } from './relationships';
 import { log } from './report';
 import { billImpact, billLean, runVote, sponsorParty } from './votes';
 
@@ -241,6 +241,7 @@ function onPassed(s: GameState, b: Bill) {
   const t = templateById(b.templateId);
   const impact = billImpact(b);
   onLawPassed(s, { templateId: t.id, title: b.title, scope: b.scope, sponsor: b.sponsor });
+  if (b.sponsor === 'player' || b.sponsor === s.player.employerId) reactToLaw(s, t.id, billLean(b), b.title);
   for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * impact, t.weeks, b.title, t.delay);
   const own = b.sponsor === 'player' ? 1 : 0.35;
   const fameF = 0.5 + s.player.fame / 100;

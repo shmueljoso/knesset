@@ -1,5 +1,7 @@
 import { rand } from '../rng';
 import { salienceMultiplier } from './issues';
+import { reactToStance } from './relationships';
+import { playerSeatContribution } from './influence';
 import type { GameState, Ideology, Sector, WorldKey } from '../types';
 import { SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
 
@@ -25,6 +27,7 @@ export function takeStance(s: GameState, lean: Partial<Ideology>, magnitude: num
   // עמדה בסוגיה בוערת מזיזה יותר
   const axis = (Object.keys(lean) as (keyof Ideology)[]).sort((a, b) => Math.abs(lean[b] ?? 0) - Math.abs(lean[a] ?? 0))[0] ?? null;
   magnitude *= salienceMultiplier(s, axis);
+  reactToStance(s, lean, magnitude);
   const fameFactor = 0.4 + s.player.fame / 100;
   const out = {} as Record<Sector, number>;
   for (const sec of SECTORS) {
@@ -90,7 +93,7 @@ export function updatePolls(s: GameState) {
     const inCoal = s.coalition.parties.includes(p.id);
     target *= 1 + (inCoal ? gov * 0.18 : -gov * 0.1);
     if (p.playerFounded) target = playerElectoralAppeal(s);
-    else if (p.id === s.player.partyId) target += (s.player.fame / 100) * ((avg(s) - 50) / 50) * 3;
+    else if (p.id === s.player.partyId) target += playerSeatContribution(s)?.pct ?? 0;
     p.poll = Math.max(0, p.poll + (target - p.poll) * 0.12 + (rand(s) - 0.5) * 0.35);
   }
   // נרמול ל-100%. הבסיס עצמו מתעדכן רק בבחירות, כדי למנוע סחף מצטבר.
@@ -98,9 +101,6 @@ export function updatePolls(s: GameState) {
   for (const p of parties) p.poll = (p.poll / total) * 100;
 }
 
-function avg(s: GameState) {
-  return SECTORS.reduce((a, sec) => a + s.player.approval[sec] * SECTOR_WEIGHTS[sec], 0);
-}
 
 export function pollSeats(poll: number, threshold = 3.25): number {
   return poll < threshold ? 0 : Math.round((poll / 100) * 120);

@@ -1,6 +1,7 @@
 import { BILL_TEMPLATES } from './data/bills';
 import { ISSUES } from './data/issues';
 import { makeLocalRng } from './rng';
+import { checkMissions } from './systems/missions';
 import type { GameState, IssueId, Npc } from './types';
 import { leanAlignment } from './util';
 
@@ -33,6 +34,7 @@ export function ensurePhase3(g: GameState) {
   g.caucuses ??= [];
   g.scandal ??= null;
   g.mod ??= null;
+  if (!g.missions.length && !g.missionsDone.length) checkMissions(g);
   g.career ??= {
     mkTerms: g.player.isMK ? 1 : 0,
     peakSeats: g.player.partyId ? g.parties[g.player.partyId].seats : 0,

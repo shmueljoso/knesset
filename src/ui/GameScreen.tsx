@@ -1,6 +1,7 @@
 import { useGame, useStore, type Panel } from '../store';
 import type { LocationId } from '../engine/types';
 import { Dashboard } from './Dashboard';
+import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
 import { Hud, TabBar } from './Hud';
@@ -39,6 +40,8 @@ function PanelView({ p }: { p: Panel }) {
       return <MinistrySheet />;
     case 'negotiation':
       return <NegotiationSheet />;
+    case 'caucus':
+      return <CaucusSheet />;
   }
 }
 

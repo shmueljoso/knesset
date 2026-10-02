@@ -32,7 +32,8 @@ export function NewsView() {
               <span className="outlet">{n.outlet}</span>
               <span className="tiny faint">{shortDateLabel(g, n.week)}</span>
             </div>
-            <h4>
+            <h4 className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+              {n.npcId && g.npcs[n.npcId] && <Avatar spec={g.npcs[n.npcId].avatar} size={30} />}
               {n.tone === 'good' ? '🟢 ' : n.tone === 'bad' ? '🔴 ' : ''}
               {n.headline}
             </h4>

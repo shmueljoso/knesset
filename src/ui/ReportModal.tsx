@@ -62,6 +62,16 @@ export function ReportModal() {
             </div>
           </>
         )}
+        {r.drivers && r.drivers.length > 0 && (
+          <>
+            <div className="section-label">למה זה קרה</div>
+            {r.drivers.map((d, i) => (
+              <p key={i} className="tiny muted" style={{ margin: '0 0 3px' }}>
+                ↳ {d}
+              </p>
+            ))}
+          </>
+        )}
         {(important.length > 0 || myNews.length > 0) && (
           <>
             <div className="section-label">מה קרה</div>

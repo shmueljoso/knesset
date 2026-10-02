@@ -4,7 +4,7 @@ import { clamp, ideologyDistance, newId } from '../util';
 import { partyMKs } from './government';
 import { addNews } from './news';
 import { playerElectoralAppeal } from './opinion';
-import { changeAttitude } from './relationships';
+import { addMemory, changeAttitude } from './relationships';
 import { log } from './report';
 
 export const FOUND_COST = 150; // אלפי ₪: רישום אצל רשם המפלגות, אגרה ומטה ראשוני
@@ -16,6 +16,7 @@ function partyPenalty(s: GameState, oldId: string, scale: number) {
   for (const n of Object.values(s.npcs)) {
     if (n.partyId !== oldId) continue;
     changeAttitude(s, n.id, (n.id === old.leaderId ? -45 : -18) * scale, { spread: false });
+    if (n.notable) addMemory(s, n.id, `נטש/ה את ${old.name}`, -18);
   }
 }
 

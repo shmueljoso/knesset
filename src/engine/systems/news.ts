@@ -11,8 +11,9 @@ export function addNews(
   aboutPlayer = false,
   body?: string,
   outlet?: string,
+  npcId?: string,
 ) {
-  s.news.unshift({ id: newId(s, 'news'), week: s.week, outlet: outlet ?? pick(s, OUTLETS), headline, body, tone, aboutPlayer });
+  s.news.unshift({ id: newId(s, 'news'), week: s.week, outlet: outlet ?? pick(s, OUTLETS), headline, body, tone, aboutPlayer, npcId });
   if (s.news.length > 150) s.news.length = 150;
 }
 
