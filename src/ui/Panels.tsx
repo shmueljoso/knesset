@@ -6,6 +6,7 @@ import { pollSeats } from '../engine/systems/opinion';
 import { FOUND_COST, defect, foundParty, joinParty, leaveParty, splitFaction, splitInfo } from '../engine/systems/parties';
 import { STAFF_ROLES, fireStaff, hireStaff, maxStaff, staffCandidates, staffCost } from '../engine/systems/staff';
 import { ideologyDistance } from '../engine/util';
+import { retire } from '../engine/systems/legacy';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Empty, Sheet } from './common';
@@ -218,6 +219,8 @@ export function SettingsSheet() {
   const setScreen = useStore((s) => s.setScreen);
   const closeAll = useStore((s) => s.closeAll);
   const [confirm, setConfirm] = useState(false);
+  const [retireConfirm, setRetireConfirm] = useState(false);
+  const act = useStore((s) => s.act);
   const bg = BACKGROUNDS.find((b) => b.id === g.player.background)!;
   const exportSave = () => {
     const blob = new Blob([JSON.stringify(g)], { type: 'application/json' });
@@ -240,6 +243,15 @@ export function SettingsSheet() {
         <button className="btn" onClick={() => { closeAll(); setScreen('title'); }}>
           🏠 למסך הפתיחה
         </button>
+        {!retireConfirm ? (
+          <button className="btn" onClick={() => setRetireConfirm(true)}>
+            🏁 לפרוש מהפוליטיקה (סיכום מורשת)
+          </button>
+        ) : (
+          <button className="btn" onClick={() => { act((s) => retire(s)); closeAll(); }}>
+            בטוח/ה? הקש/י שוב לפרישה
+          </button>
+        )}
         {!confirm ? (
           <button className="btn danger" onClick={() => setConfirm(true)}>
             🗑️ מחיקת המשחק והתחלה מחדש
@@ -285,6 +297,18 @@ export function HelpSheet() {
         </div>
         <div className="card">
           <b>🗂️ שר/ה</b> – תיק מקבלים מיו"ר המפלגה (מעמד 60+, מוניטין 50+) או במשא ומתן. במשרד: תכניות דגל, מנכ"ל ותקציב; בישיבות הממשלה – משמעת מול ראש הממשלה. אפשר גם להיות מפוטר/ת.
+        </div>
+        <div className="card">
+          <b>🔥 סוגיות בוערות</b> – כל סוגיה מתחממת כשהמצב בתחום רע ומולידה מחאות. חוק שעובר בנושא מקרר אותה, ומוליד אירועי המשך (טקסים, מחאות נגד, עתירות לבג"ץ). עמדה פומבית בסוגיה בוערת – משפיעה יותר.
+        </div>
+        <div className="card">
+          <b>🧭 איך מתקדמים</b> – בלוח, "מפת הכוח" מראה כמה מנדטים את/ה שווה למפלגה (מוכרות × תדמית בקהל של המפלגה), איפה את/ה ברשימה, ומה כל דמות יכולה לתת לך. בכרטיס של כל דמות: מה היא זוכרת עליך ומה היא יכולה לעשות בשבילך.
+        </div>
+        <div className="card">
+          <b>⚖️ חוקי יסוד ובג"ץ</b> – חוק יסוד צריך 61 (או 80 אם שוריין) בקריאה השלישית. חוקים שנויים במחלוקת עלולים להיפסל בבג"ץ; עם פסקת התגברות אפשר לחוקק מחדש.
+        </div>
+        <div className="card">
+          <b>🏁 סוף המשחק</b> – פרישה, הרשעה, פעמיים ברצף מחוץ לכנסת, או קדנציה מלאה כראש ממשלה. בסוף – סיכום מורשת עם ציון ותואר.
         </div>
         <div className="card">
           <b>👑 ראשות הממשלה</b> – התמודד/י על ראשות המפלגה במטה (ח"כ, מעמד 60+, מוכרות 30+). יו"ר המפלגה הגדולה בגוש מרכיב/ה את הממשלה.

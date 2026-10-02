@@ -1,3 +1,4 @@
+import { addStat } from '../stats';
 import { inSession } from '../calendar';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { COMMITTEE_DEFS } from '../data/committees';
@@ -223,8 +224,8 @@ export function bringToVote(s: GameState, b: Bill) {
     log(s, `ההצעה "${b.title}" נפלה (${tally})`, 'vote');
     return res;
   }
-  s.player.reputation = clamp(s.player.reputation + 2, 0, 100);
-  s.player.fame = clamp(s.player.fame + 1.5, 0, 100);
+  addStat(s, 'reputation', 2);
+  addStat(s, 'fame', 1.5);
   if (stage === 'preliminary') setStage(s, b, 'committee1', `עברה בקריאה טרומית (${tally}). הועברה ל${committeeName(b.committeeId)}.`);
   else if (stage === 'first') setStage(s, b, 'committee2', `עברה בקריאה ראשונה (${tally}). חזרה לוועדה להכנה לקריאה שנייה ושלישית.`);
   else if (stage === 'final') {
@@ -246,9 +247,9 @@ function onPassed(s: GameState, b: Bill) {
   const own = b.sponsor === 'player' ? 1 : 0.35;
   const fameF = 0.5 + s.player.fame / 100;
   for (const sec of SECTORS) changeApproval(s, sec, (t.sectors[sec] ?? 0) * impact * fameF * own);
-  s.player.reputation = clamp(s.player.reputation + 6 * own + 2, 0, 100);
+  addStat(s, 'reputation', 6 * own + 2);
   s.player.capital += 5 * own + 1;
-  s.player.fame = clamp(s.player.fame + 6 * own, 0, 100);
+  addStat(s, 'fame', 6 * own);
   const sp = sponsorParty(s, b);
   if (sp) s.parties[sp].poll += 0.4 * impact;
   if (b.sponsor === 'player') {
@@ -287,7 +288,7 @@ registerSpecial('cs_public', (s, ctx) => {
   const b = billFromCtx(s, ctx);
   if (!b) return;
   const chair = committeeChair(s, b);
-  s.player.fame = clamp(s.player.fame + 2, 0, 100);
+  addStat(s, 'fame', 2);
   if (chair) changeAttitude(s, chair.id, -6);
   if (rand(s) < 0.35 + s.player.skills.media / 150) {
     advanceCommittee(s, b, 1);

@@ -103,7 +103,8 @@ function playerMinisterEligible(s: GameState, partyId: string): boolean {
   const p = s.player;
   if (!p.isMK || p.defector || p.partyId !== partyId) return false;
   if (s.parties[partyId].leaderId === 'player') return true;
-  return p.partyStanding >= 60 && p.reputation >= 50 || !!s.flags.promisedMinistry;
+  // ח"כ בקדנציה ראשונה לא מקבל תיק בהקמת הממשלה (אלא אם הובטח במשא ומתן)
+  return (p.partyStanding >= 60 && p.reputation >= 50 && s.career.mkTerms >= 2) || !!s.flags.promisedMinistry;
 }
 
 /** הקמת ממשלה: חלוקת תיקים, יו"ר כנסת, יו"ר ועדות וחברות בוועדות. */

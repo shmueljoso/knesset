@@ -1,6 +1,7 @@
 import { useGame, useStore, type Panel } from '../store';
 import type { LocationId } from '../engine/types';
 import { Dashboard } from './Dashboard';
+import { LegacyModal } from './Legacy';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -81,7 +82,7 @@ export function GameScreen() {
       <TabBar />
       {tab === 'map' && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
-      {g.flags.showElection ? <ElectionModal /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 ? <EventModal /> : null}
+      {g.gameOver ? <LegacyModal /> : g.flags.showElection ? <ElectionModal /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 ? <EventModal /> : null}
       <Toasts />
     </>
   );

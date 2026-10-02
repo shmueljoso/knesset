@@ -11,6 +11,7 @@ import { g2 } from './labels';
 import { NextWeekButton } from './MapView';
 import { GovernmentCard } from './Government';
 import { IssuesCard } from './Issues';
+import { SCANDAL_STAGES } from '../engine/systems/scandals';
 import { MissionsCard, PowerCard } from './PowerMap';
 
 const LADDER: { rank: string; label: string }[] = [
@@ -104,6 +105,17 @@ export function Dashboard() {
             ★ = קואליציה. {p.partyId ? (isCoalition(g, p.partyId) ? 'המפלגה שלך בקואליציה.' : 'המפלגה שלך באופוזיציה.') : ''}
           </p>
         </div>
+
+        {g.scandal && (
+          <div className="card" style={{ borderColor: 'var(--bad)' }}>
+            <h3>🚨 פרשת {g.scandal.source}</h3>
+            <p className="small" style={{ margin: '6px 0' }}>
+              שלב {g.scandal.stage}/5: <b>{SCANDAL_STAGES[g.scandal.stage]}</b>
+            </p>
+            <Meter label="חום התיק" value={g.scandal.heat} color="var(--bad)" />
+            <p className="tiny muted" style={{ margin: '6px 0 0' }}>שיתוף פעולה מקרר את התיק. אחרי כתב אישום – משפט. הרשעה מסיימת את הקריירה.</p>
+          </div>
+        )}
 
         <MissionsCard />
 

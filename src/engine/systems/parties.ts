@@ -1,3 +1,4 @@
+import { addStat } from '../stats';
 import { rand } from '../rng';
 import type { GameState, Npc, Party } from '../types';
 import { clamp, ideologyDistance, newId } from '../util';
@@ -233,7 +234,7 @@ export function challengeLeader(s: GameState): Result {
     party.list = ['player', ...party.list.filter((id) => id !== 'player')];
     p.listPosition = 1;
     p.partyStanding = 95;
-    p.fame = clamp(p.fame + 8, 0, 100);
+    addStat(s, 'fame', 8);
     if (leader) {
       changeAttitude(s, leader.id, -70);
       leader.influence = clamp(leader.influence - 20, 0, 100);

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BACKGROUNDS } from '../engine/data/backgrounds';
 import { PARTY_DEFS, INITIAL_COALITION } from '../engine/data/parties';
 import { SKILL_NAMES } from '../engine/ops';
+import { modToPartyDefs, validateMod, type ModFile } from '../engine/mods';
 import type { AvatarSpec, BackgroundId, Gender, Ideology, ScenarioId } from '../engine/types';
 import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
@@ -29,18 +30,32 @@ export function CreateScreen() {
   const [avatar, setAvatar] = useState<Omit<AvatarSpec, 'gender'>>({ seed: Math.floor(Math.random() * 1e9), cover: 'none', beard: false, glasses: false, age: 38 });
   const [ideology, setIdeology] = useState<Ideology>({ econ: 0, security: 20, religion: -20, judiciary: 0 });
   const [partyId, setPartyId] = useState<string | null>(null);
+  const [mod, setMod] = useState<ModFile | null>(null);
+  const [modErr, setModErr] = useState<string[]>([]);
 
   const parties = useMemo(
-    () => [...PARTY_DEFS].sort((a, b) => ideologyDistance(a.ideology, ideology) - ideologyDistance(b.ideology, ideology)),
-    [ideology],
+    () => [...(mod ? modToPartyDefs(mod) : PARTY_DEFS)].sort((a, b) => ideologyDistance(a.ideology, ideology) - ideologyDistance(b.ideology, ideology)),
+    [ideology, mod],
   );
+  const coalitionIds = mod ? mod.coalition ?? [] : INITIAL_COALITION;
+  const loadMod = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const { mod: m, errors } = validateMod(JSON.parse(await file.text()));
+      setModErr(errors);
+      setMod(m);
+      setPartyId(null);
+    } catch {
+      setModErr(['הקובץ אינו JSON תקין']);
+    }
+  };
   const needsParty = scenario === 'freshman' || background === 'aide';
   const steps = ['תרחיש', 'רקע', 'זהות', 'עמדות', 'מפלגה'];
   const canNext = step !== 2 || name.trim().length >= 2;
   const canStart = !needsParty || !!partyId;
 
   const start = () =>
-    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar });
+    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod });
 
   return (
     <div className="scroll">
@@ -185,6 +200,23 @@ export function CreateScreen() {
         {step === 4 && (
           <>
             <h2>באיזו מפלגה?</h2>
+            <div className="card small" style={{ marginBottom: 10 }}>
+              <div className="spread">
+                <span>{mod ? `🗂️ כנסת מקובץ: ${mod.name}` : '🎭 עולם בדיוני (ברירת מחדל)'}</span>
+                {mod && (
+                  <button className="btn sm" onClick={() => { setMod(null); setPartyId(null); }}>
+                    חזרה לבדיוני
+                  </button>
+                )}
+              </div>
+              <label className="btn sm block" style={{ marginTop: 8 }}>
+                📂 טעינת כנסת מקובץ JSON
+                <input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => loadMod(e.target.files?.[0])} />
+              </label>
+              {modErr.map((e, i) => (
+                <div key={i} className="tiny bad">{e}</div>
+              ))}
+            </div>
             <p className="muted small">ממוין לפי קרבה לעמדות שלך. {needsParty ? 'בתרחיש הזה חייבים מפלגה.' : 'אפשר גם להתחיל בלי – ולהקים מפלגה בהמשך.'}</p>
             {!needsParty && (
               <button className={`pick ${partyId === null ? 'on' : ''}`} onClick={() => setPartyId(null)}>
@@ -207,7 +239,7 @@ export function CreateScreen() {
                   </p>
                   <div className="chips">
                     <span className={`chip ${fit > 75 ? 'good' : fit < 55 ? 'bad' : ''}`}>התאמה {fit}%</span>
-                    <span className="chip">{INITIAL_COALITION.includes(p.id) ? 'קואליציה' : 'אופוזיציה'}</span>
+                    <span className="chip">{coalitionIds.includes(p.id) ? 'קואליציה' : 'אופוזיציה'}</span>
                     <span className="chip">{p.primaries ? 'פריימריז' : 'רשימה ממונה'}</span>
                   </div>
                 </button>

@@ -1,4 +1,5 @@
 // השפעה שקופה: כמה השחקן שווה למפלגה, איפה הוא ברשימה, ומה כל דמות יכולה לתת לו.
+import { addStat } from '../stats';
 import { BILL_TEMPLATES } from '../data/bills';
 import { ISSUES } from '../data/issues';
 import type { Caucus, GameState, Ideology, IssueId, Npc, Sector } from '../types';
@@ -79,7 +80,7 @@ export function jointAppearance(s: GameState, n: Npc): string {
   s.flags[`joint_${n.id}`] = s.week;
   const p = s.player;
   if (n.role === 'journalist') {
-    p.fame = clamp(p.fame + 3, 0, 100);
+    addStat(s, 'fame', 3);
     addMemory(s, n.id, 'ראיון בלעדי משותף', 3);
     return 'ראיון עומק בתכנית שלו/ה. מוכרות +3.';
   }
@@ -87,7 +88,7 @@ export function jointAppearance(s: GameState, n: Npc): string {
   const gain = n.influence / 30;
   const secs = (Object.keys(party?.sectors ?? {}) as Sector[]).slice(0, 3);
   for (const sec of secs.length ? secs : SECTORS) p.approval[sec] = clamp(p.approval[sec] + gain, 0, 100);
-  p.fame = clamp(p.fame + n.influence / 40, 0, 100);
+  addStat(s, 'fame', n.influence / 40);
   const far = ideologyDistance(n.ideology, p.ideology) > 0.35;
   if (far) {
     p.consistency = clamp(p.consistency - 3, 0, 100);
@@ -182,7 +183,7 @@ export function foundCaucus(s: GameState, issue: IssueId): Caucus {
     changeAttitude(s, id, 6, { spread: false });
     addMemory(s, id, `צירף/ה אותי ל${c.name}`, 6);
   }
-  s.player.fame = clamp(s.player.fame + 1.5, 0, 100);
+  addStat(s, 'fame', 1.5);
   addNews(s, `${s.player.name} הקים/ה את ${c.name} עם ${members.length} ח"כים מכמה סיעות`, 'good', true);
   return c;
 }
@@ -192,7 +193,7 @@ export function caucusMeeting(s: GameState, id: string): string {
   if (!c) return '';
   s.player.ap -= 1;
   s.issues[c.issue] = clamp(s.issues[c.issue] + 4, 0, 100);
-  s.player.fame = clamp(s.player.fame + 1, 0, 100);
+  addStat(s, 'fame', 1);
   for (const m of c.members) changeAttitude(s, m, 2, { spread: false });
   s.flags[`cauMeet_${c.id}`] = s.week;
   return `כנס ${c.name}: הנושא עלה לסדר היום, והחברים מרוצים.`;

@@ -1,3 +1,4 @@
+import { addStat } from '../stats';
 import { EVENTS, debtCollectCandidate, eventById, type EventChoice, type GameEvent } from '../data/events';
 import { applyOps, fill, registerSpecial, type Ctx, type Op } from '../ops';
 import { chance, pickWeighted, rand, shuffle } from '../rng';
@@ -10,6 +11,7 @@ import { changeSatisfaction, recomputeStability } from './coalition';
 import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
+import { scandalAttack, scandalCooperate, scandalStepDown } from './scandals';
 import { reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
 import { templateById } from '../data/bills';
 import { leanAlignment } from '../util';
@@ -82,7 +84,7 @@ export function rollEvents(s: GameState) {
 // ---- פעולות מיוחדות שאירועים מפעילים ----
 registerSpecial('wants_list', (s) => {
   s.player.wantsList = true;
-  s.player.partyStanding = clamp(s.player.partyStanding + 1, 0, 100);
+  addStat(s, 'partyStanding', 1);
   return 'נרשמת כמועמד/ת. עכשיו צריך לגייס תמיכה במטה המפלגה.';
 });
 
@@ -96,7 +98,7 @@ registerSpecial('become_chair', (s) => {
   }
   c.chairId = 'player';
   s.player.rank = 'chair';
-  s.player.fame = clamp(s.player.fame + 5, 0, 100);
+  addStat(s, 'fame', 5);
   if (!s.player.achievements.includes('chair')) s.player.achievements.push('chair');
   return `מונית ליו"ר ${c.name}!`;
 });
@@ -209,3 +211,8 @@ registerSpecial('cosponsor', (s, ctx) => {
 registerSpecial('plot_go', (s, ctx) => {
   scheduleEvent(s, 'plot_strike', 1, { npc: ctx.npc });
 });
+
+// ---- שלב 3: חקירה ----
+registerSpecial('scandal_coop', (s) => scandalCooperate(s));
+registerSpecial('scandal_attack', (s) => scandalAttack(s));
+registerSpecial('scandal_step', (s) => scandalStepDown(s));

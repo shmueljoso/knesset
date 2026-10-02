@@ -1,3 +1,4 @@
+import { addStat } from '../stats';
 import { makeName } from '../data/names';
 import { makeAvatar } from '../avatarGen';
 import { makeLocalRng } from '../rng';
@@ -64,7 +65,7 @@ export function recomputeAp(s: GameState) {
 
 export function tickStaff(s: GameState) {
   for (const st of s.player.staff) {
-    if (st.role === 'spokesperson') s.player.fame = clamp(s.player.fame + 0.15 * st.level, 0, 100);
+    if (st.role === 'spokesperson') addStat(s, 'fame', 0.15 * st.level);
     if (st.role === 'advisor') s.player.capital += 0.25 * st.level;
     s.player.money -= staffCost(s, st);
     const target = 40 + s.player.reputation * 0.4;

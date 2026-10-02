@@ -1,6 +1,7 @@
+import { addStat } from '../stats';
 import { rand } from '../rng';
 import type { GameState } from '../types';
-import { clamp } from '../util';
+
 import { spawnCandidate } from '../newGame';
 import { startFormateur, startPartner } from './coalition';
 import { applyRecruits } from './influence';
@@ -116,6 +117,12 @@ export function buildLists(s: GameState) {
 
 /** יום הבחירות. */
 export function runElection(s: GameState) {
+  // ניצחון: קדנציה מלאה כראש ממשלה
+  if (s.coalition.pmId === 'player' && s.week - s.coalition.formedWeek >= 150 && !s.flags.pmTermWin) {
+    s.flags.pmTermWin = true;
+    s.gameOver = 'pm_term';
+  }
+  const ranForKnesset = s.player.isMK || s.player.listPosition !== null;
   const votes: Record<string, number> = {};
   const turnout = 4_700_000 + Math.round(rand(s) * 400_000);
   for (const p of Object.values(s.parties)) {
@@ -167,8 +174,8 @@ export function runElection(s: GameState) {
       s.player.employerId = null;
       s.player.achievements.push('elected');
     }
-    s.player.fame = clamp(s.player.fame + 10, 0, 100);
-    s.player.reputation = clamp(s.player.reputation + 5, 0, 100);
+    addStat(s, 'fame', 10);
+    addStat(s, 'reputation', 5);
     log(s, `נבחרת לכנסת ה-${s.knesset}!`, 'career');
   } else if (wasMK) {
     s.player.rank = s.player.partyId ? 'activist' : 'citizen';
@@ -179,6 +186,13 @@ export function runElection(s: GameState) {
     log(s, 'הבוס שלך לא נבחר מחדש – איבדת את המשרה כעוזר פרלמנטרי.', 'career');
     s.player.employerId = null;
     if (s.player.rank === 'aide') s.player.rank = 'activist';
+  }
+  if (s.player.isMK) {
+    s.career.mkTerms += 1;
+    s.career.electionsOutside = 0;
+  } else if (ranForKnesset || s.career.mkTerms > 0) {
+    s.career.electionsOutside += 1;
+    if (s.career.electionsOutside >= 2 && !s.gameOver) s.gameOver = 'outside';
   }
   s.player.listPosition = null;
   s.player.wantsList = false;

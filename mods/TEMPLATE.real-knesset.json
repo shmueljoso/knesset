@@ -1,0 +1,35 @@
+{
+  "name": "תבנית – הכנסת שלי",
+  "coalition": ["party_a", "party_c"],
+  "parties": [
+    {
+      "id": "party_a",
+      "name": "מפלגה א׳",
+      "short": "א׳",
+      "color": "#2563eb",
+      "ideology": { "econ": 40, "security": 60, "religion": 10, "judiciary": 50 },
+      "seats": 40,
+      "primaries": true,
+      "sectors": { "traditional": 1, "secular": 0.4 },
+      "members": ["שם ראשון ברשימה", "שם שני ברשימה"],
+      "surplusPartner": "party_c",
+      "blurb": "תיאור קצר שיופיע במסך הבחירה"
+    },
+    {
+      "id": "party_b",
+      "name": "מפלגה ב׳",
+      "color": "#dc2626",
+      "ideology": { "econ": -40, "security": -30, "religion": -50, "judiciary": -60 },
+      "seats": 50,
+      "sectors": { "secular": 1 }
+    },
+    {
+      "id": "party_c",
+      "name": "מפלגה ג׳",
+      "color": "#0d9488",
+      "ideology": { "econ": -20, "security": 30, "religion": 80, "judiciary": 60 },
+      "seats": 30,
+      "sectors": { "haredi": 1 }
+    }
+  ]
+}

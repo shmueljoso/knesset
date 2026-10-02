@@ -4,6 +4,7 @@ import { addNews } from './systems/news';
 import { WORLD_NAMES, addWorldEffect, changeApproval, takeStance } from './systems/opinion';
 import { addDebt, addMemory, changeAttitude, changeTrust, clearDebt, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
+import { gainFactor } from './stats';
 import type { Debt, GameState, Ideology, NewsItem, Sector, Skill, WorldKey } from './types';
 import { SECTOR_NAMES, clamp, fmtDelta } from './util';
 
@@ -114,7 +115,11 @@ function setStat(s: GameState, k: StatKey, d: number) {
   if (k === 'money') p.money = Math.round((p.money + d) * 10) / 10;
   else if (k === 'capital') p.capital = Math.max(0, Math.round((p.capital + d) * 10) / 10);
   else if (k === 'ap') p.ap = Math.max(0, p.ap + d);
-  else p[k] = clamp(Math.round((p[k] + d) * 10) / 10, 0, 100);
+  else {
+    // תשואה פוחתת: קשה יותר לעלות כשכבר גבוה
+    const eff = d > 0 && (k === 'fame' || k === 'reputation' || k === 'partyStanding') ? d * gainFactor(s, k) : d;
+    p[k] = clamp(Math.round((p[k] + eff) * 10) / 10, 0, 100);
+  }
 }
 
 export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {

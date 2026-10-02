@@ -1,3 +1,4 @@
+import { addStat } from './stats';
 import { chance, rand } from './rng';
 import { addNews } from './systems/news';
 import { takeStance } from './systems/opinion';
@@ -110,7 +111,7 @@ export function interact(s: GameState, npcId: string, id: InteractionId): { text
     case 'praise': {
       const d = changeAttitude(s, n.id, 6, { public: true });
       addMemory(s, n.id, 'שיבח/ה אותי בפומבי', d);
-      s.player.fame = clamp(s.player.fame + 0.5, 0, 100);
+      addStat(s, 'fame', 0.5);
       if (ideologyDistance(n.ideology, s.player.ideology) > 0.35) {
         s.player.consistency = clamp(s.player.consistency - 2, 0, 100);
         text = ' הבוחרים שלך הרימו גבה.';
@@ -126,7 +127,7 @@ export function interact(s: GameState, npcId: string, id: InteractionId): { text
         { econ: -n.ideology.econ / 2, security: -n.ideology.security / 2, religion: -n.ideology.religion / 2, judiciary: -n.ideology.judiciary / 2 },
         1.5,
       );
-      s.player.fame = clamp(s.player.fame + 2.5 + n.influence / 40, 0, 100);
+      addStat(s, 'fame', 2.5 + n.influence / 40);
       if (n.partyId === s.player.partyId) s.player.partyStanding = clamp(s.player.partyStanding - 6, 0, 100);
       addNews(s, `${s.player.name} נגד ${n.name}: "הגיע הזמן שמישהו יגיד את האמת"`, 'neutral', true);
       text = `תקפת את ${n.name}. יחס ${d}. מוכרות עלתה.`;

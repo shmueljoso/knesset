@@ -186,7 +186,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'mk_insult', icon: '🐦', weight: 5, cooldown: 6,
+    id: 'mk_insult', icon: '🐦', weight: 3, cooldown: 12,
     title: '{npc} תקף/ה אותך ברשת',
     body: 'ח"כ {npc} מ{npcParty} כתב/ה עליך ציוץ ארסי שצובר אלפי שיתופים. כולם מחכים לתגובה שלך.',
     when: (s) => s.player.fame >= 15,
@@ -209,7 +209,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'party_line_vote', icon: '✋', weight: 5, cooldown: 5,
+    id: 'party_line_vote', icon: '✋', weight: 4, cooldown: 8,
     title: 'משמעת סיעתית',
     body: 'הסיעה מחייבת את כל חבריה להצביע הערב בעד חוק שנוי במחלוקת שהוא חלק מהסכם קואליציוני. הוא סותר את מה שהבטחת לבוחרים.',
     when: (s) => isMK(s) && hasParty(s) && inSession(s),
@@ -220,7 +220,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'tv_panel', icon: '📺', weight: 4, cooldown: 8,
+    id: 'tv_panel', icon: '📺', weight: 3, cooldown: 12,
     title: 'הזמנה לפאנל בפריים טיים',
     body: 'מגישה מוכרת מזמינה אותך לפאנל המרכזי מול יריב מוכשר. זו במה ענקית – וגם מלכודת.',
     when: (s) => s.player.fame >= 10,
@@ -442,7 +442,7 @@ const GOV_EVENTS: GameEvent[] = [
     id: 'reshuffle_offer', icon: '🎖️', weight: 3, cooldown: 40,
     title: 'הצעה להיכנס לממשלה',
     body: '{leader} מזמין/ה אותך ללשכה: "אחד השרים שלנו לא מתפקד. אני רוצה אותך במקומו. זה תיק – לא מתנה."',
-    when: (s) => s.player.isMK && !s.player.ministry && !s.player.defector && isCoalition(s, s.player.partyId) && s.player.partyStanding >= 60 && s.player.reputation >= 50 && pmIsNpc(s) && s.parties[s.player.partyId!].leaderId !== 'player' && Object.entries(s.ministers).some(([m, id]) => m !== 'pm' && s.npcs[id]?.partyId === s.player.partyId),
+    when: (s) => s.player.isMK && !s.player.ministry && !s.player.defector && isCoalition(s, s.player.partyId) && s.player.partyStanding >= 60 && s.player.reputation >= 50 && s.week - s.coalition.formedWeek >= 40 && pmIsNpc(s) && s.parties[s.player.partyId!].leaderId !== 'player' && Object.entries(s.ministers).some(([m, id]) => m !== 'pm' && s.npcs[id]?.partyId === s.player.partyId),
     choices: [
       { label: 'לקבל את התיק', ops: [{ op: 'special', id: 'take_ministry', label: 'מתמנה לשר/ה!' }, { op: 'debt', who: '@leader', dir: 'player_owes', reason: 'מינוי לשר' }] },
       { label: 'לסרב – עוד לא הזמן', ops: [{ op: 'att', who: '@leader', d: -5 }, { op: 'consistency', d: 2 }] },
@@ -664,6 +664,22 @@ const NPC_EVENTS: GameEvent[] = [
   },
 ];
 EVENTS.push(...NPC_EVENTS);
+
+
+// ---------- חקירה ----------
+EVENTS.push({
+  id: 'scandal_stage', queued: true, icon: '🚨', title: 'פרשת {source}: {stageName}',
+  body: 'הפרשה מתגלגלת. הכתבים מחכים מחוץ לבית, היועצים המשפטיים חלוקים, והמפלגה בוחנת אותך בזכוכית מגדלת. איך את/ה מגיב/ה?',
+  choices: [
+    { label: 'לשתף פעולה עם החוקרים', hint: 'מוריד את "החום" של התיק', ops: [{ op: 'special', id: 'scandal_coop', label: 'סיכוי סגירה טוב' }] },
+    { label: 'לתקוף את "הרדיפה הפוליטית"', hint: 'הבסיס אוהב, החוקרים פחות', ops: [{ op: 'special', id: 'scandal_attack', label: 'מוכרות +2, סיכוי סגירה נמוך' }] },
+    {
+      label: 'להשעות את עצמי מכל תפקיד', hint: 'מקרר את הפרשה – אבל עולה לך בתפקיד',
+      requires: (s) => (s.player.ministry ? null : 'רק לבעלי תפקיד ביצועי'),
+      ops: [{ op: 'special', id: 'scandal_step', label: 'התפטרות מהמשרד' }],
+    },
+  ],
+});
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id);
 

@@ -1,4 +1,5 @@
 // השחקן כשר: תכניות דגל, מנכ"ל, תקציב וביצועים.
+import { addStat } from '../stats';
 import { ministryDef, programDef } from '../data/ministries';
 import { chance, rand } from '../rng';
 import type { GameState } from '../types';
@@ -30,7 +31,7 @@ export function launchProgram(s: GameState, pid: string): { ok: boolean; text: s
   for (const sec of SECTORS) if (p.sectors[sec]) changeApproval(s, sec, p.sectors[sec]! * f);
   if (p.lean) takeStance(s, p.lean, 1);
   ms.performance = clamp(ms.performance + p.perf / 2, 0, 100);
-  s.player.fame = clamp(s.player.fame + 2, 0, 100);
+  addStat(s, 'fame', 2);
   addNews(s, `${s.player.name} משיק/ה: ${p.name}`, 'good', true);
   log(s, `השקת תכנית: ${p.name}`, 'action');
   return { ok: true, text: `${p.name} יוצאת לדרך!` };
@@ -42,11 +43,11 @@ export function appointDG(s: GameState, type: DgType): string {
   ms.dgType = type;
   ms.dgId = null;
   if (type === 'loyal') {
-    s.player.partyStanding = clamp(s.player.partyStanding + 5, 0, 100);
+    addStat(s, 'partyStanding', 5);
     const p = s.player.partyId ? s.parties[s.player.partyId] : null;
     if (p && s.npcs[p.leaderId]) changeAttitude(s, p.leaderId, 5);
   }
-  if (type === 'pro') s.player.reputation = clamp(s.player.reputation + 3, 0, 100);
+  if (type === 'pro') addStat(s, 'reputation', 3);
   if (type === 'crony') {
     s.player.capital += 6;
     s.player.money += 30;
@@ -86,7 +87,7 @@ export function resignMinistry(s: GameState): string {
     s.ministers[mid] = repl.id;
   }
   s.player.consistency = clamp(s.player.consistency + 5, 0, 100);
-  s.player.fame = clamp(s.player.fame + 3, 0, 100);
+  addStat(s, 'fame', 3);
   addNews(s, `${s.player.name} התפטר/ה מהממשלה`, 'neutral', true);
   log(s, 'התפטרת מהממשלה.', 'career');
   return 'התפטרת. הציבור מעריך מי שמוותר על כיסא.';
@@ -110,7 +111,7 @@ export function tickMinistry(s: GameState) {
   const dg = ms.dgType ? DG_TYPES[ms.dgType].perf : -2;
   const target = clamp(focus + recent + dg, 0, 100);
   ms.performance = clamp(ms.performance + (target - ms.performance) * 0.1, 0, 100);
-  s.player.fame = clamp(s.player.fame + 0.25, 0, 100);
+  addStat(s, 'fame', 0.25);
   changeApproval(s, 'all', (ms.performance - 50) / 400);
   if (ms.dgType === 'crony' && chance(s, 0.03)) {
     s.player.reputation = clamp(s.player.reputation - 7, 0, 100);

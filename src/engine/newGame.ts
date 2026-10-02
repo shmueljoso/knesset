@@ -3,7 +3,8 @@ import { makeName } from './data/names';
 import { makeAvatar } from './avatarGen';
 import { INITIAL_COALITION, PARTY_DEFS, SURPLUS_PAIRS, type NamePoolId } from './data/parties';
 import { makeLocalRng } from './rng';
-import { formGovernment } from './systems/government';
+import { formGovernment, proposeCoalition } from './systems/government';
+import { modSurplusPairs, modToPartyDefs, type ModFile } from './mods';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3 } from './migrate';
@@ -33,6 +34,7 @@ export interface NewGameOptions {
   scenario: ScenarioId;
   avatar: Omit<AvatarSpec, 'gender'>;
   seed?: number;
+  mod?: ModFile | null;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -109,11 +111,18 @@ export function createGame(opts: NewGameOptions): GameState {
   const parties: Record<string, Party> = {};
   let n = 0;
 
-  for (const def of PARTY_DEFS) {
+  const defs = opts.mod ? modToPartyDefs(opts.mod) : PARTY_DEFS;
+  const memberNames = (pid: string) => opts.mod?.parties.find((p) => p.id === pid)?.members ?? [];
+  for (const def of defs) {
     const list: string[] = [];
     const listLen = def.seats + 8;
     for (let r = 0; r < listLen; r++) {
       const npc = makeNpc(rnd, used, `n${++n}`, def, r < def.seats ? 'mk' : 'candidate', r);
+      const real = memberNames(def.id)[r];
+      if (real) {
+        npc.name = real;
+        used.add(real);
+      }
       npc.isMK = r < def.seats;
       npc.bio += ` ${r === 0 ? 'יו"ר' : 'חבר/ת'} ${def.name}.`;
       npcs[npc.id] = npc;
@@ -139,7 +148,7 @@ export function createGame(opts: NewGameOptions): GameState {
     npcs[list[0]].primaryStrength = 100;
     npcs[list[0]].notable = true;
   }
-  for (const [a, b] of SURPLUS_PAIRS) {
+  for (const [a, b] of opts.mod ? modSurplusPairs(opts.mod) : SURPLUS_PAIRS) {
     parties[a].surplusPartner = b;
     parties[b].surplusPartner = a;
   }
@@ -289,10 +298,14 @@ export function createGame(opts: NewGameOptions): GameState {
     for (const npc of Object.values(npcs)) if (npc.role === 'journalist') npc.attitude += 25;
   }
 
-  formGovernment(s, INITIAL_COALITION);
+  const startCoalition = opts.mod ? opts.mod.coalition ?? proposeCoalition(s) : INITIAL_COALITION;
+  formGovernment(s, startCoalition);
+  s.mod = opts.mod?.name ?? null;
   refreshPresence(s);
   s.pollHistory.push({ week: 0, polls: Object.fromEntries(Object.values(parties).map((p) => [p.id, p.poll])) });
   s.weekStart = snapshot(s);
+  s.career.mkTerms = player.isMK ? 1 : 0;
+  s.career.peakSeats = player.partyId ? parties[player.partyId].seats : 0;
   s.missions = [];
   checkMissions(s);
   s.news.push({

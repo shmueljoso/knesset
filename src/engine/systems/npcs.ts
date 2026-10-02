@@ -1,4 +1,5 @@
 // לדמויות יש חיים משלהן: הן מעבירות חוקים בנושא שלהן, מסתבכות ומתפטרות, וזוממות נגד השחקן.
+import { addStat } from '../stats';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { chance, pick, rand } from '../rng';
 import type { GameState, Npc } from '../types';
@@ -28,8 +29,8 @@ function npcLawPasses(s: GameState) {
   for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * SCOPE_FACTOR[scope] * 0.6, t.weeks, t.title, t.delay);
   addNews(s, `הכנסת אישרה את "${t.title}" של ${n.name}`, 'neutral', co, undefined, undefined, n.id);
   if (co) {
-    s.player.reputation = clamp(s.player.reputation + 3, 0, 100);
-    s.player.fame = clamp(s.player.fame + 2, 0, 100);
+    addStat(s, 'reputation', 3);
+    addStat(s, 'fame', 2);
     takeStance(s, t.lean, 1.5);
     addMemory(s, n.id, `היה/תה שותף/ה שלי ל"${t.title}"`, 10);
     delete s.flags[cosponsorKey(n.id)];

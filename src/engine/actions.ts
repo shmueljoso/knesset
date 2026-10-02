@@ -1,3 +1,4 @@
+import { addStat } from './stats';
 import { inSession } from './calendar';
 import { COMMITTEE_DEFS } from './data/committees';
 import { applyOps, type Op } from './ops';
@@ -111,7 +112,9 @@ export const ACTIONS: ActionDef[] = [
     desc: 'העבודה השקטה שבונה מוניטין אצל עמיתים.',
     avail: all(needMK, (s) => (s.player.committees.length ? null : 'אינך חבר בוועדה')),
     run: (s) => {
-      const c = s.committees.find((x) => x.id === pick(s, s.player.committees))!;
+      const cid = pick(s, s.player.committees);
+      const c = s.committees.find((x) => x.id === cid);
+      if (!c) return { text: 'הוועדה לא מתכנסת השבוע.', good: false };
       if (s.npcs[c.chairId]) changeAttitude(s, c.chairId, 2);
       return run(s, [{ op: 'skill', skill: 'law', d: 2 }, { op: 'reputation', d: 1.2 }, { op: 'fame', d: 0.5 }], `השתתפת בדיון ב${c.name}. העמיתים התרשמו מההכנה שלך.`);
     },
@@ -165,7 +168,7 @@ export const ACTIONS: ActionDef[] = [
         s.npcs[id].lastContact = s.week;
         lines.push(`${s.npcs[id].name}: יחס ${d >= 0 ? '+' : ''}${d}`);
       }
-      s.player.reputation = clamp(s.player.reputation + 0.5, 0, 100);
+      addStat(s, 'reputation', 0.5);
       return { text: met.length ? 'שתית קפה עם כמה חברי כנסת.' : 'המזנון ריק היום.', lines };
     },
   },
@@ -286,7 +289,10 @@ export const ACTIONS: ActionDef[] = [
     id: 'fundraise', loc: 'partyhq', icon: '💰', label: 'גיוס כספים', ap: 1,
     desc: 'ערבי התרמה ותורמים קטנים. כמה שאתה מוכר יותר – קל יותר.',
     run: (s) => {
-      const amount = Math.round((8 + s.player.fame * 0.9 + s.player.skills.organization * 0.2) * (0.7 + rand(s) * 0.6));
+      // עייפות תורמים: גיוס חוזר בתוך חודש וחצי מכניס פחות
+      const recent = String(s.flags.fundLog ?? '').split(',').filter((w) => w && s.week - Number(w) < 6).length;
+      s.flags.fundLog = [...String(s.flags.fundLog ?? '').split(',').filter((w) => w && s.week - Number(w) < 6), s.week].join(',');
+      const amount = Math.round(((6 + s.player.fame * 0.5 + s.player.skills.organization * 0.15) * (0.7 + rand(s) * 0.6)) / (1 + recent));
       return run(s, [{ op: 'money', d: amount }, { op: 'skill', skill: 'organization', d: 0.5 }], `גייסת ${amount} אלף ₪.`);
     },
   },
@@ -363,7 +369,7 @@ export const ACTIONS: ActionDef[] = [
     avail: all(needMK, needSession, (s) => (isCoalition(s, s.player.partyId) ? 'אתה בקואליציה' : null), (s) => (s.week - Number(s.flags.nocWeek ?? -99) < 4 ? 'הגשת לאחרונה – חכה כמה שבועות' : null)),
     run: (s) => {
       s.flags.nocWeek = s.week;
-      s.player.fame = clamp(s.player.fame + 2, 0, 100);
+      addStat(s, 'fame', 2);
       const r = tryNoConfidence(s);
       if (!r.passed) addNews(s, `הצעת האי-אמון של ${s.player.name} נדחתה`, 'neutral', true);
       return { text: r.text, good: r.passed };
@@ -514,7 +520,7 @@ export const ACTIONS: ActionDef[] = [
       const law = petitionTarget(s)!;
       scheduleEvent(s, 'petition', 2, { law: law.templateId, title: law.title });
       takeStance(s, { judiciary: -40 }, 1);
-      s.player.fame = clamp(s.player.fame + 1.5, 0, 100);
+      addStat(s, 'fame', 1.5);
       return { text: `העתירה נגד "${law.title}" הוגשה. סיכוי פסילה מוערך: ${Math.round(strikeChance(s, law.templateId) * 100)}%.` };
     },
   },

@@ -8,6 +8,8 @@ import { isCoalition } from './systems/government';
 import { releaseScheduled, tickIssues } from './systems/issues';
 import { tickNpcs } from './systems/npcs';
 import { checkMissions } from './systems/missions';
+import { tickScandal } from './systems/scandals';
+import { tickCareer } from './systems/legacy';
 import { tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
 import { WORLD_NAMES, pollSeats, tickWorld, updatePolls } from './systems/opinion';
@@ -65,6 +67,10 @@ export function endWeek(s: GameState) {
   const p = s.player;
 
   p.money += weeklyIncome(s);
+  // מחזור החדשות שוכח, ומוניטין גבוה נשחק לאט
+  if (p.fame > 20) p.fame = Math.max(20, p.fame - 0.2 - p.fame * 0.006);
+  if (p.reputation > 60) p.reputation -= 0.15;
+  if (p.money > 300) p.money -= (p.money - 300) * 0.02; // הוצאות מטה ופעילות
   tickStaff(s);
   // "למה זה קרה": מה הזיז את מצב המדינה השבוע
   const agg: Record<string, number> = {};
@@ -86,6 +92,8 @@ export function endWeek(s: GameState) {
   tickLegislation(s);
   tickIssues(s);
   tickNpcs(s);
+  tickScandal(s);
+  tickCareer(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);

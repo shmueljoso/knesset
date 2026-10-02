@@ -19,7 +19,7 @@ export function IssuesCard() {
         const tr = g.issueTrend[i.id] ?? 0;
         const solved = recentLaw(g, i.id);
         return (
-          <div key={i.id} className="meter-row" title={i.blurb}>
+          <div key={i.id} className="meter-row" title={i.blurb} style={{ gridTemplateColumns: '128px 1fr 46px' }}>
             <span className="ellipsis">
               {i.icon} {i.name}
             </span>
