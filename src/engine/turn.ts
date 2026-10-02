@@ -5,6 +5,7 @@ import { buildLists, callEarlyElections, runElection } from './systems/elections
 import { resetMinistryBudget, tickMinistry } from './systems/ministry';
 import { rollEvents } from './systems/events';
 import { isCoalition } from './systems/government';
+import { releaseScheduled, tickIssues } from './systems/issues';
 import { tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
 import { pollSeats, tickWorld, updatePolls } from './systems/opinion';
@@ -66,6 +67,7 @@ export function endWeek(s: GameState) {
   tickWorld(s);
   updatePolls(s);
   tickLegislation(s);
+  tickIssues(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);
@@ -87,6 +89,7 @@ export function endWeek(s: GameState) {
   }
 
   decayRelationships(s);
+  releaseScheduled(s);
   rollEvents(s);
   worldNews(s);
 

@@ -4,6 +4,7 @@ import type { Ctx, Op } from '../ops';
 import { pick } from '../rng';
 import { isCoalition } from '../systems/government';
 import { debtsWith } from '../systems/relationships';
+import { isHot } from '../systems/issues';
 import type { GameState, Npc } from '../types';
 
 export interface EventChoice {
@@ -271,7 +272,7 @@ export const EVENTS: GameEvent[] = [
     id: 'investigation', icon: '🚨', weight: 5, cooldown: 40,
     title: 'פתיחת בדיקה',
     body: 'מבקר המדינה ויחידה חוקרת בודקים את התרומות שקיבלת מגורמים עסקיים. הכותרות לא מחמיאות.',
-    when: (s) => !!s.flags.lobbyMoney,
+    when: () => false, // הוחלף בשרשרת החקירה (systems/scandals)
     choices: [
       { label: 'לשתף פעולה ולהחזיר את הכסף', ops: [{ op: 'money', d: -80 }, { op: 'reputation', d: -4 }, { op: 'approval', sector: 'all', d: -1 }, { op: 'flag', key: 'lobbyMoney', v: false }] },
       { label: 'לתקוף את "רדיפת הנבחרים"', chance: { p: () => 0.45, fail: [{ op: 'approval', sector: 'all', d: -5 }, { op: 'reputation', d: -10 }], failText: 'התיק התפוצץ בתקשורת.' }, ops: [{ op: 'fame', d: 3 }, { op: 'flag', key: 'lobbyMoney', v: false }], result: 'הבדיקה נסגרה מחוסר ראיות.' },
@@ -282,7 +283,7 @@ export const EVENTS: GameEvent[] = [
     id: 'security_escalation', icon: '🚀', weight: 4, cooldown: 12,
     title: 'הסלמה ביטחונית בגבול',
     body: 'ירי רקטות על יישובי הגבול. הממשלה מתלבטת בין מבצע לבין הכלה. האולפנים מחכים לך.',
-    when: (s) => s.world.security < 55,
+    when: (s) => s.issues.security >= 50,
     choices: [
       { label: 'לדרוש תגובה צבאית חריפה', ops: [{ op: 'stance', lean: { security: 85 }, d: 3 }, { op: 'fame', d: 2 }, { op: 'world', key: 'security', d: -2, weeks: 2 }] },
       { label: 'להתייצב מאחורי הממשלה', ops: [{ op: 'stance', lean: { security: 40 }, d: 1.5 }, { op: 'att', who: '@pm', d: 6 }, { op: 'stability', d: 3 }] },
@@ -293,7 +294,7 @@ export const EVENTS: GameEvent[] = [
     id: 'housing_protest', icon: '⛺', weight: 4, cooldown: 20,
     title: 'מחאת הדיור חוזרת',
     body: 'מאות אוהלים בשדרה בתל אביב. "העם דורש צדק חברתי" חוזר לכותרות. המוחים מזמינים פוליטיקאים לנאום – אבל לא את כולם מקבלים בברכה.',
-    when: (s) => s.world.housing < 35 || s.world.affordability < 35,
+    when: (s) => isHot(s, 'housing', 55) || isHot(s, 'cost', 65),
     choices: [
       { label: 'לנאום בהפגנה', ops: [{ op: 'stance', lean: { econ: -50 }, d: 3.5 }, { op: 'fame', d: 4 }, { op: 'att', who: '@pm', d: -6 }, { op: 'stability', d: -2 }] },
       { label: 'להציע פתרונות שוק', ops: [{ op: 'stance', lean: { econ: 50 }, d: 2.5 }, { op: 'fame', d: 2 }] },
@@ -304,7 +305,7 @@ export const EVENTS: GameEvent[] = [
     id: 'general_strike', icon: '🪧', weight: 3, cooldown: 25,
     title: 'ההסתדרות מכריזה על שביתה כללית',
     body: 'נמלי הים, נתב"ג והרשויות המקומיות מושבתים. הצדדים מחפשים מתווכים – ומחפשים אשמים.',
-    when: (s) => s.world.economy < 60,
+    when: (s) => isHot(s, 'wages', 45),
     choices: [
       { label: 'לתמוך בעובדים', ops: [{ op: 'stance', lean: { econ: -60 }, d: 3 }, { op: 'fame', d: 2 }] },
       { label: 'לתקוף את ההסתדרות', ops: [{ op: 'stance', lean: { econ: 60 }, d: 3 }, { op: 'fame', d: 2 }] },
@@ -319,6 +320,7 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'court_ruling', icon: '⚖️', weight: 3, cooldown: 20,
+    when: (s) => s.issues.judiciary >= 40,
     title: 'בג"ץ פסל חוק של הכנסת',
     body: 'בית המשפט העליון פסל סעיף בחוק שהכנסת חוקקה בשנה שעברה. הקואליציה זועמת, האופוזיציה חוגגת.',
     choices: [
@@ -329,6 +331,7 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'draft_protest', icon: '🪖', weight: 3, cooldown: 25,
+    when: (s) => isHot(s, 'draft', 45),
     title: 'הפגנת ענק נגד גיוס',
     body: 'מאות אלפים חוסמים את כניסת העיר. הקואליציה תלויה במפלגות החרדיות, והמילואימניקים זועמים.',
     choices: [
@@ -341,7 +344,7 @@ export const EVENTS: GameEvent[] = [
     id: 'inflation', icon: '📈', weight: 3, cooldown: 16,
     title: 'הלמ"ס: מדד המחירים זינק',
     body: 'האינפלציה קפצה, המשכנתאות מתייקרות, והרשתות מעלות מחירים. כולם מחפשים אשם.',
-    when: (s) => s.world.affordability < 40,
+    when: (s) => isHot(s, 'cost', 50),
     choices: [
       { label: 'להאשים את הממשלה', requires: (s) => (isCoalition(s, s.player.partyId) ? 'אתה בקואליציה' : null), ops: [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: 1 }, { op: 'att', who: '@pm', d: -5 }] },
       { label: 'לתקוף את הטייקונים והרשתות', ops: [{ op: 'stance', lean: { econ: -40 }, d: 2 }, { op: 'fame', d: 2 }] },
@@ -485,6 +488,124 @@ const GOV_EVENTS: GameEvent[] = [
 ];
 EVENTS.push(...GOV_EVENTS);
 export const CABINET_EVENTS = GOV_EVENTS.filter((e) => e.id.startsWith('cab_')).map((e) => e.id);
+
+
+// ---------- אירועי המשך לחקיקה ובג"ץ ----------
+/** האם השחקן "שותף" לחוק (הגיש או הצטרף כמגיש) */
+const ownsLaw = (s: GameState, ctx: Ctx) =>
+  s.lawsPassed.some((l) => l.templateId === ctx.law && (l.sponsor === 'player' || l.coSponsor || l.sponsor === s.player.employerId));
+const credit = (base: Op[], extra: Op[]) => (s: GameState, ctx: Ctx) => (ownsLaw(s, ctx) ? [...base, ...extra] : base);
+
+const LAW_EVENTS: GameEvent[] = [
+  {
+    id: 'housing_delivered', queued: true, icon: '🔑', title: 'נמסרו הדירות הראשונות',
+    body: 'בזכות "{title}" זוגות צעירים מקבלים מפתחות לדירות בהישג יד. המצלמות שם, וכולם רוצים להיות בתמונה.',
+    choices: [
+      { label: 'להגיע לטקס ולקחת קרדיט', dyn: credit([{ op: 'fame', d: 1 }], [{ op: 'fame', d: 3 }, { op: 'approval', sector: 'secular', d: 2 }, { op: 'approval', sector: 'traditional', d: 2 }]) },
+      { label: 'לתת לאחרים לחגוג', ops: [{ op: 'reputation', d: 1 }] },
+    ],
+  },
+  {
+    id: 'shabbat_buses', queued: true, icon: '🚌', title: 'האוטובוסים יצאו לדרך בשבת',
+    body: 'לראשונה קווי תחבורה ציבורית פועלים בסופ"ש. הקווים מלאים – ובשכונות החרדיות זועמים.',
+    choices: [
+      { label: 'לעלות על הקו הראשון מול המצלמות', dyn: credit([{ op: 'stance', lean: { religion: -60 }, d: 1.5 }], [{ op: 'fame', d: 3 }]) },
+      { label: 'להיפגש עם רבנים להרגעת הרוחות', ops: [{ op: 'world', key: 'cohesion', d: 1, weeks: 4 }, { op: 'reputation', d: 2 }] },
+    ],
+  },
+  {
+    id: 'draft_backlash', queued: true, icon: '🪧', title: 'הפגנות ענק נגד החוק',
+    body: 'אחרי שעבר "{title}", עשרות אלפי חרדים חוסמים כבישים. הרבנים מכריזים על "מלחמת דת", והשותפות החרדיות מאיימות.',
+    choices: [
+      { label: '"החוק יאכף – אין הנחות"', ops: [{ op: 'stance', lean: { religion: -60 }, d: 2 }, { op: 'world', key: 'cohesion', d: -2, weeks: 4 }, { op: 'stability', d: -5 }] },
+      { label: 'להציע תקופת מעבר', ops: [{ op: 'world', key: 'cohesion', d: 2, weeks: 4 }, { op: 'consistency', d: -2 }, { op: 'stability', d: 3 }] },
+      { label: 'לשתוק', ops: [] },
+    ],
+  },
+  {
+    id: 'override_protest', queued: true, icon: '📣', title: 'מאות אלפים ברחובות',
+    body: 'מיד אחרי ש"{title}" עבר, מחאה ענקית פורצת. טייסי מילואים, הייטקיסטים ומשפטנים קוראים לסירוב. מנגד – הפגנת תמיכה גדולה.',
+    choices: [
+      { label: 'לנאום בהפגנת התמיכה', ops: [{ op: 'stance', lean: { judiciary: 80 }, d: 2.5 }, { op: 'fame', d: 2 }] },
+      { label: 'לנאום בהפגנת המחאה', ops: [{ op: 'stance', lean: { judiciary: -80 }, d: 2.5 }, { op: 'fame', d: 2 }] },
+      { label: 'לקרוא להידברות', ops: [{ op: 'world', key: 'cohesion', d: 1, weeks: 4 }, { op: 'reputation', d: 2 }] },
+    ],
+  },
+  {
+    id: 'prices_drop', queued: true, icon: '🏷️', title: 'המחירים בסופר ירדו',
+    body: 'מדד המחירים מראה ירידה ראשונה מזה שנים, אחרי "{title}". החקלאים והיבואנים המקומיים זועמים.',
+    choices: [
+      { label: 'לחגוג בסיור בסופר', dyn: credit([{ op: 'fame', d: 1 }], [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: 1 }]) },
+      { label: 'להיפגש עם החקלאים', ops: [{ op: 'approval', sector: 'traditional', d: 1 }, { op: 'reputation', d: 1 }] },
+    ],
+  },
+  {
+    id: 'civil_first', queued: true, icon: '💍', title: 'הזוג הראשון נישא בברית זוגיות',
+    body: 'זוג עולים מברית המועצות לשעבר נישא לראשונה בישראל בברית זוגיות אזרחית. הרבנות הראשית מגנה.',
+    choices: [
+      { label: 'להגיע לחתונה', dyn: credit([{ op: 'stance', lean: { religion: -60 }, d: 1.5 }], [{ op: 'approval', sector: 'olim', d: 3 }, { op: 'fame', d: 2 }]) },
+      { label: 'לשלוח ברכה בשקט', ops: [{ op: 'approval', sector: 'olim', d: 1 }] },
+    ],
+  },
+  {
+    id: 'border_thanks', queued: true, icon: '🏡', title: 'תושבי הגבול אומרים תודה',
+    body: 'ממ"דים חדשים והטבות מס: תושבי הצפון והדרום מזמינים את מי שקידם את "{title}" לכנס הוקרה.',
+    choices: [
+      { label: 'לנסוע לכנס', dyn: credit([{ op: 'fame', d: 1 }], [{ op: 'approval', sector: 'traditional', d: 3 }, { op: 'approval', sector: 'religious', d: 2 }, { op: 'fame', d: 2 }]) },
+      { label: 'לשלוח נציג', ops: [] },
+    ],
+  },
+  {
+    id: 'crime_drop', queued: true, icon: '📉', title: 'ירידה ברציחות בחברה הערבית',
+    body: 'לראשונה מזה עשור מספר קורבנות הירי יורד. ראשי הרשויות הערביות מייחסים זאת ל"{title}".',
+    choices: [
+      { label: 'לבקר ביישוב ערבי ולשמוע', dyn: credit([{ op: 'approval', sector: 'arab', d: 2 }], [{ op: 'approval', sector: 'arab', d: 4 }, { op: 'fame', d: 2 }]) },
+      { label: '"זו רק ההתחלה"', ops: [{ op: 'reputation', d: 1 }] },
+    ],
+  },
+  {
+    id: 'employers_protest', queued: true, icon: '🏭', title: 'המעסיקים מתריעים: נפטר עובדים',
+    body: 'התאחדות התעשיינים טוענת ש"{title}" יוביל לפיטורים בפריפריה.',
+    choices: [
+      { label: 'לעמוד מאחורי החוק', ops: [{ op: 'stance', lean: { econ: -50 }, d: 1.5 }] },
+      { label: 'להציע הטבות מס למעסיקים קטנים', ops: [{ op: 'world', key: 'economy', d: 1, weeks: 8 }, { op: 'consistency', d: -1 }] },
+    ],
+  },
+  {
+    id: 'teachers_strike', queued: true, icon: '🍎', title: 'המורים שובתים',
+    body: 'הסתדרות המורים דורשת תוספת שכר על השעות הנוספות של "{title}". ההורים בלחץ.',
+    choices: [
+      { label: 'לתמוך במורים', ops: [{ op: 'stance', lean: { econ: -40 }, d: 1.5 }, { op: 'world', key: 'economy', d: -0.5, weeks: 4 }] },
+      { label: 'לדרוש לחזור לעבודה', ops: [{ op: 'stance', lean: { econ: 40 }, d: 1.5 }] },
+    ],
+  },
+  {
+    id: 'lobby_backlash', queued: true, icon: '💼', title: 'הלוביסטים נגדך',
+    body: 'אחרי "{title}", משרדי הלובי מפיצים בשקט שיש להם "מה לספר" על מי שקידם את החוק.',
+    choices: [
+      { label: 'לחשוף את האיומים בתקשורת', ops: [{ op: 'fame', d: 3 }, { op: 'reputation', d: 2 }] },
+      { label: 'להתעלם', ops: [] },
+    ],
+  },
+  {
+    id: 'petition', queued: true, icon: '⚖️', title: 'עתירה לבג"ץ נגד "{title}"',
+    body: 'ארגונים הגישו עתירה, ובית המשפט העליון כינס הרכב מורחב. ההחלטה צפויה בקרוב, והתקשורת שואלת לעמדתך.',
+    choices: [
+      { label: 'להגן על החוק', ops: [{ op: 'stance', lean: { judiciary: 60 }, d: 1.5 }, { op: 'special', id: 'court_rule', label: 'בג"ץ יכריע' }] },
+      { label: 'לתמוך בעתירה', ops: [{ op: 'stance', lean: { judiciary: -60 }, d: 1.5 }, { op: 'special', id: 'court_rule', label: 'בג"ץ יכריע' }] },
+      { label: '"נכבד כל החלטה"', ops: [{ op: 'reputation', d: 1 }, { op: 'special', id: 'court_rule', label: 'בג"ץ יכריע' }] },
+    ],
+  },
+  {
+    id: 'override_reenact', queued: true, icon: '🔁', title: 'פסקת ההתגברות: לחוקק מחדש?',
+    body: 'בג"ץ פסל את "{title}". בזכות חוק יסוד: החקיקה, הקואליציה יכולה לחוקק אותו מחדש – במחיר סערה ציבורית.',
+    choices: [
+      { label: 'לתמוך בחקיקה מחדש', ops: [{ op: 'stance', lean: { judiciary: 80 }, d: 2 }, { op: 'special', id: 'override_vote', label: 'הכנסת תצביע' }] },
+      { label: 'להתנגד – לכבד את הפסיקה', ops: [{ op: 'stance', lean: { judiciary: -70 }, d: 2 }, { op: 'special', id: 'override_vote', label: 'הכנסת תצביע' }] },
+    ],
+  },
+];
+EVENTS.push(...LAW_EVENTS);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id);
 

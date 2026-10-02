@@ -10,6 +10,7 @@ import { Meter } from './common';
 import { g2 } from './labels';
 import { NextWeekButton } from './MapView';
 import { GovernmentCard } from './Government';
+import { IssuesCard } from './Issues';
 
 const LADDER: { rank: string; label: string }[] = [
   { rank: 'activist', label: 'פעיל' },
@@ -102,6 +103,8 @@ export function Dashboard() {
             ★ = קואליציה. {p.partyId ? (isCoalition(g, p.partyId) ? 'המפלגה שלך בקואליציה.' : 'המפלגה שלך באופוזיציה.') : ''}
           </p>
         </div>
+
+        <IssuesCard />
 
         <GovernmentCard />
 

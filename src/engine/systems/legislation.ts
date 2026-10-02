@@ -6,6 +6,7 @@ import { chance, rand } from '../rng';
 import type { Bill, BillStage, GameState } from '../types';
 import { SECTORS, clamp, leanAlignment, newId } from '../util';
 import { onBillPassed } from './coalition';
+import { onLawPassed } from './issues';
 import { isCoalition } from './government';
 import { addNews } from './news';
 import { addWorldEffect, changeApproval } from './opinion';
@@ -239,6 +240,7 @@ export function bringToVote(s: GameState, b: Bill) {
 function onPassed(s: GameState, b: Bill) {
   const t = templateById(b.templateId);
   const impact = billImpact(b);
+  onLawPassed(s, { templateId: t.id, title: b.title, scope: b.scope, sponsor: b.sponsor });
   for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * impact, t.weeks, b.title, t.delay);
   const own = b.sponsor === 'player' ? 1 : 0.35;
   const fameF = 0.5 + s.player.fame / 100;

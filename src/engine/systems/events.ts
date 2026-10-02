@@ -10,6 +10,9 @@ import { changeSatisfaction, recomputeStability } from './coalition';
 import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
+import { reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
+import { templateById } from '../data/bills';
+import { leanAlignment } from '../util';
 
 export function currentEvent(s: GameState): { ev: GameEvent; ctx: Ctx } | null {
   while (s.eventQueue.length) {
@@ -164,4 +167,30 @@ registerSpecial('partner_refuse', (s, ctx) => {
 });
 registerSpecial('ministry_perf', (s) => {
   if (s.ministryState) s.ministryState.performance = clamp(s.ministryState.performance + 5, 0, 100);
+});
+
+// ---- שלב 3: בג"ץ ----
+registerSpecial('court_rule', (s, ctx) => {
+  const p = strikeChance(s, ctx.law);
+  if (rand(s) < p) {
+    strikeLaw(s, ctx.law);
+    addNews(s, `בג"ץ פסל את "${ctx.title}"`, 'neutral', false, 'ברוב של 7 שופטים מול 2 קבע בית המשפט שהחוק פוגע בזכויות יסוד באופן לא מידתי.', 'ערוץ המשכן');
+    if (s.rules.override) scheduleEvent(s, 'override_reenact', 1, ctx);
+    return `בג"ץ פסל את החוק (סיכוי היה ${Math.round(p * 100)}%). ההשפעות שלו מתבטלות.`;
+  }
+  addNews(s, `בג"ץ דחה את העתירות נגד "${ctx.title}"`, 'neutral');
+  return `בג"ץ דחה את העתירה (סיכוי פסילה היה ${Math.round(p * 100)}%). החוק נשאר.`;
+});
+
+registerSpecial('override_vote', (s, ctx) => {
+  const t = templateById(ctx.law);
+  const coal = s.coalition.parties;
+  const seats = coal.reduce((a, p) => a + s.parties[p].seats, 0) || 1;
+  const support = coal.reduce((a, p) => a + leanAlignment(s.parties[p].ideology, t.lean) * s.parties[p].seats, 0) / seats;
+  if (support > 0.3 && s.coalition.stability >= 35) {
+    reenactLaw(s, ctx.law);
+    addNews(s, `הכנסת חוקקה מחדש את "${ctx.title}" בפסקת ההתגברות`, 'neutral', false, undefined, 'ערוץ המשכן');
+    return 'הקואליציה חוקקה את החוק מחדש. הסערה רק מתחילה.';
+  }
+  return 'לקואליציה אין רוב לחקיקה מחדש. הפסיקה נשארת.';
 });

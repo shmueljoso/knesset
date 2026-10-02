@@ -61,6 +61,9 @@ export interface Npc {
   primaryStrength: number; // כוח בפריימריז/אצל היו"ר
   pledges: string[]; // מזהי הצעות חוק שהתחייב לתמוך בהן
   bio: string;
+  agenda: string; // תבנית החוק שהיא "הנושא שלו"
+  ambition: number; // 0-100
+  memory: { week: number; text: string; d: number }[];
 }
 
 export interface Party {
@@ -199,6 +202,7 @@ export interface NewsItem {
   body?: string;
   tone: 'good' | 'bad' | 'neutral';
   aboutPlayer: boolean;
+  npcId?: string;
 }
 
 export interface PendingEvent {
@@ -284,6 +288,65 @@ export interface GameState {
   flags: Record<string, number | string | boolean>;
   counter: number;
   gameOver: string | null;
+  // ---- שלב 3 ----
+  issues: Record<IssueId, number>; // בולטות 0-100
+  issueTrend: Record<IssueId, number>;
+  lawsPassed: LawRecord[];
+  rules: Rules;
+  scheduled: { week: number; eventId: string; ctx: Record<string, string> }[];
+  counters: Record<string, number>;
+  missions: string[]; // משימות פעילות
+  missionsDone: string[];
+  caucuses: Caucus[];
+  scandal: Scandal | null;
+  career: CareerStats;
+  mod: string | null;
+}
+
+export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';
+
+export interface LawRecord {
+  templateId: string;
+  title: string;
+  scope: 1 | 2 | 3;
+  week: number;
+  sponsor: string; // 'player' או מזהה NPC
+  struck?: boolean;
+  coSponsor?: boolean;
+}
+
+export interface Rules {
+  threshold: number;
+  norwegian: boolean;
+  termLimit: boolean;
+  override: boolean;
+  entrench: boolean;
+  equality: boolean;
+}
+
+export interface Caucus {
+  id: string;
+  issue: IssueId;
+  name: string;
+  members: string[];
+  founded: number;
+}
+
+export interface Scandal {
+  stage: number; // 1-5
+  heat: number; // 0-100
+  source: string;
+  startWeek: number;
+  nextWeek: number;
+}
+
+export interface CareerStats {
+  mkTerms: number;
+  peakSeats: number;
+  roles: string[];
+  pmWeeks: number;
+  electionsOutside: number;
+  startWorld: number;
 }
 
 // ---------- קואליציה וממשלה ----------

@@ -29,6 +29,9 @@ import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Hemicycle, VOTE_COLORS, VOTE_NAMES } from './Charts';
 import { Empty, Sheet } from './common';
+import { LawBook } from './Issues';
+import { ISSUES } from '../engine/data/issues';
+import { requiredMajority, strikeChance } from '../engine/systems/issues';
 
 function Pipeline({ b }: { b: Bill }) {
   const idx = b.stage === 'failed' ? STAGES.indexOf(b.history.length > 2 ? 'preliminary' : 'tabled') : STAGES.indexOf(b.stage);
@@ -91,6 +94,7 @@ export function LegislationView() {
         {active.map((b) => (
           <BillCard key={b.id} b={b} />
         ))}
+        <LawBook />
         {done.length > 0 && <div className="section-label">ארכיון</div>}
         {done.map((b) => (
           <BillCard key={b.id} b={b} />
@@ -265,6 +269,8 @@ export function VoteSheet({ id }: { id: string }) {
   };
   const probs = f.seats.map((x) => (x ? x.pFor / Math.max(0.01, x.pFor + x.pAgainst) : null));
   const margin = f.eFor - f.eAgainst;
+  const maj = b.stage === 'final' ? requiredMajority(g, b.templateId) : null;
+  const verdict = maj ? f.eFor - maj : margin;
 
   if (result) {
     return (
@@ -281,11 +287,12 @@ export function VoteSheet({ id }: { id: string }) {
         <Hemicycle probs={probs} onSeat={(nid) => open({ kind: 'npc', id: nid })} />
         <div className="spread" style={{ marginTop: 6 }}>
           <span className="good">בעד ~{Math.round(f.eFor)}</span>
-          <span className={margin > 3 ? 'good' : margin < -3 ? 'bad' : 'warn'} style={{ fontWeight: 800 }}>
-            {margin > 3 ? 'צפוי לעבור' : margin < -3 ? 'צפוי ליפול' : 'צמוד!'}
+          <span className={verdict > 3 ? 'good' : verdict < -3 ? 'bad' : 'warn'} style={{ fontWeight: 800 }}>
+            {verdict > 3 ? 'צפוי לעבור' : verdict < -3 ? 'צפוי ליפול' : 'צמוד!'}
           </span>
           <span className="bad">נגד ~{Math.round(f.eAgainst)}</span>
         </div>
+        {maj && <p className="small gold" style={{ margin: '6px 0 0' }}>חוק יסוד: נדרשים {maj} קולות בעד (לא רק רוב מהנוכחים).</p>}
         <p className="tiny muted" style={{ margin: '6px 0 0' }}>ירוק = נוטה בעד · אדום = נוטה נגד · אפור = מתלבט · זהב = את/ה. נעדרים לא נספרים.</p>
       </div>
 
@@ -337,6 +344,14 @@ export function VoteSheet({ id }: { id: string }) {
   );
 }
 
+const CATEGORIES: [string, string][] = [
+  ['economy', 'כלכלה'],
+  ['society', 'חברה'],
+  ['security', 'ביטחון'],
+  ['governance', 'ממשל'],
+  ['basic', 'חוקי יסוד'],
+];
+
 export function BillBuilder() {
   const g = useGame();
   const act = useStore((s) => s.act);
@@ -345,6 +360,7 @@ export function BillBuilder() {
   const toast = useStore((s) => s.toast);
   const [tid, setTid] = useState(BILL_TEMPLATES[0].id);
   const [scope, setScope] = useState<1 | 2 | 3>(2);
+  const [cat, setCat] = useState<string>('economy');
   const canGov = !!g.player.ministry || g.coalition.pmId === 'player';
   const [gov, setGov] = useState(canGov);
   const t = templateById(tid);
@@ -388,8 +404,15 @@ export function BillBuilder() {
         </div>
       )}
       {gov && <p className="tiny gold" style={{ marginTop: 0 }}>תזכיר חוק (21 יום) ← ועדת שרים ← ישר לקריאה ראשונה. אם ועדת השרים לא מאשרת – ההצעה נגנזת.</p>}
+      <div className="seg" style={{ marginBottom: 8 }}>
+        {CATEGORIES.map(([id, label]) => (
+          <button key={id} className={cat === id ? 'on' : ''} onClick={() => { setCat(id); setTid(BILL_TEMPLATES.find((x) => x.category === id)!.id); }}>
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="filter-row">
-        {BILL_TEMPLATES.map((x) => (
+        {BILL_TEMPLATES.filter((x) => x.category === cat).map((x) => (
           <button key={x.id} className={tid === x.id ? 'on' : ''} onClick={() => setTid(x.id)}>
             {x.icon} {x.title.replace('חוק ', '')}
           </button>
@@ -400,6 +423,16 @@ export function BillBuilder() {
           {t.icon} {t.title}
         </h3>
         <p className="small muted" style={{ margin: '6px 0 10px' }}>{t.summary}</p>
+        <div className="chips" style={{ marginBottom: 10 }}>
+          {t.issue && (
+            <span className={`chip ${g.issues[t.issue] >= 60 ? 'bad' : ''}`}>
+              {ISSUES.find((i) => i.id === t.issue)!.icon} סוגיה: {ISSUES.find((i) => i.id === t.issue)!.name} ({Math.round(g.issues[t.issue])})
+            </span>
+          )}
+          {t.basic && <span className="chip gold">חוק יסוד: דרוש רוב של {requiredMajority(g, t.id)} בקריאה השלישית</span>}
+          {t.rule && <span className="chip gold">משנה את כללי המשחק</span>}
+          {t.petitionRisk ? <span className="chip warn">סיכון פסילה בבג"ץ: {Math.round(strikeChance(g, t.id) * 100)}%</span> : null}
+        </div>
         <div className="small muted" style={{ marginBottom: 6 }}>היקף ההצעה</div>
         <div className="seg">
           {([1, 2, 3] as const).map((sc) => (

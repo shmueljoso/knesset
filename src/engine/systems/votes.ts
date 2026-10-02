@@ -4,6 +4,7 @@ import type { Bill, BillStage, GameState, Ideology, Npc, VoteResult } from '../t
 import { AXES, leanAlignment, sigmoid } from '../util';
 import { isCoalition } from './government';
 import { debtsWith } from './relationships';
+import { requiredMajority } from './issues';
 
 export type Line = 'for' | 'against' | 'free';
 export const LINE_NAMES: Record<Line, string> = { for: 'בעד', against: 'נגד', free: 'חופש הצבעה' };
@@ -30,6 +31,11 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
   const align = leanAlignment(p.ideology, billLean(b));
   const sp = sponsorParty(s, b);
   if (sp === partyId) return align < -0.3 ? 'free' : 'for';
+  // חוקים שמשנים את כללי המשחק: כל מפלגה מצביעה לפי האינטרס שלה
+  const rule = templateById(b.templateId).rule;
+  if (rule === 'threshold') return p.seats >= 12 ? 'for' : 'against';
+  if (rule === 'norwegian') return isCoalition(s, partyId) ? 'for' : 'against';
+  if (rule === 'termLimit') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'against' : isCoalition(s, partyId) ? 'free' : 'for';
   if (isCoalition(s, partyId)) {
     if (b.govPosition === 'support') return 'for';
     if (b.govPosition === 'oppose') return align > 0.75 ? 'free' : 'against';
@@ -118,5 +124,7 @@ export function runVote(s: GameState, b: Bill): VoteResult {
     else if (v === 'abstain') cAbstain++;
     else cAbsent++;
   });
-  return { week: s.week, stage: b.stage, for: cFor, against: cAgainst, abstain: cAbstain, absent: cAbsent, passed: cFor > cAgainst, seats };
+  const maj = b.stage === 'final' ? requiredMajority(s, b.templateId) : null;
+  const passed = maj ? cFor >= maj : cFor > cAgainst;
+  return { week: s.week, stage: b.stage, for: cFor, against: cAgainst, abstain: cAbstain, absent: cAbsent, passed, seats };
 }

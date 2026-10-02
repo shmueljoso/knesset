@@ -6,6 +6,7 @@ import { makeLocalRng } from './rng';
 import { formGovernment } from './systems/government';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
+import { ensurePhase3 } from './migrate';
 import type {
   AvatarSpec,
   BackgroundId,
@@ -93,6 +94,9 @@ export function makeNpc(
     primaryStrength: clamp(Math.round(90 - rank * 3 + (rnd() - 0.5) * 30), 5, 100),
     pledges: [],
     bio: `לשעבר ${prof}.`,
+    agenda: '',
+    ambition: Math.round(rnd() * 100),
+    memory: [],
   };
 }
 
@@ -247,7 +251,8 @@ export function createGame(opts: NewGameOptions): GameState {
     flags: {},
     counter: 0,
     gameOver: null,
-  };
+  } as Partial<GameState> as GameState;
+  ensurePhase3(s);
 
   if (opts.partyId) {
     const party = parties[opts.partyId];

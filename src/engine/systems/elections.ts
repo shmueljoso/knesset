@@ -123,7 +123,7 @@ export function runElection(s: GameState) {
   const totalShare = Object.values(votes).reduce((a, b) => a + b, 0);
   for (const id of Object.keys(votes)) votes[id] = Math.round((votes[id] / totalShare) * turnout);
   const surplus = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.surplusPartner]));
-  const seats = allocateSeats(votes, surplus);
+  const seats = allocateSeats(votes, surplus, 120, (s.rules?.threshold ?? 3.25) / 100);
 
   // הרכב הכנסת החדשה
   for (const n of Object.values(s.npcs)) n.isMK = false;

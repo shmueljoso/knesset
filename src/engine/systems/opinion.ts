@@ -1,4 +1,5 @@
 import { rand } from '../rng';
+import { salienceMultiplier } from './issues';
 import type { GameState, Ideology, Sector, WorldKey } from '../types';
 import { SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
 
@@ -21,6 +22,9 @@ export function changeApproval(s: GameState, sector: Sector | 'all', delta: numb
  * ועוצמת התגובה גדלה עם המוכרות. עמדה שסותרת את האידיאולוגיה של השחקן פוגעת בעקביות.
  */
 export function takeStance(s: GameState, lean: Partial<Ideology>, magnitude: number): Record<Sector, number> {
+  // עמדה בסוגיה בוערת מזיזה יותר
+  const axis = (Object.keys(lean) as (keyof Ideology)[]).sort((a, b) => Math.abs(lean[b] ?? 0) - Math.abs(lean[a] ?? 0))[0] ?? null;
+  magnitude *= salienceMultiplier(s, axis);
   const fameFactor = 0.4 + s.player.fame / 100;
   const out = {} as Record<Sector, number>;
   for (const sec of SECTORS) {
@@ -98,7 +102,7 @@ function avg(s: GameState) {
   return SECTORS.reduce((a, sec) => a + s.player.approval[sec] * SECTOR_WEIGHTS[sec], 0);
 }
 
-export function pollSeats(poll: number): number {
-  return poll < 3.25 ? 0 : Math.round((poll / 100) * 120);
+export function pollSeats(poll: number, threshold = 3.25): number {
+  return poll < threshold ? 0 : Math.round((poll / 100) * 120);
 }
 

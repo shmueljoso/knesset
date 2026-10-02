@@ -8,6 +8,7 @@ import { takeStance } from './systems/opinion';
 import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { askBudget } from './systems/ministry';
+import { scheduleEvent, strikeChance } from './systems/issues';
 import { CABINET_EVENTS } from './data/events';
 import { changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
@@ -454,9 +455,45 @@ export const ACTIONS: ActionDef[] = [
       return { text: r.text, good: r.ok };
     },
   },
+  // ---------- שלב 3: בית המשפט ----------
+  {
+    id: 'petition', loc: 'court', icon: '📄', label: 'להגיש עתירה נגד חוק', ap: 1, money: 20,
+    desc: 'עתירה לבג"ץ נגד החוק האחרון שעבר ואת/ה מתנגד/ת לו. שכר טרחה: 20 אלף ₪.',
+    avail: (s) => (petitionTarget(s) ? null : 'אין חוק שעבר לאחרונה שאפשר לעתור נגדו'),
+    run: (s) => {
+      const law = petitionTarget(s)!;
+      scheduleEvent(s, 'petition', 2, { law: law.templateId, title: law.title });
+      takeStance(s, { judiciary: -40 }, 1);
+      s.player.fame = clamp(s.player.fame + 1.5, 0, 100);
+      return { text: `העתירה נגד "${law.title}" הוגשה. סיכוי פסילה מוערך: ${Math.round(strikeChance(s, law.templateId) * 100)}%.` };
+    },
+  },
+  {
+    id: 'court_attack', loc: 'court', icon: '🔨', label: 'לתקוף את "שלטון השופטים"', ap: 1,
+    desc: 'נאום חריף מול בית המשפט. הבסיס הימני אוהב, המרכז נבהל.',
+    run: (s) => {
+      takeStance(s, { judiciary: 85 }, 2.5);
+      return run(s, [{ op: 'fame', d: 2 }, { op: 'world', key: 'trust', d: -0.5, weeks: 2 }], 'הנאום הוביל את המהדורות.');
+    },
+  },
+  {
+    id: 'court_defend', loc: 'court', icon: '🛡️', label: 'להגן על בית המשפט', ap: 1,
+    desc: 'שרשרת אנושית סביב העליון. המרכז-שמאל מריע, הימין זועם.',
+    run: (s) => {
+      takeStance(s, { judiciary: -85 }, 2.5);
+      return run(s, [{ op: 'fame', d: 2 }, { op: 'world', key: 'trust', d: 0.5, weeks: 2 }], 'אלפים הצטרפו אליך.');
+    },
+  },
 ];
 
 export const actionsAt = (loc: LocationId) => ACTIONS.filter((a) => a.loc === loc);
+
+/** החוק האחרון שעבר (שלא השחקן הגיש) – יעד לעתירה */
+export function petitionTarget(s: GameState) {
+  return [...s.lawsPassed]
+    .reverse()
+    .find((l) => !l.struck && l.sponsor !== 'player' && !l.coSponsor && s.week - l.week <= 52 && !s.scheduled.some((x) => x.eventId === 'petition' && x.ctx.law === l.templateId));
+}
 
 export function actionBlocked(s: GameState, a: ActionDef): string | null {
   if (s.player.ap < a.ap) return 'אין מספיק זמן השבוע';
