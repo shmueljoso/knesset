@@ -1,0 +1,119 @@
+{
+  "name": "לקראת הבחירות לכנסת ה-26 (אוקטובר 2026)",
+  "description": "הכנסת ה-25 התפזרה ביולי 2026 אחרי קדנציה מלאה. הבחירות ב-27 באוקטובר. הרשימות כבר נסגרו. הסקרים: \"ישר!\" של איזנקוט מול הליכוד, \"ביחד\" של בנט ולפיד, ואף גוש לא מגיע ל-61. ש\"ס ויהדות התורה כבר מחוץ לממשלה מאז 2025 – והקואליציה רעועה.",
+  "source": "הרכב הסיעות בכנסת היוצאת ותוצאות סקר חדשות 12 מ-23 בספטמבר 2026 (ישר! 23, ליכוד 20, ביחד 13, ישראל ביתנו 9, הדמוקרטים 9, יהדות התורה 8, ש\"ס 7, הרשימה המשותפת 7, עוצמה יהודית 6, הציונות הדתית 5, רע\"מ 5, עם ישראל 4, המילואימניקים 4). מפלגה בכנסת היוצאת משויכת לרשימה שממשיכה אותה. סדר השמות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "2026-09-23",
+  "realPeople": true,
+  "knesset": 25,
+  "startDate": "2026-10-04",
+  "electionInWeeks": 3,
+  "listsClosed": true,
+  "issues": { "security": 80, "draft": 85, "cost": 70, "housing": 65, "judiciary": 60, "crime": 70, "religion": 55, "education": 40, "wages": 45 },
+  "world": { "economy": 45, "affordability": 35, "housing": 30, "security": 35, "trust": 30, "cohesion": 25 },
+  "coalition": ["likud", "rzp", "otzma", "shas", "utj"],
+  "ministers": {
+    "defense": "ישראל כץ",
+    "finance": "בצלאל סמוטריץ'",
+    "justice": "יריב לוין",
+    "foreign": "גדעון סער",
+    "education": "יואב קיש",
+    "economy": "ניר ברקת",
+    "transport": "מירי רגב"
+  },
+  "parties": [
+    {
+      "id": "likud", "name": "הליכוד", "short": "ליכוד", "color": "#2563eb",
+      "ideology": { "econ": 45, "security": 75, "religion": 20, "judiciary": 75 },
+      "seats": 36, "polls": 16.5, "primaries": true, "sectors": { "traditional": 1, "secular": 0.4, "olim": 0.3 },
+      "members": ["בנימין נתניהו", "אלי כהן", "אמיר אוחנה", "יריב לוין", "ישראל כץ", "מירי רגב", "ניר ברקת", "יואב קיש", "גדעון סער", "אבי דיכטר", "דוד אמסלם", "שלמה קרעי", "מיקי זוהר", "חיים כץ", "עידית סילמן", "מאי גולן", "טלי גוטליב", "בועז ביסמוט", "דן אילוז", "זאב אלקין"],
+      "blurb": "כולל את אנשי \"תקווה חדשה\" שהצטרפו לליכוד."
+    },
+    {
+      "id": "together", "name": "ביחד", "short": "ביחד", "color": "#0891b2",
+      "ideology": { "econ": 35, "security": 40, "religion": -45, "judiciary": -40 },
+      "seats": 24, "polls": 11, "primaries": false, "sectors": { "secular": 1, "olim": 0.3, "traditional": 0.2 },
+      "members": ["נפתלי בנט", "יאיר לפיד", "מאיר כהן", "קארין אלהרר", "מרב כהן", "יואב סגלוביץ'", "מירב בן ארי", "רם בן ברק", "אלעזר שטרן", "יסמין פרידמן"],
+      "blurb": "איחוד \"בנט 2026\" ו\"יש עתיד\" (אפריל 2026)."
+    },
+    {
+      "id": "yashar", "name": "ישר!", "short": "ישר!", "color": "#6366f1",
+      "ideology": { "econ": 5, "security": 45, "religion": -30, "judiciary": -50 },
+      "seats": 0, "polls": 19, "primaries": false, "sectors": { "secular": 0.8, "traditional": 0.5, "olim": 0.3 },
+      "members": ["גדי איזנקוט", "חילי טרופר"],
+      "blurb": "המפלגה החדשה של הרמטכ\"ל לשעבר גדי איזנקוט."
+    },
+    {
+      "id": "bluewhite", "name": "כחול לבן", "short": "כחול לבן", "color": "#64748b",
+      "ideology": { "econ": 10, "security": 40, "religion": -25, "judiciary": -50 },
+      "seats": 8, "polls": 1.8, "primaries": false, "sectors": { "secular": 0.4 },
+      "members": ["בני גנץ", "פנינה תמנו-שטה"],
+      "blurb": "מפלגתו של בני גנץ – מתחת לאחוז החסימה בסקרים."
+    },
+    {
+      "id": "rzp", "name": "הציונות הדתית", "short": "הצ\"ד", "color": "#ea580c",
+      "ideology": { "econ": 40, "security": 95, "religion": 75, "judiciary": 90 },
+      "seats": 8, "polls": 4.2, "primaries": false, "sectors": { "religious": 1 },
+      "members": ["בצלאל סמוטריץ'", "משה פייגלין", "אורית סטרוק", "שמחה רוטמן", "אופיר סופר", "אבי מעוז"],
+      "blurb": "רשימה משותפת עם \"זהות\" של פייגלין (ונעם)."
+    },
+    {
+      "id": "otzma", "name": "עוצמה יהודית", "short": "עוצמה", "color": "#b45309",
+      "ideology": { "econ": 15, "security": 100, "religion": 70, "judiciary": 85 },
+      "seats": 6, "polls": 5, "primaries": false, "sectors": { "religious": 0.6, "traditional": 0.5 },
+      "members": ["איתמר בן גביר", "יצחק וסרלאוף", "עמיחי אליהו", "לימור סון הר-מלך", "צביקה פוגל", "אלמוג כהן"]
+    },
+    {
+      "id": "shas", "name": "ש\"ס", "short": "ש\"ס", "color": "#b8860b",
+      "ideology": { "econ": -45, "security": 40, "religion": 85, "judiciary": 65 },
+      "seats": 11, "polls": 5.8, "primaries": false, "sectors": { "haredi": 0.6, "traditional": 0.8 }, "satisfaction": 25,
+      "members": ["אריה דרעי", "יעקב מרגי", "מיכאל מלכיאלי", "חיים ביטון", "משה ארבל", "ינון אזולאי"],
+      "blurb": "יצאה מהממשלה ביולי 2025 בגלל חוק הגיוס."
+    },
+    {
+      "id": "utj", "name": "יהדות התורה", "short": "יהדות התורה", "color": "#0d9488",
+      "ideology": { "econ": -25, "security": 25, "religion": 95, "judiciary": 70 },
+      "seats": 7, "polls": 6.6, "primaries": false, "sectors": { "haredi": 1 }, "satisfaction": 20,
+      "members": ["יצחק גולדקנופף", "משה גפני", "מאיר פרוש", "אורי מקלב", "יעקב טסלר"],
+      "blurb": "פרשה מהקואליציה ביולי 2025 בגלל חוק הגיוס."
+    },
+    {
+      "id": "yb", "name": "ישראל ביתנו", "short": "ישראל ביתנו", "color": "#7c3aed",
+      "ideology": { "econ": 40, "security": 70, "religion": -75, "judiciary": 0 },
+      "seats": 6, "polls": 7.5, "primaries": false, "sectors": { "olim": 1, "secular": 0.4 },
+      "members": ["אביגדור ליברמן", "עודד פורר", "יבגני סובה", "שרון ניר", "יוליה מלינובסקי"]
+    },
+    {
+      "id": "democrats", "name": "הדמוקרטים", "short": "הדמוקרטים", "color": "#dc2626",
+      "ideology": { "econ": -60, "security": -50, "religion": -80, "judiciary": -85 },
+      "seats": 4, "polls": 7.5, "primaries": true, "sectors": { "secular": 1 },
+      "members": ["יאיר גולן", "נעמה לזימי", "גלעד קריב", "אפרת רייטן"],
+      "blurb": "איחוד העבודה ומרצ (2024)."
+    },
+    {
+      "id": "joint", "name": "הרשימה המשותפת", "short": "המשותפת", "color": "#db2777",
+      "ideology": { "econ": -60, "security": -95, "religion": -25, "judiciary": -70 },
+      "seats": 5, "polls": 5.8, "primaries": false, "sectors": { "arab": 1 },
+      "members": ["יוסף ג'בארין", "אחמד טיבי", "פאתן ע'טאס", "בכר עואודה"]
+    },
+    {
+      "id": "raam", "name": "רע\"מ", "short": "רע\"מ", "color": "#16a34a",
+      "ideology": { "econ": -25, "security": -55, "religion": 50, "judiciary": -30 },
+      "seats": 5, "polls": 4.2, "primaries": false, "sectors": { "arab": 0.9 },
+      "members": ["מנסור עבאס", "וליד טאהא", "אימאן ח'טיב-יאסין"]
+    },
+    {
+      "id": "amcha", "name": "עם ישראל", "short": "עם ישראל", "color": "#65a30d",
+      "ideology": { "econ": 30, "security": 85, "religion": 35, "judiciary": 45 },
+      "seats": 0, "polls": 3.4, "primaries": false, "sectors": { "traditional": 0.4, "religious": 0.3 },
+      "members": ["עופר וינטר", "יוסף חדאד", "נטלי שם טוב"],
+      "blurb": "המפלגה החדשה של האלוף (מיל') עופר וינטר."
+    },
+    {
+      "id": "reservists", "name": "המילואימניקים", "short": "המילואימניקים", "color": "#0ea5e9",
+      "ideology": { "econ": 35, "security": 65, "religion": -35, "judiciary": -10 },
+      "seats": 0, "polls": 3.4, "primaries": false, "sectors": { "secular": 0.3, "traditional": 0.2 },
+      "members": ["יועז הנדל", "ירון זליכה"],
+      "blurb": "יועז הנדל בשיתוף עם מפלגת הכלכלה של ירון זליכה."
+    }
+  ]
+}

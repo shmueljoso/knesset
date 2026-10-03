@@ -3,6 +3,7 @@ import { BACKGROUNDS } from '../engine/data/backgrounds';
 import { PARTY_DEFS, INITIAL_COALITION } from '../engine/data/parties';
 import { SKILL_NAMES } from '../engine/ops';
 import { modToPartyDefs, validateMod, type ModFile } from '../engine/mods';
+import { SCENARIOS } from '../engine/data/scenarios';
 import type { AvatarSpec, BackgroundId, Gender, Ideology, ScenarioId } from '../engine/types';
 import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
@@ -30,7 +31,9 @@ export function CreateScreen() {
   const [avatar, setAvatar] = useState<Omit<AvatarSpec, 'gender'>>({ seed: Math.floor(Math.random() * 1e9), cover: 'none', beard: false, glasses: false, age: 38 });
   const [ideology, setIdeology] = useState<Ideology>({ econ: 0, security: 20, religion: -20, judiciary: 0 });
   const [partyId, setPartyId] = useState<string | null>(null);
-  const [mod, setMod] = useState<ModFile | null>(null);
+  const pendingMod = useStore((st) => st.pendingMod);
+  const setPendingMod = useStore((st) => st.setPendingMod);
+  const [mod, setMod] = useState<ModFile | null>(pendingMod);
   const [modErr, setModErr] = useState<string[]>([]);
 
   const parties = useMemo(
@@ -201,18 +204,35 @@ export function CreateScreen() {
           <>
             <h2>באיזו מפלגה?</h2>
             <div className="card small" style={{ marginBottom: 10 }}>
-              <div className="spread">
-                <span>{mod ? `🗂️ כנסת מקובץ: ${mod.name}` : '🎭 עולם בדיוני (ברירת מחדל)'}</span>
-                {mod && (
-                  <button className="btn sm" onClick={() => { setMod(null); setPartyId(null); }}>
-                    חזרה לבדיוני
+              <div className="small muted" style={{ marginBottom: 6 }}>איזו כנסת?</div>
+              <div className="filter-row">
+                <button className={!mod ? 'on' : ''} onClick={() => { setMod(null); setPartyId(null); }}>
+                  🎭 בדיוני
+                </button>
+                {SCENARIOS.map((sc) => (
+                  <button key={sc.id} className={mod === sc.mod ? 'on' : ''} onClick={() => { setMod(sc.mod); setModErr([]); setPartyId(null); }}>
+                    {sc.icon} {sc.mod.name.replace(/\s*\(.*\)/, '')}
                   </button>
-                )}
+                ))}
+                <label className={`btn sm ${mod && !SCENARIOS.some((x) => x.mod === mod) ? 'on' : ''}`} style={{ flex: 'none' }}>
+                  📂 מקובץ
+                  <input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => loadMod(e.target.files?.[0])} />
+                </label>
+                <button onClick={() => { setPendingMod(mod); setScreen('editor'); }}>🛠️ עורך</button>
               </div>
-              <label className="btn sm block" style={{ marginTop: 8 }}>
-                📂 טעינת כנסת מקובץ JSON
-                <input type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => loadMod(e.target.files?.[0])} />
-              </label>
+              {mod && (
+                <div style={{ marginTop: 10 }}>
+                  <b>{mod.name}</b>
+                  {mod.description && <p className="small" style={{ margin: '4px 0' }}>{mod.description}</p>}
+                  <div className="tiny muted">
+                    {mod.startDate && `מתחיל ב-${new Date(mod.startDate).toLocaleDateString('he-IL')}`}
+                    {mod.electionInWeeks && ` · בחירות בעוד ${mod.electionInWeeks} שבועות`}
+                    {mod.listsClosed && ' · הרשימות כבר נסגרו'}
+                  </div>
+                  {mod.source && <div className="tiny faint" style={{ marginTop: 4 }}>מקור: {mod.source}{mod.asOf ? ` (נכון ל-${mod.asOf})` : ''}</div>}
+                  {mod.realPeople && <div className="tiny faint">התכונות, היחסים והאירועים במשחק בדיוניים.</div>}
+                </div>
+              )}
               {modErr.map((e, i) => (
                 <div key={i} className="tiny bad">{e}</div>
               ))}
@@ -232,7 +252,10 @@ export function CreateScreen() {
                       <span className="party-dot" style={{ background: p.color }} />
                       {p.name}
                     </h3>
-                    <span className="small muted">{p.seats} מנדטים</span>
+                    <span className="small muted">
+                      {p.seats} מנדטים
+                      {mod?.parties.find((x) => x.id === p.id)?.polls !== undefined && ` · סקרים ${Math.round(((mod!.parties.find((x) => x.id === p.id)!.polls ?? 0) * 120) / 100)}`}
+                    </span>
                   </div>
                   <p className="small muted" style={{ margin: '4px 0 6px' }}>
                     {p.blurb}

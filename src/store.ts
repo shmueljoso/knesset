@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createGame, endWeek, type GameState, type NewGameOptions } from './engine';
 import type { OpenPanel } from './engine/actions';
 import { migrate } from './engine/migrate';
+import type { ModFile } from './engine/mods';
 
 export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
 export type Panel =
@@ -51,7 +52,9 @@ export function clearSaved() {
 }
 
 interface Store {
-  screen: 'title' | 'create' | 'game';
+  screen: 'title' | 'create' | 'game' | 'editor';
+  pendingMod: ModFile | null;
+  setPendingMod: (m: ModFile | null) => void;
   game: GameState | null;
   tab: Tab;
   panels: Panel[];
@@ -76,6 +79,8 @@ let toastId = 0;
 
 export const useStore = create<Store>((set, get) => ({
   screen: 'title',
+  pendingMod: null,
+  setPendingMod: (pendingMod) => set({ pendingMod }),
   game: null,
   tab: 'map',
   panels: [],

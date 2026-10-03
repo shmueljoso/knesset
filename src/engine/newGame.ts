@@ -4,7 +4,7 @@ import { makeAvatar } from './avatarGen';
 import { INITIAL_COALITION, PARTY_DEFS, SURPLUS_PAIRS, type NamePoolId } from './data/parties';
 import { makeLocalRng } from './rng';
 import { formGovernment, proposeCoalition } from './systems/government';
-import { modSurplusPairs, modToPartyDefs, type ModFile } from './mods';
+import { applyModSettings, modSurplusPairs, modToPartyDefs, type ModFile } from './mods';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3 } from './migrate';
@@ -267,7 +267,7 @@ export function createGame(opts: NewGameOptions): GameState {
   if (opts.partyId) {
     const party = parties[opts.partyId];
     for (const npc of Object.values(npcs)) if (npc.partyId === party.id) npc.attitude += 10;
-    if (freshman) {
+    if (freshman && party.seats > 0) {
       // השחקן נכנס כח"כ אחרון ברשימה
       const replaced = party.list[party.seats - 1];
       npcs[replaced].isMK = false;
@@ -283,8 +283,9 @@ export function createGame(opts: NewGameOptions): GameState {
       player.fame += 8;
       player.money += 30;
       player.memberSince = -60;
-    } else if (opts.background === 'aide') {
-      const boss = party.list.slice(2, Math.min(10, party.seats)).map((id) => npcs[id])[Math.floor(rnd() * 5)];
+    } else if (opts.background === 'aide' && party.seats > 0) {
+      const pool = party.list.slice(party.seats > 2 ? 2 : 0, Math.min(10, party.seats));
+      const boss = npcs[pool[Math.floor(rnd() * pool.length)]];
       player.employerId = boss.id;
       player.rank = 'aide';
       boss.attitude = 35;
@@ -301,6 +302,7 @@ export function createGame(opts: NewGameOptions): GameState {
   const startCoalition = opts.mod ? opts.mod.coalition ?? proposeCoalition(s) : INITIAL_COALITION;
   formGovernment(s, startCoalition);
   s.mod = opts.mod?.name ?? null;
+  if (opts.mod) applyModSettings(s, opts.mod);
   refreshPresence(s);
   s.pollHistory.push({ week: 0, polls: Object.fromEntries(Object.values(parties).map((p) => [p.id, p.poll])) });
   s.weekStart = snapshot(s);
@@ -312,7 +314,7 @@ export function createGame(opts: NewGameOptions): GameState {
     id: 'w0',
     week: 0,
     outlet: 'ערוץ המשכן',
-    headline: freshman ? `הכנסת ה-${s.knesset} הושבעה: ${opts.name} בין הח"כים החדשים` : 'נפתח מושב החורף של הכנסת; הקואליציה מבטיחה "שנה של משילות"',
+    headline: opts.mod ? `${opts.mod.name}${opts.mod.description ? ' – ' + opts.mod.description.split('.')[0] : ''}` : freshman ? `הכנסת ה-${s.knesset} הושבעה: ${opts.name} בין הח"כים החדשים` : 'נפתח מושב החורף של הכנסת; הקואליציה מבטיחה "שנה של משילות"',
     tone: 'neutral',
     aboutPlayer: freshman,
   });

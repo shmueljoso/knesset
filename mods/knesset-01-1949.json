@@ -1,0 +1,109 @@
+{
+  "name": "הכנסת הראשונה (1949)",
+  "description": "האספה המכוננת שהפכה לכנסת הראשונה. בן-גוריון מקים קואליציה עם החזית הדתית המאוחדת, הפרוגרסיבים, הספרדים ורשימת נצרת. צנע, עלייה המונית ומעברות.",
+  "source": "תוצאות הבחירות לאספה המכוננת, 25 בינואר 1949 (ועדת הבחירות המרכזית). שמות ח\"כים: חברי סיעות ידועים – הסדר אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "1949-02-14",
+  "realPeople": true,
+  "knesset": 1,
+  "startDate": "1949-02-14",
+  "electionInWeeks": 128,
+  "world": { "economy": 30, "affordability": 25, "housing": 15, "security": 35, "trust": 62, "cohesion": 55 },
+  "issues": { "housing": 85, "cost": 80, "security": 70, "draft": 25, "religion": 50, "judiciary": 20, "crime": 10, "education": 60, "wages": 55 },
+  "coalition": ["mapai", "urf", "progressive", "sephardim", "nazareth"],
+  "ministers": {
+    "foreign": "משה שרת",
+    "finance": "אליעזר קפלן",
+    "justice": "פנחס רוזן",
+    "interior": "משה חיים שפירא",
+    "education": "זלמן שז\"ר",
+    "welfare": "יצחק מאיר לוין",
+    "religion": "יהודה לייב מימון",
+    "economy": "גולדה מאירסון"
+  },
+  "parties": [
+    {
+      "id": "mapai", "name": "מפא\"י", "short": "מפא\"י", "color": "#dc2626",
+      "ideology": { "econ": -55, "security": 35, "religion": -20, "judiciary": 0 },
+      "seats": 46, "primaries": false, "sectors": { "secular": 1, "traditional": 0.5, "olim": 0.6 },
+      "members": ["דוד בן-גוריון", "משה שרת", "יוסף שפרינצק", "גולדה מאירסון", "אליעזר קפלן", "זלמן שז\"ר", "דוב יוסף", "פנחס לבון", "מרדכי נמיר", "בבה אידלסון", "זלמן ארן", "דוד רמז", "הרצל ברגר", "אברהם הרצפלד", "בכור שלום שטרית"],
+      "blurb": "מפלגת פועלי ארץ ישראל – מפלגת השלטון."
+    },
+    {
+      "id": "mapam", "name": "מפ\"ם", "short": "מפ\"ם", "color": "#be123c",
+      "ideology": { "econ": -85, "security": -10, "religion": -70, "judiciary": -10 },
+      "seats": 19, "primaries": false, "sectors": { "secular": 1 },
+      "members": ["מאיר יערי", "יצחק טבנקין", "יעקב חזן", "משה סנה", "מרדכי בנטוב", "יעקב ריפתין", "אהרן ציזלינג", "חנה למדן", "יצחק בן-אהרן"],
+      "blurb": "מפלגת הפועלים המאוחדת – השמאל הסוציאליסטי, מזוהה עם הקיבוצים."
+    },
+    {
+      "id": "urf", "name": "החזית הדתית המאוחדת", "short": "החזית הדתית", "color": "#0d9488",
+      "ideology": { "econ": -10, "security": 20, "religion": 90, "judiciary": 30 },
+      "seats": 16, "primaries": false, "sectors": { "religious": 1, "haredi": 1, "traditional": 0.3 },
+      "members": ["יצחק מאיר לוין", "משה חיים שפירא", "יהודה לייב מימון", "זרח ורהפטיג", "יוסף בורג", "כלמן כהנא", "מרדכי נורוק"],
+      "blurb": "איחוד המזרחי, הפועל המזרחי, אגודת ישראל ופועלי אגודת ישראל."
+    },
+    {
+      "id": "herut", "name": "תנועת החרות", "short": "חרות", "color": "#2563eb",
+      "ideology": { "econ": 40, "security": 90, "religion": 15, "judiciary": 10 },
+      "seats": 14, "primaries": false, "sectors": { "traditional": 1, "secular": 0.3 },
+      "members": ["מנחם בגין", "יוחנן בדר", "חיים לנדאו", "אסתר רזיאל-נאור", "שמואל מרלין", "הלל קוק", "ערי ז'בוטינסקי", "אריה בן-אליעזר", "יעקב מרידור"],
+      "blurb": "יוצאי האצ\"ל בהנהגת מנחם בגין – האופוזיציה הימנית."
+    },
+    {
+      "id": "gz", "name": "הציונים הכלליים", "short": "צ\"כ", "color": "#0891b2",
+      "ideology": { "econ": 70, "security": 30, "religion": -10, "judiciary": -20 },
+      "seats": 7, "primaries": false, "sectors": { "secular": 0.7 },
+      "members": ["ישראל רוקח", "פרץ ברנשטיין", "יוסף ספיר", "יוסף סרלין"],
+      "blurb": "המעמד הבינוני והיוזמה הפרטית."
+    },
+    {
+      "id": "progressive", "name": "המפלגה הפרוגרסיבית", "short": "פרוגרסיבים", "color": "#6366f1",
+      "ideology": { "econ": 35, "security": 0, "religion": -40, "judiciary": -60 },
+      "seats": 5, "primaries": false, "sectors": { "secular": 0.5 },
+      "members": ["פנחס רוזן", "יזהר הררי", "עידוב כהן", "משה קול", "ישעיהו פרדר"],
+      "blurb": "ליברלים ממוצא מרכז-אירופי, בעד שלטון החוק."
+    },
+    {
+      "id": "sephardim", "name": "רשימת הספרדים ועדות המזרח", "short": "הספרדים", "color": "#b8860b",
+      "ideology": { "econ": 10, "security": 30, "religion": 30, "judiciary": 0 },
+      "seats": 4, "primaries": false, "sectors": { "traditional": 1 },
+      "members": [],
+      "blurb": "ייצוג לעדות המזרח הוותיקות."
+    },
+    {
+      "id": "maki", "name": "המפלגה הקומוניסטית הישראלית", "short": "מק\"י", "color": "#7c3aed",
+      "ideology": { "econ": -100, "security": -70, "religion": -90, "judiciary": -20 },
+      "seats": 4, "primaries": false, "sectors": { "arab": 0.6, "secular": 0.2 },
+      "members": ["שמואל מיקוניס", "מאיר וילנר", "תאופיק טובי", "אסתר וילנסקה"],
+      "blurb": "קומוניסטים יהודים וערבים."
+    },
+    {
+      "id": "nazareth", "name": "הרשימה הדמוקרטית של נצרת", "short": "נצרת", "color": "#65a30d",
+      "ideology": { "econ": -10, "security": 0, "religion": 20, "judiciary": 0 },
+      "seats": 2, "primaries": false, "sectors": { "arab": 1 },
+      "members": ["אמין-סלים ג'רג'ורה", "סייף א-דין א-זועבי"],
+      "blurb": "רשימה ערבית שהתחברה למפא\"י."
+    },
+    {
+      "id": "fighters", "name": "רשימת הלוחמים", "short": "הלוחמים", "color": "#ea580c",
+      "ideology": { "econ": -40, "security": 70, "religion": -30, "judiciary": 0 },
+      "seats": 1, "primaries": false, "sectors": { "secular": 0.2 },
+      "members": ["נתן ילין-מור"],
+      "blurb": "יוצאי הלח\"י."
+    },
+    {
+      "id": "wizo", "name": "ויצו", "short": "ויצו", "color": "#db2777",
+      "ideology": { "econ": 10, "security": 0, "religion": -30, "judiciary": -20 },
+      "seats": 1, "primaries": false, "sectors": { "secular": 0.2 },
+      "members": ["רחל כהן-כגן"],
+      "blurb": "הסתדרות נשים ציוניות."
+    },
+    {
+      "id": "yemenites", "name": "התאחדות התימנים", "short": "התימנים", "color": "#16a34a",
+      "ideology": { "econ": 0, "security": 20, "religion": 50, "judiciary": 10 },
+      "seats": 1, "primaries": false, "sectors": { "traditional": 0.4 },
+      "members": ["זכריה גלוסקא"],
+      "blurb": "ייצוג ליוצאי תימן."
+    }
+  ]
+}

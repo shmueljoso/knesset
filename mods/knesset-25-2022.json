@@ -1,0 +1,88 @@
+{
+  "name": "הכנסת ה-25 (נבחרה ב-2022)",
+  "description": "אחרי הבחירות של נובמבר 2022: גוש נתניהו זכה ב-64 מנדטים. הממשלה ה-37 – הליכוד, הציונות הדתית (כולל עוצמה יהודית ונעם), ש\"ס ויהדות התורה. הרפורמה המשפטית בפתח.",
+  "source": "תוצאות רשמיות של הבחירות לכנסת ה-25, 1 בנובמבר 2022; הרכב הממשלה ה-37 בהקמתה. סדר השמות ברשימות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "2022-12-29",
+  "realPeople": true,
+  "knesset": 25,
+  "startDate": "2022-12-29",
+  "electionInWeeks": 199,
+  "issues": { "judiciary": 70, "cost": 70, "housing": 65, "draft": 45, "security": 50, "crime": 75, "religion": 50, "education": 35, "wages": 40 },
+  "coalition": ["likud", "rzp", "shas", "utj"],
+  "ministers": {
+    "defense": "יואב גלנט",
+    "finance": "בצלאל סמוטריץ'",
+    "justice": "יריב לוין",
+    "foreign": "אלי כהן",
+    "interior": "אריה דרעי",
+    "education": "יואב קיש",
+    "economy": "ניר ברקת",
+    "transport": "מירי רגב",
+    "housing": "יצחק גולדקנופף",
+    "welfare": "יעקב מרגי",
+    "religion": "מיכאל מלכיאלי"
+  },
+  "parties": [
+    {
+      "id": "likud", "name": "הליכוד", "short": "ליכוד", "color": "#2563eb",
+      "ideology": { "econ": 45, "security": 70, "religion": 20, "judiciary": 75 },
+      "seats": 32, "primaries": true, "sectors": { "traditional": 1, "secular": 0.4, "olim": 0.3 }, "surplusPartner": "rzp",
+      "members": ["בנימין נתניהו", "יריב לוין", "אלי כהן", "יואב גלנט", "אמיר אוחנה", "יואב קיש", "ניר ברקת", "מירי רגב", "אבי דיכטר", "ישראל כץ", "דוד אמסלם", "שלמה קרעי", "מיקי זוהר", "אופיר אקוניס", "חיים כץ", "עידית סילמן", "גלית דיסטל אטבריאן", "מאי גולן", "טלי גוטליב", "בועז ביסמוט", "דן אילוז", "חנוך מילביצקי", "ניסים ואטורי", "משה סעדה", "אביחי בוארון"]
+    },
+    {
+      "id": "yeshatid", "name": "יש עתיד", "short": "יש עתיד", "color": "#0891b2",
+      "ideology": { "econ": 30, "security": 30, "religion": -60, "judiciary": -60 },
+      "seats": 24, "primaries": false, "sectors": { "secular": 1, "olim": 0.2 }, "surplusPartner": "nu",
+      "members": ["יאיר לפיד", "אורנה ברביבאי", "מאיר כהן", "קארין אלהרר", "מרב כהן", "יואב סגלוביץ'", "בועז טופורובסקי", "מיקי לוי", "מירב בן ארי", "רם בן ברק", "יסמין פרידמן", "אלעזר שטרן", "ולדימיר בליאק", "רון כץ", "מטי צרפתי הרכבי", "יוראי להב הרצנו", "שלי טל מירון", "נאור שירי", "שמעון דוידסון", "משה טור-פז"]
+    },
+    {
+      "id": "rzp", "name": "הציונות הדתית", "short": "הצ\"ד", "color": "#ea580c",
+      "ideology": { "econ": 30, "security": 95, "religion": 75, "judiciary": 90 },
+      "seats": 14, "primaries": false, "sectors": { "religious": 1, "traditional": 0.3 }, "surplusPartner": "likud",
+      "members": ["בצלאל סמוטריץ'", "איתמר בן גביר", "אורית סטרוק", "יצחק וסרלאוף", "שמחה רוטמן", "עמיחי אליהו", "אופיר סופר", "אבי מעוז", "אלמוג כהן", "אוהד טל", "צביקה פוגל", "מיכל וולדיגר", "לימור סון הר-מלך", "יצחק קרויזר"],
+      "blurb": "רשימה משותפת של הציונות הדתית, עוצמה יהודית ונעם."
+    },
+    {
+      "id": "nu", "name": "המחנה הממלכתי", "short": "הממלכתי", "color": "#6366f1",
+      "ideology": { "econ": 15, "security": 45, "religion": -25, "judiciary": -55 },
+      "seats": 12, "primaries": false, "sectors": { "secular": 0.7, "traditional": 0.3 }, "surplusPartner": "yeshatid",
+      "members": ["בני גנץ", "גדעון סער", "גדי איזנקוט", "פנינה תמנו-שטה", "חילי טרופר", "זאב אלקין", "מתן כהנא", "יפעת שאשא-ביטון", "אורית פרקש-הכהן", "מיכאל ביטון", "שרן השכל", "אלון טל"]
+    },
+    {
+      "id": "shas", "name": "ש\"ס", "short": "ש\"ס", "color": "#b8860b",
+      "ideology": { "econ": -45, "security": 40, "religion": 85, "judiciary": 65 },
+      "seats": 11, "primaries": false, "sectors": { "haredi": 0.6, "traditional": 0.8 }, "surplusPartner": "utj",
+      "members": ["אריה דרעי", "יעקב מרגי", "יואב בן צור", "מיכאל מלכיאלי", "חיים ביטון", "משה ארבל", "אוריאל בוסו", "ינון אזולאי", "אברהם בצלאל", "יוסף טייב", "משה אבוטבול"]
+    },
+    {
+      "id": "utj", "name": "יהדות התורה", "short": "יהדות התורה", "color": "#0d9488",
+      "ideology": { "econ": -25, "security": 25, "religion": 95, "judiciary": 70 },
+      "seats": 7, "primaries": false, "sectors": { "haredi": 1 }, "surplusPartner": "shas",
+      "members": ["יצחק גולדקנופף", "משה גפני", "מאיר פרוש", "אורי מקלב", "יעקב טסלר", "יעקב אשר", "ישראל אייכלר"]
+    },
+    {
+      "id": "yb", "name": "ישראל ביתנו", "short": "ישראל ביתנו", "color": "#7c3aed",
+      "ideology": { "econ": 40, "security": 65, "religion": -75, "judiciary": 0 },
+      "seats": 6, "primaries": false, "sectors": { "olim": 1, "secular": 0.3 },
+      "members": ["אביגדור ליברמן", "עודד פורר", "יבגני סובה", "שרון ניר", "יוליה מלינובסקי", "חמד עמאר"]
+    },
+    {
+      "id": "raam", "name": "רע\"מ", "short": "רע\"מ", "color": "#16a34a",
+      "ideology": { "econ": -25, "security": -60, "religion": 50, "judiciary": -30 },
+      "seats": 5, "primaries": false, "sectors": { "arab": 0.9 },
+      "members": ["מנסור עבאס", "וליד טאהא", "וליד אלהואשלה", "אימאן ח'טיב-יאסין", "יאסר חוג'יראת"]
+    },
+    {
+      "id": "hadash", "name": "חד\"ש-תע\"ל", "short": "חד\"ש-תע\"ל", "color": "#db2777",
+      "ideology": { "econ": -60, "security": -95, "religion": -30, "judiciary": -70 },
+      "seats": 5, "primaries": false, "sectors": { "arab": 1 },
+      "members": ["איימן עודה", "אחמד טיבי", "עאידה תומא-סלימאן", "עופר כסיף", "יוסף עטאונה"]
+    },
+    {
+      "id": "labor", "name": "העבודה", "short": "העבודה", "color": "#dc2626",
+      "ideology": { "econ": -55, "security": -40, "religion": -70, "judiciary": -80 },
+      "seats": 4, "primaries": true, "sectors": { "secular": 1 },
+      "members": ["מרב מיכאלי", "נעמה לזימי", "גלעד קריב", "אפרת רייטן"]
+    }
+  ]
+}

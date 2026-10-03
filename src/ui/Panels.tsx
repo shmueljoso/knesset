@@ -7,6 +7,7 @@ import { FOUND_COST, defect, foundParty, joinParty, leaveParty, splitFaction, sp
 import { STAFF_ROLES, fireStaff, hireStaff, maxStaff, staffCandidates, staffCost } from '../engine/systems/staff';
 import { ideologyDistance } from '../engine/util';
 import { retire } from '../engine/systems/legacy';
+import { modFromGame } from '../engine/mods';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Empty, Sheet } from './common';
@@ -221,6 +222,7 @@ export function SettingsSheet() {
   const [confirm, setConfirm] = useState(false);
   const [retireConfirm, setRetireConfirm] = useState(false);
   const act = useStore((s) => s.act);
+  const setPendingMod = useStore((s) => s.setPendingMod);
   const bg = BACKGROUNDS.find((b) => b.id === g.player.background)!;
   const exportSave = () => {
     const blob = new Blob([JSON.stringify(g)], { type: 'application/json' });
@@ -239,6 +241,9 @@ export function SettingsSheet() {
       <div className="col" style={{ marginTop: 12 }}>
         <button className="btn" onClick={exportSave}>
           💾 ייצוא שמירה לקובץ
+        </button>
+        <button className="btn" onClick={() => { setPendingMod(modFromGame(g)); closeAll(); setScreen('editor'); }}>
+          🛠️ ייצוא הכנסת הנוכחית לעורך
         </button>
         <button className="btn" onClick={() => { closeAll(); setScreen('title'); }}>
           🏠 למסך הפתיחה
@@ -306,6 +311,9 @@ export function HelpSheet() {
         </div>
         <div className="card">
           <b>⚖️ חוקי יסוד ובג"ץ</b> – חוק יסוד צריך 61 (או 80 אם שוריין) בקריאה השלישית. חוקים שנויים במחלוקת עלולים להיפסל בבג"ץ; עם פסקת התגברות אפשר לחוקק מחדש.
+        </div>
+        <div className="card">
+          <b>🗂️ כנסת אמיתית ועורך</b> – במשחק חדש, בשלב "מפלגה", בוחרים "איזו כנסת?": בדיוני, הכנסת הראשונה (1949), הכנסת ה-25 (2022) או "לקראת הבחירות 2026". במסך הפתיחה יש "עורך כנסת" – בונים מפלגות, מושבים, סקרים, עמדות, קואליציה ושמות, ומשחקים או מורידים קובץ.
         </div>
         <div className="card">
           <b>🏁 סוף המשחק</b> – פרישה, הרשעה, פעמיים ברצף מחוץ לכנסת, או קדנציה מלאה כראש ממשלה. בסוף – סיכום מורשת עם ציון ותואר.

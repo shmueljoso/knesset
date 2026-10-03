@@ -6,6 +6,7 @@ import { IsoSkyline } from './MapView';
 export function TitleScreen() {
   const setScreen = useStore((s) => s.setScreen);
   const continueGame = useStore((s) => s.continueGame);
+  const setPendingMod = useStore((s) => s.setPendingMod);
   const saved = useMemo(() => loadSaved(), []);
   return (
     <div className="title-screen">
@@ -24,12 +25,15 @@ export function TitleScreen() {
               המשך משחק – {saved.player.name}, {dateLabel(saved)}
             </button>
           )}
-          <button className={`btn block ${saved ? '' : 'primary'}`} onClick={() => setScreen('create')}>
+          <button className={`btn block ${saved ? '' : 'primary'}`} onClick={() => { setPendingMod(null); setScreen('create'); }}>
             משחק חדש
+          </button>
+          <button className="btn block ghost" onClick={() => { setPendingMod(null); setScreen('editor'); }}>
+            🛠️ עורך כנסת – בנה/י הרכב משלך
           </button>
         </div>
         <p className="faint tiny" style={{ marginTop: 16, textAlign: 'center' }}>
-          כל המפלגות והדמויות בדיוניות. התהליכים – אמיתיים.
+          עולם בדיוני, או הכנסת האמיתית: 1949, 2022 ובחירות 2026. התהליכים – אמיתיים.
         </p>
       </div>
     </div>
