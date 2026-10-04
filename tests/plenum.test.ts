@@ -15,6 +15,8 @@ import {
   ultimatumChance,
 } from '../src/engine/systems/legislation';
 import type { Bill } from '../src/engine/types';
+import { migrate } from '../src/engine';
+import { cabinetBlock, ministerialDecision } from '../src/engine/systems/legislation';
 
 const base: NewGameOptions = {
   name: 'שחקן', gender: 'm', background: 'journalist',
@@ -55,6 +57,49 @@ describe('pressure on the ministerial committee', () => {
       expect(ultimatumBlocked(s, b)).not.toBeNull();
     }
     expect(flipped + refused).toBe(8);
+  });
+
+  it('works on bills that already fell, and before the committee decides', () => {
+    let revived = 0;
+    let preempted = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      const s = createGame({ ...base, partyId: 'oz', seed });
+      s.parties.oz.leaderId = 'player';
+      s.player.capital = 30;
+      // הצעה שכבר נפלה בטרומית בגלל התנגדות הממשלה
+      const fell = blockedBill(s);
+      fell.stage = 'failed';
+      fell.lastVote = { week: 0, stage: 'preliminary', for: 30, against: 60, abstain: 0, absent: 30, passed: false, seats: [] };
+      expect(cabinetBlock(s, fell)).toBe('fell');
+      if (issueUltimatum(s, fell).ok) {
+        revived++;
+        expect(fell.stage).toBe('preliminary');
+        expect(fell.govPosition).toBe('support');
+      }
+      s.eventQueue = [];
+      // הצעה שעוד לא הגיעה לוועדת השרים
+      const early = createBill(s, 'shabbat', 2) as Bill;
+      if (cabinetBlock(s, early) === 'before' && issueUltimatum(s, early).ok) {
+        preempted++;
+        expect(ministerialDecision(s, early)).toBe('support');
+      }
+      s.eventQueue = [];
+    }
+    expect(revived).toBeGreaterThan(0);
+    expect(preempted).toBeGreaterThan(0);
+  });
+
+  it('old saves: government bills shelved by the committee are recognized', () => {
+    const s = createGame(base);
+    s.player.ap = 5;
+    const b = createBill(s, 'housing', 2) as Bill;
+    b.stage = 'failed';
+    b.government = true;
+    b.history.push({ week: 1, text: 'ועדת השרים לא אישרה את הצעת החוק הממשלתית.' });
+    const old = JSON.parse(JSON.stringify(s));
+    delete old.liveVote;
+    const m = migrate(old);
+    expect(m.bills.find((x) => x.id === b.id)!.cabinetRejected).toBe(true);
   });
 
   it('a rejected government bill can be revived by an appeal', () => {

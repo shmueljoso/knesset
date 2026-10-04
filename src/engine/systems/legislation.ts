@@ -122,7 +122,7 @@ export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose'
     const pmAlign = pmParty && s.parties[pmParty] ? leanAlignment(s.parties[pmParty].ideology, lean) : 0;
     return pmAlign > 0.75 && coalAlign > 0.55 ? 'support' : pmAlign < 0.45 ? 'oppose' : 'free';
   }
-  if (s.coalition.pmId === 'player' && b.sponsor === 'player') return 'support';
+  if ((s.coalition.pmId === 'player' && b.sponsor === 'player') || s.flags[`ultok_${b.id}`]) return 'support';
   if (score > 0.35) return 'support';
   if (score < 0.05) return 'oppose';
   return 'free';
@@ -423,12 +423,22 @@ export function pressureRole(s: GameState): PressureRole | null {
   return p.ministry ? 'minister' : 'mk';
 }
 
-const cabinetAgainst = (b: Bill) => b.govPosition === 'oppose' || !!b.cabinetRejected;
-const pressureStage = (b: Bill) => b.stage === 'preliminary' || (b.stage === 'failed' && !!b.cabinetRejected && !b.lastVote);
+/**
+ * האם ועדת השרים חוסמת (או צפויה לחסום) את ההצעה, ובאיזה מצב:
+ * before – לפני ההחלטה (תחזית התנגדות), blocked – הממשלה מתנגדת לפני הטרומית,
+ * fell – ההצעה כבר נפלה בגלל ההתנגדות (נגנזה בוועדת השרים או נפלה בטרומית).
+ */
+export function cabinetBlock(s: GameState, b: Bill): 'before' | 'blocked' | 'fell' | null {
+  if (b.sponsor !== 'player') return null;
+  if ((b.stage === 'tabled' || b.stage === 'ministerial') && !s.flags[`ultok_${b.id}`]) return ministerialDecision(s, b) === 'oppose' ? 'before' : null;
+  if (b.stage === 'preliminary' && b.govPosition === 'oppose') return 'blocked';
+  if (b.stage === 'failed' && (b.cabinetRejected || (b.govPosition === 'oppose' && (!b.lastVote || b.lastVote.stage === 'preliminary')))) return 'fell';
+  return null;
+}
 
 export function ultimatumBlocked(s: GameState, b: Bill): string | null {
   if (b.sponsor !== 'player') return 'רק להצעות שלך';
-  if (!cabinetAgainst(b) || !pressureStage(b)) return 'ועדת השרים לא חוסמת את ההצעה';
+  if (!cabinetBlock(s, b)) return 'ועדת השרים לא חוסמת את ההצעה';
   if (!pressureRole(s)) return 'רק מתוך הקואליציה (ולא כראש הממשלה)';
   if (s.flags[`ult_${b.id}`]) return 'כבר הצבת אולטימטום על ההצעה הזו';
   if (s.player.capital < 3) return 'נדרש הון פוליטי 3';
@@ -456,10 +466,18 @@ export function ultimatumChance(s: GameState, b: Bill): number {
 }
 
 function cabinetFlips(s: GameState, b: Bill, how: string) {
+  const state = cabinetBlock(s, b);
   b.govPosition = 'support';
-  if (b.cabinetRejected) {
+  if (state === 'before') {
+    s.flags[`ultok_${b.id}`] = true;
+    b.govPosition = null;
+    b.history.push({ week: s.week, text: `${how} – ועדת השרים תתמוך בהצעה כשתגיע אליה.` });
+  } else if (state === 'fell' && b.cabinetRejected) {
     b.cabinetRejected = false;
     setStage(s, b, 'first', `${how} – ועדת השרים חזרה בה ואישרה את ההצעה. היא מונחת לקריאה ראשונה.`);
+  } else if (state === 'fell') {
+    b.lastVote = undefined;
+    setStage(s, b, 'preliminary', `${how} – ההצעה חוזרת לקריאה טרומית, הפעם עם תמיכת הממשלה.`);
   } else b.history.push({ week: s.week, text: `${how} – הממשלה תתמוך בהצעה.` });
 }
 
@@ -486,7 +504,7 @@ export function issueUltimatum(s: GameState, b: Bill): { ok: boolean; text: stri
 
 export function appealBlocked(s: GameState, b: Bill): string | null {
   if (b.sponsor !== 'player') return 'רק להצעות שלך';
-  if (!cabinetAgainst(b) || !pressureStage(b)) return 'ועדת השרים לא חוסמת את ההצעה';
+  if (!cabinetBlock(s, b)) return 'ועדת השרים לא חוסמת את ההצעה';
   if (!s.player.ministry) return 'רק שר/ה יכול/ה לערער למליאת הממשלה';
   if (s.flags[`appeal_${b.id}`]) return 'כבר ערערת';
   if (s.player.ap < 1) return 'אין זמן';

@@ -8,6 +8,7 @@ import {
   appealBlocked,
   appealChance,
   appealToGovernment,
+  cabinetBlock,
   canBringToVote,
   issueUltimatum,
   pressureRole,
@@ -157,7 +158,7 @@ export function BillSheet({ id }: { id: string }) {
   const voteBlock = canBringToVote(g, b);
   const ultBlock = ultimatumBlocked(g, b);
   const appealBlock = appealBlocked(g, b);
-  const pressure = b.sponsor === 'player' && (b.govPosition === 'oppose' || b.cabinetRejected) && (b.stage === 'preliminary' || (b.stage === 'failed' && b.cabinetRejected && !b.lastVote));
+  const pressure = cabinetBlock(g, b);
   return (
     <Sheet title={`${t.icon} ${b.title}`} sub={STAGE_NAMES[b.stage]}>
       <p className="small" style={{ marginTop: 0 }}>{t.summary}</p>
@@ -204,8 +205,11 @@ export function BillSheet({ id }: { id: string }) {
         )}
         {pressure && (
           <div className="card small" style={{ background: 'var(--bg)' }} data-testid="cabinet-pressure">
-            <b>🚫 ועדת השרים חוסמת את ההצעה</b>
-            <div className="muted">{b.cabinetRejected ? 'ההצעה הממשלתית נגנזה.' : 'הקואליציה תצביע נגד – כמעט אין סיכוי בקריאה הטרומית.'} אפשר ללחוץ:</div>
+            <b>🚫 {pressure === 'before' ? 'ועדת השרים צפויה להתנגד' : pressure === 'fell' ? 'ההצעה נפלה בגלל התנגדות הממשלה' : 'ועדת השרים חוסמת את ההצעה'}</b>
+            <div className="muted">
+              {pressure === 'before' ? 'לפי הרכב הממשלה, ההצעה תיתקל בהתנגדות.' : pressure === 'fell' ? (b.cabinetRejected ? 'ההצעה הממשלתית נגנזה.' : 'הקואליציה הצביעה נגד.') + ' הצלחה תחזיר אותה למסלול.' : 'הקואליציה תצביע נגד – כמעט אין סיכוי בקריאה הטרומית.'} אפשר ללחוץ:
+            </div>
+            {!pressureRole(g) && <div className="tiny faint" style={{ marginTop: 4 }}>{g.coalition.pmId === 'player' ? 'כראש הממשלה – ועדת השרים כבר בצד שלך.' : 'מהאופוזיציה אין מנוף על הממשלה. נסה/י לגייס תומכים בספירת הקולות, או להגיש מחדש בהיקף מתון.'}</div>}
             {!ultBlock && (
               <button
                 className="btn danger block"
