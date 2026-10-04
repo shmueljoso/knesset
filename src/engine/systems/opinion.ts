@@ -92,12 +92,21 @@ export function updatePolls(s: GameState) {
     let target = p.base;
     const inCoal = s.coalition.parties.includes(p.id);
     target *= 1 + (inCoal ? gov * 0.18 : -gov * 0.1);
-    if (p.playerFounded) target = playerElectoralAppeal(s);
+    if (p.playerFounded) target = playerElectoralAppeal(s) + (p.absorbed ?? 0);
     else if (p.id === s.player.partyId) target += playerSeatContribution(s)?.pct ?? 0;
+    // מומנטום: הייפ או קריסה זמניים, שדועכים אם לא מתחזקים
+    const m = p.momentum ?? 0;
+    target = Math.max(0.2, target + m);
+    if (m) p.momentum = Math.abs(m) < 0.05 ? 0 : m * 0.95;
     p.poll = Math.max(0, p.poll + (target - p.poll) * 0.12 + (rand(s) - 0.5) * 0.35);
   }
   // נרמול ל-100%. הבסיס עצמו מתעדכן רק בבחירות, כדי למנוע סחף מצטבר.
-  const total = parties.reduce((a, p) => a + p.poll, 0);
+  normalizePolls(s);
+}
+
+export function normalizePolls(s: GameState) {
+  const parties = Object.values(s.parties);
+  const total = parties.reduce((a, p) => a + p.poll, 0) || 1;
   for (const p of parties) p.poll = (p.poll / total) * 100;
 }
 
@@ -106,3 +115,19 @@ export function pollSeats(poll: number, threshold = 3.25): number {
   return poll < threshold ? 0 : Math.round((poll / 100) * 120);
 }
 
+
+/** מכפיל לפי רמת הדרמה שנבחרה */
+export function dramaScale(s: GameState): number {
+  const d = s.settings?.drama ?? 'normal';
+  return d === 'calm' ? 0.7 : d === 'wild' ? 1.4 : 1;
+}
+
+/** תנופה בסקרים למפלגה (באחוזים), מוכפלת ברמת הדרמה. */
+export function addMomentum(s: GameState, partyId: string, d: number) {
+  const p = s.parties[partyId];
+  if (!p) return;
+  const dd = d * dramaScale(s);
+  p.momentum = Math.max(-25, Math.min(25, (p.momentum ?? 0) + dd));
+  // הסקר הבא כבר מראה חלק מהקפיצה
+  p.poll = Math.max(0.1, p.poll + dd * 0.4);
+}

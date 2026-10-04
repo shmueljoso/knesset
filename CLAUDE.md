@@ -10,4 +10,5 @@
 - שינויים במוכרות/מוניטין/מעמד במפלגה – דרך `addStat` (`engine/stats.ts`) או Op, כדי לשמור על תשואה פוחתת.
 - שדות חדשים ב-GameState חייבים ברירת מחדל ב-`ensurePhase3` (`engine/migrate.ts`) כדי ששמירות ישנות ימשיכו לעבוד.
 - מודים ותרחישים: קובצי JSON ב-`mods/` (נבדקים ב-`validateMod`, נטענים ל-bundle דרך `data/scenarios.ts`). נתונים אמיתיים מותרים רק שם, עם `source`, `asOf` ו-`realPeople`. הפרויקט לשימוש אישי – אין הגבלות על אירועים לדמויות אמיתיות.
+- סקרים: שינוי מתמשך (הייפ/קריסה) דרך `momentum`/`swing` (Op) או `addMomentum`; אופ `poll` הוא רגעי. טלטלות ב-`data/shocks.ts` (setup + אירוע תגובה), איחודים ב-`systems/mergers.ts` (`mergeParties`/`removeParty` מנקים הפניות).
 - בדיקת איזון: סימולציה ארוכה ב-`tests/engine.test.ts`; לפני שינוי מספרים כדאי להריץ סימולציה של 10 שנים בכמה זרעים.

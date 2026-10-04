@@ -1,5 +1,6 @@
 import { useGame, useStore, type Panel } from '../store';
 import type { LocationId } from '../engine/types';
+import { AllianceSheet, GuideSheet } from './Alliances';
 import { Dashboard } from './Dashboard';
 import { LegacyModal } from './Legacy';
 import { CaucusSheet } from './PowerMap';
@@ -43,6 +44,10 @@ function PanelView({ p }: { p: Panel }) {
       return <NegotiationSheet />;
     case 'caucus':
       return <CaucusSheet />;
+    case 'alliances':
+      return <AllianceSheet />;
+    case 'guide':
+      return <GuideSheet />;
   }
 }
 

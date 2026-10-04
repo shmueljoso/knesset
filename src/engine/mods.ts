@@ -186,3 +186,17 @@ export function modFromGame(s: GameState): ModFile {
     })),
   };
 }
+
+/** "מה אם": להתחיל את אותו תרחיש כ-4 חודשים קודם, כשהרשימות עוד פתוחות (אפשר איחודים ופריימריז) */
+export function earlyStart(mod: ModFile, weeks = 17): ModFile {
+  const d = mod.startDate ? new Date(mod.startDate + 'T12:00:00Z') : null;
+  if (d) d.setUTCDate(d.getUTCDate() - weeks * 7);
+  return {
+    ...mod,
+    name: `${mod.name} – ${Math.round(weeks / 4.33)} חודשים קודם`,
+    startDate: d ? d.toISOString().slice(0, 10) : mod.startDate,
+    electionInWeeks: (mod.electionInWeeks ?? 52) + weeks,
+    listsClosed: false,
+    description: `${mod.description ?? ''} מה-אם: אותם נתונים, אבל הרשימות עוד פתוחות – אפשר איחודים, פילוגים ומפלגות חדשות.`.trim(),
+  };
+}

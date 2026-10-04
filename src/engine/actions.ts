@@ -10,6 +10,7 @@ import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { askBudget } from './systems/ministry';
 import { pressFactor } from './systems/influence';
+import { directRival, playerLeads } from './systems/mergers';
 import { checkMissions } from './systems/missions';
 import { scheduleEvent, strikeChance } from './systems/issues';
 import { CABINET_EVENTS } from './data/events';
@@ -19,7 +20,7 @@ import { staffBonus } from './systems/staff';
 import type { GameState, Ideology, LocationId } from './types';
 import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_NAMES, clamp, leanAlignment } from './util';
 
-export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus';
+export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus' | 'alliances';
 
 export interface ActionResult {
   text: string;
@@ -331,6 +332,12 @@ export const ACTIONS: ActionDef[] = [
     run: () => ({ text: '', open: 'party' }),
   },
   {
+    id: 'alliances', loc: 'partyhq', icon: '🤝', label: 'איחודים ובריתות', ap: 0,
+    desc: 'רשימה משותפת או הסכם עודפים – להציל קולות מתחת לאחוז החסימה, או לבנות גוש גדול.',
+    avail: needParty,
+    run: () => ({ text: '', open: 'alliances' }),
+  },
+  {
     id: 'recruit', loc: 'partyhq', icon: '🧲', label: 'גיוס מועמדים לרשימה', ap: 1,
     desc: 'לשכנע אנשים טובים להצטרף למפלגה החדשה.',
     avail: (s) => (s.player.partyId && s.parties[s.player.partyId].playerFounded ? null : 'רק למפלגה שהקמת'),
@@ -479,6 +486,26 @@ export const ACTIONS: ActionDef[] = [
     run: (s) => {
       const sec = [...SECTORS].sort((a, b) => leanAlignment(SECTOR_IDEOLOGY[b], s.player.ideology) - leanAlignment(SECTOR_IDEOLOGY[a], s.player.ideology))[0];
       return run(s, [{ op: 'approval', sector: sec, d: 2.5 }, { op: 'fame', d: 1 }], `הקמפיין רץ בקרב ${SECTOR_NAMES[sec]}.`);
+    },
+  },
+  {
+    id: 'negative', loc: 'studio', icon: '🗡️', label: 'קמפיין שלילי נגד המתחרה', ap: 1, money: 20,
+    desc: 'לתקוף את המפלגה שמתחרה על אותם מצביעים. עובד – אבל מלכלך, ולפעמים מתפוצץ בפנים.',
+    avail: (s) => (!s.player.partyId ? 'צריך מפלגה' : directRival(s) ? null : 'אין מתחרה ישירה'),
+    preview: (s) => {
+      const rival = directRival(s)!;
+      const k = playerLeads(s) ? 1 : 0.5;
+      return [{ op: 'momentum', party: rival.id, d: -(1.5 + s.player.skills.media / 50) * k }, { op: 'momentum', party: '@player', d: 0.5 * k }, { op: 'reputation', d: -2 }];
+    },
+    run: (s) => {
+      const rival = directRival(s)!;
+      const k = playerLeads(s) ? 1 : 0.5;
+      if (chance(s, 0.2)) {
+        addNews(s, `הקמפיין של ${s.parties[s.player.partyId!].short} נגד ${rival.short} התפוצץ: "פוליטיקה מלוכלכת"`, 'bad', true);
+        return run(s, [{ op: 'momentum', party: '@player', d: -1 * k }, { op: 'reputation', d: -3 }], 'הקמפיין התפוצץ בפנים. התגובות ברשתות – נגדך.', false);
+      }
+      changeAttitude(s, rival.leaderId, -15);
+      return run(s, [{ op: 'momentum', party: rival.id, d: -(1.5 + s.player.skills.media / 50) * k }, { op: 'momentum', party: '@player', d: 0.5 * k }, { op: 'reputation', d: -2 }], `הקמפיין נגד ${rival.short} עובד: הם מתגוננים.`);
     },
   },
   {

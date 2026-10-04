@@ -5,6 +5,7 @@ import type { GameState } from '../types';
 import { spawnCandidate } from '../newGame';
 import { startFormateur, startPartner } from './coalition';
 import { applyRecruits } from './influence';
+import { applySlots, removeParty } from './mergers';
 import { formGovernment, proposeCoalition } from './government';
 import { addNews } from './news';
 import { log } from './report';
@@ -82,7 +83,10 @@ export function playerListScore(s: GameState): number {
 export function buildLists(s: GameState) {
   applyRecruits(s);
   for (const party of Object.values(s.parties)) {
-    if (party.playerFounded) continue;
+    if (party.playerFounded) {
+      delete party.slots;
+      continue;
+    }
     const leader = party.leaderId;
     const cands = party.list.filter((id) => id !== 'player' && s.npcs[id]);
     const scored = cands
@@ -98,10 +102,17 @@ export function buildLists(s: GameState) {
     scored.sort((a, b) => b.score - a.score);
     if (leader === 'player') {
       party.list = ['player', ...scored.filter((x) => x.id !== 'player').map((x) => x.id)];
+      applySlots(party);
+      delete party.slots;
       s.player.listPosition = 1;
       continue;
     }
     party.list = [leader, ...scored.map((x) => x.id)];
+    // מקומות שמורים מהסכמי איחוד, ומקום שהובטח לשחקן
+    const promised = String(s.flags.promisedSlot ?? '').split(':');
+    if (playerIn && !blocked && promised[0] === party.id) party.slots = { ...(party.slots ?? {}), player: Number(promised[1]) };
+    applySlots(party);
+    delete party.slots;
     if (playerIn) {
       const pos = party.list.indexOf('player');
       s.player.listPosition = pos >= 0 ? pos + 1 : null;
@@ -159,9 +170,18 @@ export function runElection(s: GameState) {
     p.inOutgoingKnesset = p.seats > 0;
     p.base = (votes[p.id] / turnout) * 100;
     p.poll = p.base;
+    p.momentum = 0;
+    if (p.playerFounded) p.absorbed = 0;
   }
   // אם לרשימה אין מספיק מועמדים – מושבים לא מאוישים נשארים "ריקים" (נדיר)
   s.seating = seating;
+  // רשימות שקרסו (בלי מושבים ומתחת ל-1%) מתפרקות
+  for (const p of Object.values(s.parties)) {
+    if (p.seats > 0 || p.id === s.player.partyId || p.base >= 1) continue;
+    for (const n of Object.values(s.npcs)) if (n.partyId === p.id) n.partyId = null;
+    removeParty(s, p.id);
+    addNews(s, `${p.name} מתפרקת אחרי הכישלון בקלפי`, 'neutral');
+  }
   s.knesset += 1;
   s.player.defector = false;
   for (const n of Object.values(s.npcs)) n.pledges = [];
@@ -195,6 +215,7 @@ export function runElection(s: GameState) {
     if (s.career.electionsOutside >= 2 && !s.gameOver) s.gameOver = 'outside';
   }
   s.player.listPosition = null;
+  delete s.flags.promisedSlot;
   s.player.wantsList = false;
   s.player.primariesScore = 0;
   // הצעות חוק שלא עברו – דין רציפות רק אם המגיש עדיין ח"כ

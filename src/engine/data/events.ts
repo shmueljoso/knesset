@@ -7,6 +7,7 @@ import { debtsWith } from '../systems/relationships';
 import { isHot } from '../systems/issues';
 import type { GameState, Npc } from '../types';
 import { BILL_TEMPLATES } from './bills';
+import { SHOCK_EVENTS } from './shocks';
 
 export interface EventChoice {
   label: string;
@@ -681,7 +682,7 @@ EVENTS.push({
   ],
 });
 
-export const eventById = (id: string) => EVENTS.find((e) => e.id === id);
+export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id);
 
 export function debtCollectCandidate(s: GameState): Ctx | null {
   const due = s.player.debts.filter((d) => d.dir === 'player_owes' && s.week - d.week >= 4);

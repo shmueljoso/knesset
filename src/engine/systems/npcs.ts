@@ -16,7 +16,7 @@ export const cosponsorKey = (npcId: string) => `cosp_${npcId}`;
 /** ח"כ בולט/ה מעביר/ה חוק בנושא שלו/ה */
 function npcLawPasses(s: GameState) {
   const cands = Object.values(s.npcs).filter(
-    (n) => n.isMK && n.notable && !s.lawsPassed.some((l) => l.templateId === n.agenda && s.week - l.week < 104),
+    (n) => n.isMK && n.notable && !!n.agenda && !s.lawsPassed.some((l) => l.templateId === n.agenda && s.week - l.week < 104),
   );
   if (!cands.length) return;
   // שותפות של השחקן מגדילה את הסיכוי; ח"כי קואליציה מצליחים יותר

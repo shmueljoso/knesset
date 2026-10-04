@@ -120,7 +120,7 @@ export function formGovernment(s: GameState, coalition: string[], opts: GovOptio
   const pmId = s.parties[lead].leaderId;
   const satisfaction: Record<string, number> = {};
   for (const p of coalition) satisfaction[p] = opts.satisfaction?.[p] ?? 68;
-  s.coalition = { parties: coalition, pmId, stability: 70, formedWeek: s.week, satisfaction, agreement: opts.agreement ?? [], minoritySince: null };
+  s.coalition = { parties: [...coalition], pmId, stability: 70, formedWeek: s.week, satisfaction, agreement: opts.agreement ?? [], minoritySince: null };
   s.ministers = { pm: pmId };
   if (pmId === 'player') {
     s.player.rank = 'minister';

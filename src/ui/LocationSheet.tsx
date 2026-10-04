@@ -1,6 +1,7 @@
 import { actionBlocked, actionsAt, performAction } from '../engine';
 import { LOCATIONS, locationLock } from '../engine/data/locations';
 import { describeOps } from '../engine/ops';
+import { guideFor } from '../engine/data/guide';
 import { attitudeColor } from '../engine/systems/relationships';
 import type { LocationId } from '../engine/types';
 import { useGame, useStore } from '../store';
@@ -76,6 +77,12 @@ export function LocationSheet({ id }: { id: LocationId }) {
                 </span>
               </div>
               <div className="small muted">{blocked ?? a.desc}</div>
+              {!blocked && guideFor(a.id) && (
+                <div className="tiny" style={{ marginTop: 3 }}>
+                  <span className="good">➕ {guideFor(a.id)!.gain}</span>
+                  {guideFor(a.id)!.risk && <span className="bad"> · ⚠️ {guideFor(a.id)!.risk}</span>}
+                </div>
+              )}
               {!blocked && chips.length > 0 && (
                 <div style={{ marginTop: 5 }}>
                   <Chips chips={chips} />

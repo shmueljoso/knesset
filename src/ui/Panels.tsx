@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { dateLabel, shortDateLabel } from '../engine/calendar';
 import { BACKGROUNDS } from '../engine/data/backgrounds';
+import { NEW_PARTY_COLORS } from '../engine/data/parties';
 import { isCoalition } from '../engine/systems/government';
 import { pollSeats } from '../engine/systems/opinion';
 import { FOUND_COST, defect, foundParty, joinParty, leaveParty, splitFaction, splitInfo } from '../engine/systems/parties';
@@ -8,6 +9,7 @@ import { STAFF_ROLES, fireStaff, hireStaff, maxStaff, staffCandidates, staffCost
 import { ideologyDistance } from '../engine/util';
 import { retire } from '../engine/systems/legacy';
 import { modFromGame } from '../engine/mods';
+import type { Drama } from '../engine/types';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Empty, Sheet } from './common';
@@ -47,7 +49,12 @@ export function NewsView() {
   );
 }
 
-const COLORS = ['#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#22c55e', '#0ea5e9'];
+const COLORS = NEW_PARTY_COLORS;
+const DRAMA_OPTS: [Drama, string][] = [
+  ['calm', '🌤️ רגוע'],
+  ['normal', '⛅ רגיל'],
+  ['wild', '🌪️ פרוע'],
+];
 
 export function PartySheet() {
   const g = useGame();
@@ -238,6 +245,17 @@ export function SettingsSheet() {
         <div>המשחק נשמר אוטומטית אחרי כל פעולה.</div>
         <div className="muted">הישגים: {g.player.achievements.length ? g.player.achievements.map((a) => ({ first_law: 'חוק ראשון', elected: 'נבחר/ה לכנסת', chair: 'יו"ר ועדה', minister: 'שר/ה', leader: 'יו"ר מפלגה', pm: 'ראשות הממשלה' })[a] ?? a).join(' · ') : 'עדיין אין'}</div>
       </div>
+      <div className="card small" style={{ marginTop: 10 }}>
+        <b>🌪️ רמת דרמה</b>
+        <div className="tiny muted">כמה טלטלות: מפלגות חדשות, מלחמות, כתבי אישום, פילוגים.</div>
+        <div className="filter-row" style={{ marginTop: 6 }}>
+          {DRAMA_OPTS.map(([id, label]) => (
+            <button key={id} className={(g.settings?.drama ?? 'normal') === id ? 'on' : ''} onClick={() => act((s) => void (s.settings = { ...s.settings, drama: id }))}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="col" style={{ marginTop: 12 }}>
         <button className="btn" onClick={exportSave}>
           💾 ייצוא שמירה לקובץ
@@ -273,9 +291,19 @@ export function SettingsSheet() {
 
 export function HelpSheet() {
   const g = useGame();
+  const open = useStore((s) => s.open);
   return (
     <Sheet title="❓ איך משחקים" sub="המדריך המהיר">
       <div className="col small">
+        <button className="btn primary" onClick={() => open({ kind: 'guide' })}>
+          📖 מה מרוויחים ומה מפסידים מכל מהלך
+        </button>
+        <div className="card">
+          <b>🤝 איחודים ואחוז החסימה</b> – מפלגה מתחת ל-{g.rules.threshold}% לא נכנסת. יו"ר מפלגה יכול/ה להציע איחוד או הסכם עודפים במטה המפלגה ← "איחודים ובריתות" (רק לפני סגירת הרשימות). מפלגות קטנות מתאחדות גם לבד, וב-6 השבועות האחרונים מצביעים בורחים ממפלגות שמתחת לחסימה.
+        </div>
+        <div className="card">
+          <b>🌪️ טלטלות</b> – רמטכ"ל לשעבר או כוכב/ת טלוויזיה שמקימים מפלגה ומזנקים לדו-ספרתי, מלחמה, מחדל, משבר כלכלי, כתב אישום ליו"ר, פילוג, הקלטות, ועימות טלוויזיוני לפני הבחירות. ההייפ דועך עם הזמן אם לא מתחזק. את רמת הדרמה משנים בתפריט.
+        </div>
         <div className="card">
           <b>⏱ זמן</b> – בכל שבוע יש {g.player.apMax} נקודות זמן. כל פעולה עולה זמן. כשנגמר – "סיום שבוע" והעולם מתקדם.
         </div>

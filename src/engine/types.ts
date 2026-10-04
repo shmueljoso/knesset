@@ -84,6 +84,16 @@ export interface Party {
   inOutgoingKnesset: boolean;
   surplusPartner?: string;
   incompatible?: string[];
+  momentum?: number; // נקודות אחוז זמניות (הייפ/קריסה) שדועכות עם הזמן
+  absorbed?: number; // בסיס שנוסף למפלגה שהשחקן הקים, מאיחודים
+  mergedFrom?: string[]; // שמות מפלגות שאוחדו לתוכה
+  slots?: Record<string, number>; // מקומות שמורים ברשימה מהסכם איחוד (מזהה → מקום)
+}
+
+export type Drama = 'calm' | 'normal' | 'wild';
+
+export interface Settings {
+  drama: Drama;
 }
 
 export interface Committee {
@@ -302,6 +312,7 @@ export interface GameState {
   scandal: Scandal | null;
   career: CareerStats;
   mod: string | null;
+  settings: Settings;
 }
 
 export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';

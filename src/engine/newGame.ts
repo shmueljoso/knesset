@@ -7,12 +7,13 @@ import { formGovernment, proposeCoalition } from './systems/government';
 import { applyModSettings, modSurplusPairs, modToPartyDefs, type ModFile } from './mods';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
-import { ensurePhase3 } from './migrate';
+import { ensurePhase3, pickAgenda } from './migrate';
 import { checkMissions } from './systems/missions';
 import type {
   AvatarSpec,
   BackgroundId,
   Gender,
+  Drama,
   GameState,
   Ideology,
   LocationId,
@@ -35,6 +36,7 @@ export interface NewGameOptions {
   avatar: Omit<AvatarSpec, 'gender'>;
   seed?: number;
   mod?: ModFile | null;
+  drama?: Drama;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -263,6 +265,7 @@ export function createGame(opts: NewGameOptions): GameState {
     gameOver: null,
   } as Partial<GameState> as GameState;
   ensurePhase3(s);
+  s.settings = { drama: opts.drama ?? 'normal' };
 
   if (opts.partyId) {
     const party = parties[opts.partyId];
@@ -330,6 +333,7 @@ export function spawnCandidate(s: GameState, partyId: string): Npc {
   s.counter += 1;
   const npc = makeNpc(rnd, used, `c${s.counter}`, { id: partyId, ideology: party.ideology, namePool: def?.namePool ?? { jewish: 1 } }, 'candidate', 12);
   npc.bio += ` מועמד/ת ב${party.name}.`;
+  npc.agenda = pickAgenda(npc, s.seed + s.counter * 31);
   s.npcs[npc.id] = npc;
   party.list.push(npc.id);
   return npc;

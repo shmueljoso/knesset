@@ -12,6 +12,7 @@ export type Panel =
   | { kind: 'vote'; id: string }
   | { kind: 'settings' }
   | { kind: 'help' }
+  | { kind: 'guide' }
   | { kind: 'negotiation' }
   | { kind: OpenPanel };
 

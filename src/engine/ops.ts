@@ -1,12 +1,12 @@
 // מפעיל אפקטים דקלרטיבי: אירועים ופעולות מתארים את ההשפעה כרשימת Op,
 // וכך אפשר גם להציג לשחקן "השפעה צפויה" לפני שהוא בוחר.
 import { addNews } from './systems/news';
-import { WORLD_NAMES, addWorldEffect, changeApproval, takeStance } from './systems/opinion';
+import { WORLD_NAMES, addMomentum, addWorldEffect, changeApproval, dramaScale, takeStance } from './systems/opinion';
 import { addDebt, addMemory, changeAttitude, changeTrust, clearDebt, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
 import { gainFactor } from './stats';
 import type { Debt, GameState, Ideology, NewsItem, Sector, Skill, WorldKey } from './types';
-import { SECTOR_NAMES, clamp, fmtDelta } from './util';
+import { SECTOR_NAMES, clamp, fmtDelta, leanAlignment } from './util';
 
 export type StatKey = 'fame' | 'reputation' | 'partyStanding' | 'capital' | 'money' | 'consistency' | 'ap';
 export type Ctx = Record<string, string>;
@@ -20,6 +20,8 @@ export type Op =
   | { op: 'trust'; who: string; d: number }
   | { op: 'world'; key: WorldKey; d: number; weeks?: number }
   | { op: 'poll'; party: string; d: number }
+  | { op: 'momentum'; party: string; d: number }
+  | { op: 'swing'; lean: Partial<Ideology>; d: number; label?: string }
   | { op: 'stability'; d: number }
   | { op: 'news'; headline: string; tone: NewsItem['tone']; about?: boolean }
   | { op: 'debt'; who: string; dir: Debt['dir']; reason: string }
@@ -52,6 +54,16 @@ export const SPECIALS: Record<string, Special> = {};
 export const registerSpecial = (id: string, fn: Special) => {
   SPECIALS[id] = fn;
 };
+
+/** מפלגות יעד: @player, @ctx, @coalition, @opposition או מזהה */
+export function partyTargets(s: GameState, who: string, ctx: Ctx): string[] {
+  if (who === '@player') return s.player.partyId && s.parties[s.player.partyId] ? [s.player.partyId] : [];
+  if (who === '@ctx') return ctx.party && s.parties[ctx.party] ? [ctx.party] : [];
+  if (who === '@ctx2') return ctx.party2 && s.parties[ctx.party2] ? [ctx.party2] : [];
+  if (who === '@coalition') return s.coalition.parties.filter((p) => s.parties[p]);
+  if (who === '@opposition') return Object.values(s.parties).filter((p) => p.seats > 0 && !s.coalition.parties.includes(p.id)).map((p) => p.id);
+  return s.parties[who] ? [who] : [];
+}
 
 /** פענוח יעד: מזהה NPC או כינוי (@ctx, @employer, @leader, @pm, @party, @coalition, @justice, @friends:<id>) */
 export function resolveWho(s: GameState, who: string, ctx: Ctx): string[] {
@@ -95,6 +107,7 @@ export function fill(s: GameState, text: string, ctx: Ctx): string {
       return n ? n.name : '?';
     }
     if (k === 'party') return ctx.party ? s.parties[ctx.party]?.name ?? '?' : s.player.partyId ? s.parties[s.player.partyId].name : 'המפלגה';
+    if (k === 'party2') return s.parties[ctx.party2]?.name ?? ctx.party2Name ?? '?';
     if (k === 'npcParty') {
       const n = s.npcs[ctx.npc];
       return n?.partyId ? s.parties[n.partyId].name : 'ללא מפלגה';
@@ -162,6 +175,12 @@ export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {
         for (const id of ids) if (s.parties[id]) s.parties[id].poll = Math.max(0.1, s.parties[id].poll + o.d);
         break;
       }
+      case 'momentum':
+        for (const id of partyTargets(s, o.party, ctx)) addMomentum(s, id, o.d);
+        break;
+      case 'swing':
+        for (const p of Object.values(s.parties)) addMomentum(s, p.id, o.d * leanAlignment(p.ideology, o.lean));
+        break;
       case 'stability':
         // יציבות נגזרת משביעות הרצון של השותפות – משנים את כולן
         for (const p of s.coalition.parties) {
@@ -244,6 +263,18 @@ export function describeOps(s: GameState, ops: Op[], ctx: Ctx = {}): OpChip[] {
       case 'poll':
         chips.push({ label: `סקרים ${fmtDelta(o.d, 1)}%`, tone: o.party === '@player' ? tone(o.d) : 'neutral' });
         break;
+      case 'momentum': {
+        const ids = partyTargets(s, o.party, ctx);
+        const who = o.party === '@player' ? 'המפלגה שלך' : o.party === '@coalition' ? 'הקואליציה' : o.party === '@opposition' ? 'האופוזיציה' : ids.length === 1 ? s.parties[ids[0]].short : '';
+        if (who) chips.push({ label: `${o.d > 0 ? '📈' : '📉'} ${who} ${fmtDelta(o.d * dramaScale(s), 1)}%`, tone: ids.includes(s.player.partyId ?? '') ? tone(o.d) : 'neutral' });
+        break;
+      }
+      case 'swing': {
+        const mine = s.player.partyId ? leanAlignment(s.parties[s.player.partyId].ideology, o.lean) * o.d : 0;
+        chips.push({ label: o.label ?? 'תזוזה בדעת הקהל', tone: 'neutral' });
+        if (Math.abs(mine) >= 0.3) chips.push({ label: `המפלגה שלך ${fmtDelta(mine * dramaScale(s), 1)}%`, tone: tone(mine) });
+        break;
+      }
       case 'stability':
         chips.push({ label: `יציבות קואליציה ${fmtDelta(o.d)}`, tone: 'neutral' });
         break;

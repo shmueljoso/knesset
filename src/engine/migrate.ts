@@ -34,6 +34,7 @@ export function ensurePhase3(g: GameState) {
   g.caucuses ??= [];
   g.scandal ??= null;
   g.mod ??= null;
+  g.settings ??= { drama: 'normal' };
   if (!g.missions.length && !g.missionsDone.length) checkMissions(g);
   g.career ??= {
     mkTerms: g.player.isMK ? 1 : 0,

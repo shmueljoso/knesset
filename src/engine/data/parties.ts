@@ -14,6 +14,9 @@ export interface PartyDef {
   blurb: string;
 }
 
+/** צבעים למפלגות חדשות (של השחקן או שקמו במהלך המשחק) – נבדקו לעיוורון צבעים מול צבעי המפלגות הקיימות */
+export const NEW_PARTY_COLORS = ['#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#22c55e', '#0ea5e9'];
+
 export type NamePoolId = 'jewish' | 'haredi' | 'religious' | 'arab' | 'russian' | 'druze';
 
 // מפלגות בדיוניות בהשראת ארכיטיפים של הפוליטיקה הישראלית.

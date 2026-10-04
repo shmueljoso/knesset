@@ -6,13 +6,15 @@ import { resetMinistryBudget, tickMinistry } from './systems/ministry';
 import { rollEvents } from './systems/events';
 import { isCoalition } from './systems/government';
 import { releaseScheduled, tickIssues } from './systems/issues';
+import { tickPartyDynamics } from './systems/mergers';
+import { rollShocks } from './systems/shocks';
 import { tickNpcs } from './systems/npcs';
 import { checkMissions } from './systems/missions';
 import { tickScandal } from './systems/scandals';
 import { tickCareer } from './systems/legacy';
 import { tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
-import { WORLD_NAMES, pollSeats, tickWorld, updatePolls } from './systems/opinion';
+import { WORLD_NAMES, normalizePolls, pollSeats, tickWorld, updatePolls } from './systems/opinion';
 import { refreshPresence } from './systems/presence';
 import { decayRelationships } from './systems/relationships';
 import { log, snapshot } from './systems/report';
@@ -89,6 +91,7 @@ export function endWeek(s: GameState) {
     });
   tickWorld(s);
   updatePolls(s);
+  tickPartyDynamics(s);
   tickLegislation(s);
   tickIssues(s);
   tickNpcs(s);
@@ -118,6 +121,7 @@ export function endWeek(s: GameState) {
   checkMissions(s);
   releaseScheduled(s);
   rollEvents(s);
+  rollShocks(s);
   worldNews(s);
 
   s.week += 1;
@@ -133,6 +137,7 @@ export function endWeek(s: GameState) {
   p.ap = p.apMax + (s.flags.rested ? 1 : 0);
   delete s.flags.rested;
   refreshPresence(s);
+  normalizePolls(s);
   s.pollHistory.push({ week: s.week, polls: Object.fromEntries(Object.values(s.parties).map((x) => [x.id, x.poll])) });
   if (s.pollHistory.length > 260) s.pollHistory.shift();
   s.playerHistory.push({ week: s.week, fame: p.fame, approval: avgApproval(s), reputation: p.reputation });

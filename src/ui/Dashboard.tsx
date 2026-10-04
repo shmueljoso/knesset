@@ -39,6 +39,7 @@ export function Dashboard() {
     .sort((a, b) => (latest[b.id] ?? 0) - (latest[a.id] ?? 0))
     .slice(0, 5);
   if (p.partyId && !top.some((x) => x.id === p.partyId)) top.push(g.parties[p.partyId]);
+  for (const x of Object.values(g.parties)) if ((x.momentum ?? 0) >= 4 && !top.includes(x) && top.length < 7) top.push(x);
   const hist = g.pollHistory.slice(-30);
   const series = top.map((party) => ({
     name: party.short,
@@ -46,6 +47,10 @@ export function Dashboard() {
     bold: party.id === p.partyId,
     values: hist.map((h) => ((h.polls[party.id] ?? 0) / 100) * 120),
   }));
+  const movers = Object.values(g.parties)
+    .filter((x) => Math.abs(x.momentum ?? 0) >= 2)
+    .sort((a, b) => Math.abs(b.momentum ?? 0) - Math.abs(a.momentum ?? 0))
+    .slice(0, 5);
   const ph = g.playerHistory.slice(-30);
 
   let goal = '';
@@ -131,7 +136,16 @@ export function Dashboard() {
             {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {pollSeats(g.parties[p.partyId].poll)}</span>}
           </div>
           <LineChart series={series} xLabels={hist.map((h) => shortDateLabel(g, h.week))} yMax={40} />
-          <p className="tiny faint" style={{ margin: '6px 0 0' }}>מתחת ל-3.25% (כ-4 מנדטים) – הרשימה לא נכנסת לכנסת.</p>
+          {movers.length > 0 && (
+            <div className="chips" style={{ marginTop: 6 }} data-testid="momentum">
+              {movers.map((x) => (
+                <span key={x.id} className={`chip ${(x.momentum ?? 0) > 0 ? 'good' : 'bad'}`}>
+                  {(x.momentum ?? 0) > 0 ? '▲' : '▼'} {x.short} {pollSeats(x.poll, g.rules.threshold)}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="tiny faint" style={{ margin: '6px 0 0' }}>מתחת ל-{g.rules.threshold}% (כ-4 מנדטים) – הרשימה לא נכנסת לכנסת. ▲▼ = מגמה חזקה (הייפ או קריסה).</p>
         </div>
 
         <div className="card">

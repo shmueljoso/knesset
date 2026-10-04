@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { BACKGROUNDS } from '../engine/data/backgrounds';
 import { PARTY_DEFS, INITIAL_COALITION } from '../engine/data/parties';
 import { SKILL_NAMES } from '../engine/ops';
-import { modToPartyDefs, validateMod, type ModFile } from '../engine/mods';
+import { earlyStart, modToPartyDefs, validateMod, type ModFile } from '../engine/mods';
 import { SCENARIOS } from '../engine/data/scenarios';
-import type { AvatarSpec, BackgroundId, Gender, Ideology, ScenarioId } from '../engine/types';
+import type { AvatarSpec, BackgroundId, Drama, Gender, Ideology, ScenarioId } from '../engine/types';
 import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
 import { Avatar } from './Avatar';
@@ -35,6 +35,8 @@ export function CreateScreen() {
   const setPendingMod = useStore((st) => st.setPendingMod);
   const [mod, setMod] = useState<ModFile | null>(pendingMod);
   const [modErr, setModErr] = useState<string[]>([]);
+  const [early, setEarly] = useState(false);
+  const [drama, setDrama] = useState<Drama>('normal');
 
   const parties = useMemo(
     () => [...(mod ? modToPartyDefs(mod) : PARTY_DEFS)].sort((a, b) => ideologyDistance(a.ideology, ideology) - ideologyDistance(b.ideology, ideology)),
@@ -58,7 +60,7 @@ export function CreateScreen() {
   const canStart = !needsParty || !!partyId;
 
   const start = () =>
-    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod });
+    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod: mod && early && mod.listsClosed ? earlyStart(mod) : mod, drama });
 
   return (
     <div className="scroll">
@@ -231,8 +233,22 @@ export function CreateScreen() {
                   </div>
                   {mod.source && <div className="tiny faint" style={{ marginTop: 4 }}>מקור: {mod.source}{mod.asOf ? ` (נכון ל-${mod.asOf})` : ''}</div>}
                   {mod.realPeople && <div className="tiny faint">התכונות, היחסים והאירועים במשחק בדיוניים.</div>}
+                  {mod.listsClosed && (
+                    <label className="row small" style={{ gap: 6, marginTop: 8 }}>
+                      <input type="checkbox" checked={early} onChange={(e) => setEarly(e.target.checked)} />
+                      להתחיל 4 חודשים קודם – הרשימות פתוחות, אפשר איחודים (מה-אם)
+                    </label>
+                  )}
                 </div>
               )}
+              <div className="small muted" style={{ margin: '10px 0 6px' }}>רמת דרמה (טלטלות, מפלגות חדשות, משברים)</div>
+              <div className="filter-row">
+                {([['calm', '🌤️ רגוע'], ['normal', '⛅ רגיל'], ['wild', '🌪️ פרוע']] as [Drama, string][]).map(([id, label]) => (
+                  <button key={id} className={drama === id ? 'on' : ''} onClick={() => setDrama(id)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               {modErr.map((e, i) => (
                 <div key={i} className="tiny bad">{e}</div>
               ))}
