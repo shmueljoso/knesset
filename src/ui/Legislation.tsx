@@ -5,8 +5,15 @@ import {
   GOV_POS_NAMES,
   STAGES,
   STAGE_NAMES,
-  bringToVote,
+  appealBlocked,
+  appealChance,
+  appealToGovernment,
   canBringToVote,
+  issueUltimatum,
+  pressureRole,
+  startVote,
+  ultimatumBlocked,
+  ultimatumChance,
   committeeChair,
   committeeName,
   createBill,
@@ -148,6 +155,9 @@ export function BillSheet({ id }: { id: string }) {
   const t = templateById(b.templateId);
   const chair = committeeChair(g, b);
   const voteBlock = canBringToVote(g, b);
+  const ultBlock = ultimatumBlocked(g, b);
+  const appealBlock = appealBlocked(g, b);
+  const pressure = b.sponsor === 'player' && (b.govPosition === 'oppose' || b.cabinetRejected) && (b.stage === 'preliminary' || (b.stage === 'failed' && b.cabinetRejected && !b.lastVote));
   return (
     <Sheet title={`${t.icon} ${b.title}`} sub={STAGE_NAMES[b.stage]}>
       <p className="small" style={{ marginTop: 0 }}>{t.summary}</p>
@@ -191,6 +201,38 @@ export function BillSheet({ id }: { id: string }) {
           >
             🤝 לשכנע את ועדת השרים (⏱1, הון 3)
           </button>
+        )}
+        {pressure && (
+          <div className="card small" style={{ background: 'var(--bg)' }} data-testid="cabinet-pressure">
+            <b>🚫 ועדת השרים חוסמת את ההצעה</b>
+            <div className="muted">{b.cabinetRejected ? 'ההצעה הממשלתית נגנזה.' : 'הקואליציה תצביע נגד – כמעט אין סיכוי בקריאה הטרומית.'} אפשר ללחוץ:</div>
+            {!ultBlock && (
+              <button
+                className="btn danger block"
+                style={{ marginTop: 6 }}
+                onClick={() => {
+                  const r = act((s) => issueUltimatum(s, s.bills.find((x) => x.id === id)!));
+                  toast(r.text, r.ok ? 'good' : 'bad');
+                }}
+              >
+                😤 אולטימטום: "{pressureRole(g) === 'leader' ? 'בלי החוק – אנחנו פורשים' : pressureRole(g) === 'minister' ? 'בלי החוק – אני מתפטר/ת' : 'בלי החוק – אני מצביע/ה נגד הקואליציה'}" (הון 3 · סיכוי {Math.round(ultimatumChance(g, b) * 100)}%)
+              </button>
+            )}
+            {ultBlock && <div className="tiny faint" style={{ marginTop: 4 }}>אולטימטום: {ultBlock}</div>}
+            {!appealBlock && (
+              <button
+                className="btn block"
+                style={{ marginTop: 6 }}
+                onClick={() => {
+                  const r = act((s) => appealToGovernment(s, s.bills.find((x) => x.id === id)!));
+                  toast(r.text, r.ok ? 'good' : 'bad');
+                }}
+              >
+                ⚖️ ערר למליאת הממשלה (⏱1 · סיכוי {Math.round(appealChance(g, b) * 100)}%)
+              </button>
+            )}
+            {pressureRole(g) === 'leader' && <div className="tiny muted" style={{ marginTop: 4 }}>ואם נמאס – משרד ראש הממשלה ← ניהול הקואליציה ← לפרוש.</div>}
+          </div>
         )}
         {(b.stage === 'committee1' || b.stage === 'committee2') && (
           <button
@@ -256,7 +298,7 @@ export function VoteSheet({ id }: { id: string }) {
   const act = useStore((s) => s.act);
   const toast = useStore((s) => s.toast);
   const open = useStore((s) => s.open);
-  const [result, setResult] = useState<VoteResult | null>(null);
+  const closeSheet = useStore((s) => s.close);
   const b = g.bills.find((x) => x.id === id);
   const f = useMemo(() => (b ? forecast(g, b) : null), [g, b]);
   if (!b || !f) return null;
@@ -266,22 +308,13 @@ export function VoteSheet({ id }: { id: string }) {
     toast(r.text, r.ok ? 'good' : 'bad');
   };
   const vote = () => {
-    const r = act((s) => bringToVote(s, s.bills.find((x) => x.id === id)!));
-    setResult(r);
+    act((s) => startVote(s, s.bills.find((x) => x.id === id)!, 'own'));
+    closeSheet();
   };
   const probs = f.seats.map((x) => (x ? x.pFor / Math.max(0.01, x.pFor + x.pAgainst) : null));
   const margin = f.eFor - f.eAgainst;
   const maj = b.stage === 'final' ? requiredMajority(g, b.templateId) : null;
   const verdict = maj ? f.eFor - maj : margin;
-
-  if (result) {
-    return (
-      <Sheet title={`תוצאות: ${STAGE_NAMES[result.stage]}`} sub={b.title}>
-        <VoteResultView r={result} />
-        <p className="small muted">{result.passed ? `השלב הבא: ${STAGE_NAMES[g.bills.find((x) => x.id === id)!.stage]}.` : 'ההצעה נפלה. אפשר לנסות שוב בהמשך עם היקף מתון יותר.'}</p>
-      </Sheet>
-    );
-  }
 
   return (
     <Sheet title={`ספירת קולות: ${STAGE_NAMES[b.stage]}`} sub={b.title}>
@@ -415,7 +448,7 @@ export function BillBuilder() {
         ))}
       </div>
       <div className="filter-row">
-        {BILL_TEMPLATES.filter((x) => x.category === cat).map((x) => (
+        {BILL_TEMPLATES.filter((x) => x.category === cat && !x.hidden).map((x) => (
           <button key={x.id} className={tid === x.id ? 'on' : ''} onClick={() => setTid(x.id)}>
             {x.icon} {x.title.replace('חוק ', '')}
           </button>

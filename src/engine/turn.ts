@@ -12,7 +12,7 @@ import { tickNpcs } from './systems/npcs';
 import { checkMissions } from './systems/missions';
 import { tickScandal } from './systems/scandals';
 import { tickCareer } from './systems/legacy';
-import { tickLegislation } from './systems/legislation';
+import { finishVote, queueOtherVote, tickLegislation } from './systems/legislation';
 import { addNews, npcLabel } from './systems/news';
 import { WORLD_NAMES, normalizePolls, pollSeats, tickWorld, updatePolls } from './systems/opinion';
 import { refreshPresence } from './systems/presence';
@@ -63,6 +63,7 @@ function worldNews(s: GameState) {
 
 /** סוף שבוע: כל מערכות העולם מתקדמות. */
 export function endWeek(s: GameState) {
+  if (s.liveVote) finishVote(s);
   if (s.eventQueue.length) return;
   const before = s.weekStart;
   const worldBefore = { ...s.world };
@@ -103,7 +104,9 @@ export function endWeek(s: GameState) {
   if (!s.negotiation) tickCoalition(s);
   tickMinistry(s);
   if (isBudgetDeadline(s) && !s.negotiation) {
-    if (s.coalition.stability < 25) callEarlyElections(s, 'חוק התקציב לא עבר במועד');
+    // ח"כ: הצבעת תקציב חיה ומותחת. אחרת – לפי יציבות הקואליציה
+    if (p.isMK) queueOtherVote(s, s.ministers.finance ?? s.coalition.pmId, 'budget_law', 2);
+    else if (s.coalition.stability < 25) callEarlyElections(s, 'חוק התקציב לא עבר במועד');
     else {
       addNews(s, 'הכנסת אישרה את תקציב המדינה בקריאה שנייה ושלישית', 'neutral');
       onBudgetPassed(s);

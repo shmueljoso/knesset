@@ -29,6 +29,12 @@ export function sponsorParty(s: GameState, b: Bill): string | null {
 
 export function partyLine(s: GameState, partyId: string, b: Bill): Line {
   const p = s.parties[partyId];
+  // חוק התקציב: קואליציה בעד (אלא אם שותפה ממורמרת), אופוזיציה נגד
+  if (b.templateId === 'budget_law') {
+    if (!isCoalition(s, partyId)) return 'against';
+    const sat = s.coalition.satisfaction[partyId] ?? 60;
+    return sat < 20 ? 'against' : sat < 30 ? 'free' : 'for';
+  }
   const align = leanAlignment(p.ideology, billLean(b));
   const sp = sponsorParty(s, b);
   if (sp === partyId) return align < -0.3 ? 'free' : 'for';
@@ -81,6 +87,7 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
   if (line === 'against' && score > 0) absent += 0.25;
   if (Math.abs(score) < 0.5) absent += 0.1;
   absent = Math.min(0.8, absent);
+  if (b.templateId === 'budget_law') absent = line === 'free' ? 0.25 : 0.03; // הצבעת תקציב: כולם מתייצבים
   const pAbstain = 0.04;
   const pv = 1 - absent - pAbstain;
   const pf = sigmoid(2.2 * score);
@@ -95,7 +102,7 @@ export function forecast(s: GameState, b: Bill) {
     const n = s.npcs[id];
     return mkProbs(s, n, b, lines[n.partyId!] ?? 'free');
   });
-  let eFor = s.seating.includes('player') ? 1 : 0;
+  let eFor = s.seating.includes('player') && (b.sponsor === 'player' || b.sponsor === s.player.employerId) ? 1 : 0;
   let eAgainst = 0;
   for (const sp of seats) {
     if (!sp) continue;
@@ -112,7 +119,7 @@ export function forecast(s: GameState, b: Bill) {
   return { lines, seats, eFor, eAgainst, swing };
 }
 
-export function runVote(s: GameState, b: Bill): VoteResult {
+export function runVote(s: GameState, b: Bill, playerVote?: VoteResult['seats'][number]): VoteResult {
   const f = forecast(s, b);
   const seats: VoteResult['seats'] = [];
   let cFor = 0;
@@ -121,7 +128,7 @@ export function runVote(s: GameState, b: Bill): VoteResult {
   let cAbsent = 0;
   s.seating.forEach((id, i) => {
     let v: VoteResult['seats'][number];
-    if (id === 'player') v = b.sponsor === 'player' || b.sponsor === s.player.employerId ? 'for' : 'abstain';
+    if (id === 'player') v = playerVote ?? (b.sponsor === 'player' || b.sponsor === s.player.employerId ? 'for' : 'abstain');
     else {
       const p = f.seats[i]!;
       const r = rand(s);

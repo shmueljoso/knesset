@@ -139,6 +139,21 @@ export interface VoteResult {
   seats: ('for' | 'against' | 'abstain' | 'absent')[]; // 120 מושבים לפי סדר המליאה
 }
 
+export type SeatVote = VoteResult['seats'][number];
+
+/** הצבעה שמתנהלת "בשידור חי": התוצאה כבר הוגרלה, ה-UI חושף אותה מושב אחרי מושב */
+export interface LiveVote {
+  billId: string;
+  kind: 'own' | 'other' | 'budget';
+  result: VoteResult;
+  order: number[]; // סדר חשיפת המושבים
+  playerVote: SeatVote | null;
+  lines: Record<string, 'for' | 'against' | 'free'>;
+  majority: number | null; // רוב מיוחד (חוק יסוד/80), אחרת רוב רגיל
+  rescued: boolean;
+  flipped: number[]; // מושבים שהשחקן הביא מהמזנון
+}
+
 export interface Bill {
   id: string;
   templateId: string;
@@ -160,6 +175,8 @@ export interface Bill {
   lastVote?: VoteResult;
   government?: boolean; // הצעת חוק ממשלתית
   agreementParty?: string; // סעיף בהסכם הקואליציוני
+  cabinetRejected?: boolean; // הצעה ממשלתית שוועדת השרים דחתה
+  external?: boolean; // הצעה של אחרים שעולה להצבעה שבה השחקן משתתף
   history: { week: number; text: string }[];
 }
 
@@ -326,6 +343,7 @@ export interface GameState {
   mod: string | null;
   settings: Settings;
   transforms: Transform[];
+  liveVote: LiveVote | null;
 }
 
 export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';

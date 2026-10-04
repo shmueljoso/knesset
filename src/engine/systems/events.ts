@@ -7,7 +7,7 @@ import { clamp } from '../util';
 import { changeAttitude, changeTrust } from './relationships';
 import { log } from './report';
 import { recomputeAp } from './staff';
-import { changeSatisfaction, recomputeStability } from './coalition';
+import { changeSatisfaction, playerPartyQuits, recomputeStability } from './coalition';
 import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
@@ -155,6 +155,7 @@ registerSpecial('fired', (s) => {
   return 'פוטרת מהממשלה.';
 });
 registerSpecial('resign', (s) => resignMinistry(s));
+registerSpecial('quit_coalition', (s) => playerPartyQuits(s));
 registerSpecial('partner_give', (s, ctx) => {
   changeSatisfaction(s, ctx.party, 15);
   recomputeStability(s);

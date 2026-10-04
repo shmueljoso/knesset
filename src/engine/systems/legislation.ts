@@ -3,17 +3,19 @@ import { inSession } from '../calendar';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { COMMITTEE_DEFS } from '../data/committees';
 import { registerSpecial, type Ctx } from '../ops';
-import { chance, rand } from '../rng';
-import type { Bill, BillStage, GameState } from '../types';
+import { chance, rand, shuffle } from '../rng';
+import type { Bill, BillStage, GameState, Ideology, LiveVote, SeatVote, VoteResult } from '../types';
 import { SECTORS, clamp, leanAlignment, newId } from '../util';
-import { onBillPassed } from './coalition';
-import { onLawPassed } from './issues';
+import { onBillPassed, onBudgetPassed } from './coalition';
+import { callEarlyElections } from './elections';
+import { resetMinistryBudget } from './ministry';
+import { onLawPassed, requiredMajority } from './issues';
 import { isCoalition } from './government';
 import { addNews } from './news';
-import { addWorldEffect, changeApproval } from './opinion';
+import { addWorldEffect, changeApproval, takeStance } from './opinion';
 import { addDebt, changeAttitude, reactToLaw } from './relationships';
 import { log } from './report';
-import { billImpact, billLean, runVote, sponsorParty } from './votes';
+import { LINE_NAMES, billImpact, billLean, forecast, runVote, sponsorParty } from './votes';
 
 export const STAGES: BillStage[] = ['tabled', 'ministerial', 'preliminary', 'committee1', 'first', 'committee2', 'final', 'passed'];
 export const STAGE_NAMES: Record<BillStage, string> = {
@@ -120,6 +122,7 @@ export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose'
     const pmAlign = pmParty && s.parties[pmParty] ? leanAlignment(s.parties[pmParty].ideology, lean) : 0;
     return pmAlign > 0.75 && coalAlign > 0.55 ? 'support' : pmAlign < 0.45 ? 'oppose' : 'free';
   }
+  if (s.coalition.pmId === 'player' && b.sponsor === 'player') return 'support';
   if (score > 0.35) return 'support';
   if (score < 0.05) return 'oppose';
   return 'free';
@@ -169,7 +172,10 @@ export function tickLegislation(s: GameState) {
       if (b.government) {
         // הצעת חוק ממשלתית מדלגת על הקריאה הטרומית – אבל רק אם ועדת השרים מאשרת
         if (b.govPosition === 'support') setStage(s, b, 'first', 'ועדת השרים אישרה את הצעת החוק הממשלתית. היא מונחת לקריאה ראשונה.');
-        else setStage(s, b, 'failed', 'ועדת השרים לא אישרה את הצעת החוק הממשלתית.');
+        else {
+          setStage(s, b, 'failed', 'ועדת השרים לא אישרה את הצעת החוק הממשלתית.');
+          b.cabinetRejected = true;
+        }
         if (isPlayerBill(s, b)) addNews(s, `ועדת השרים ${b.govPosition === 'support' ? 'אישרה' : 'דחתה'} את "${b.title}"`, b.govPosition === 'support' ? 'good' : 'bad', true);
         continue;
       }
@@ -206,12 +212,52 @@ export function canBringToVote(s: GameState, b: Bill): string | null {
   return null;
 }
 
+/** הצבעה מיידית (לבדיקות ולתאימות): פותחת וסוגרת הצבעה חיה */
 export function bringToVote(s: GameState, b: Bill) {
-  const stage = b.stage;
-  const res = runVote(s, b);
-  b.lastVote = res;
+  startVote(s, b, 'own');
+  return finishVote(s)!.result;
+}
+
+/** פתיחת הצבעה במליאה: התוצאה מוגרלת מיד, וה-UI חושף אותה מושב אחרי מושב. */
+export function startVote(s: GameState, b: Bill, kind: LiveVote['kind'] = 'own', playerVote?: SeatVote): LiveVote {
+  if (kind === 'own') s.player.ap -= 1;
   b.votedThisWeek = true;
-  s.player.ap -= 1;
+  const vote = playerVote ?? (kind === 'own' && s.seating.includes('player') ? 'for' : undefined);
+  const f = forecast(s, b);
+  const result = runVote(s, b, vote);
+  const lv: LiveVote = {
+    billId: b.id,
+    kind,
+    result,
+    order: shuffle(s, Array.from({ length: s.seating.length }, (_, i) => i)),
+    playerVote: s.seating.includes('player') ? result.seats[s.seating.indexOf('player')] : null,
+    lines: f.lines,
+    majority: b.stage === 'final' ? requiredMajority(s, b.templateId) : null,
+    rescued: false,
+    flipped: [],
+  };
+  s.liveVote = lv;
+  return lv;
+}
+
+/** סגירת ההצבעה והחלת התוצאה */
+export function finishVote(s: GameState): { text: string; result: VoteResult } | null {
+  const lv = s.liveVote;
+  if (!lv) return null;
+  s.liveVote = null;
+  const b = s.bills.find((x) => x.id === lv.billId);
+  if (!b) return null;
+  const res = lv.result;
+  b.lastVote = res;
+  if (lv.kind === 'own') return { text: applyOwnVote(s, b, res), result: res };
+  let text = lv.kind === 'budget' ? applyBudgetVote(s, res) : applyOtherVote(s, b, res);
+  text += playerVoteConsequences(s, b, lv);
+  s.bills = s.bills.filter((x) => x !== b);
+  return { text, result: res };
+}
+
+function applyOwnVote(s: GameState, b: Bill, res: VoteResult): string {
+  const stage = b.stage;
   const tally = `${res.for} בעד, ${res.against} נגד`;
   // התחייבויות מתממשות או נשברות
   s.seating.forEach((id, i) => {
@@ -228,7 +274,7 @@ export function bringToVote(s: GameState, b: Bill) {
     s.player.reputation = clamp(s.player.reputation - 3, 0, 100);
     addNews(s, `"${b.title}" נפלה ב${STAGE_NAMES[stage]}: ${tally}`, 'bad', true);
     log(s, `ההצעה "${b.title}" נפלה (${tally})`, 'vote');
-    return res;
+    return `ההצעה נפלה (${tally}).`;
   }
   addStat(s, 'reputation', 2);
   addStat(s, 'fame', 1.5);
@@ -241,7 +287,273 @@ export function bringToVote(s: GameState, b: Bill) {
   }
   if (stage !== 'final') addNews(s, `"${b.title}" עברה ב${STAGE_NAMES[stage]} (${tally})`, 'good', true);
   log(s, `"${b.title}" עברה ב${STAGE_NAMES[stage]} (${tally})`, 'vote');
-  return res;
+  return stage === 'final' ? `זה חוק! (${tally})` : `עברה! (${tally})`;
+}
+
+function applyOtherVote(s: GameState, b: Bill, res: VoteResult): string {
+  const t = templateById(b.templateId);
+  const tally = `${res.for} בעד, ${res.against} נגד`;
+  if (!res.passed) {
+    addNews(s, `"${b.title}" נפלה במליאה: ${tally}`, 'neutral');
+    return `ההצעה נפלה (${tally}).`;
+  }
+  b.stage = 'passed';
+  onLawPassed(s, { templateId: t.id, title: b.title, scope: b.scope, sponsor: b.sponsor, coSponsor: s.flags[`cosp_${b.sponsor}`] === t.id || undefined });
+  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * billImpact(b) * 0.8, t.weeks, b.title, t.delay);
+  const sp = s.npcs[b.sponsor];
+  addNews(s, `הכנסת אישרה את "${b.title}"${sp ? ` של ${sp.name}` : ''} (${tally})`, 'neutral', false, undefined, undefined, sp?.id);
+  return `החוק עבר (${tally}).`;
+}
+
+function applyBudgetVote(s: GameState, res: VoteResult): string {
+  const tally = `${res.for} בעד, ${res.against} נגד`;
+  if (res.passed) {
+    addNews(s, `הכנסת אישרה את תקציב המדינה (${tally})`, 'neutral', false, undefined, 'ערוץ המשכן');
+    onBudgetPassed(s);
+    resetMinistryBudget(s);
+    if (s.player.isMK && isCoalition(s, s.player.partyId)) s.player.capital += 2;
+    return `התקציב עבר (${tally}). הממשלה שורדת.`;
+  }
+  callEarlyElections(s, `חוק התקציב נפל במליאה (${tally})`);
+  return `התקציב נפל (${tally})! הכנסת מתפזרת – בחירות.`;
+}
+
+function negate(lean: Partial<Ideology>): Partial<Ideology> {
+  return Object.fromEntries(Object.entries(lean).map(([k, v]) => [k, -(v ?? 0)]));
+}
+
+/** מה קרה לשחקן בגלל איך שהצביע: קו הסיעה, קול מכריע, הדמות שהגישה */
+function playerVoteConsequences(s: GameState, b: Bill, lv: LiveVote): string {
+  const v = lv.playerVote;
+  if (!v) return '';
+  const res = lv.result;
+  const notes: string[] = [];
+  const line = s.player.partyId ? lv.lines[s.player.partyId] ?? 'free' : 'free';
+  const lean = billLean(b);
+  if ((v === 'for' || v === 'against') && Object.keys(lean).length) takeStance(s, v === 'for' ? lean : negate(lean), 1);
+  if (line !== 'free' && (v === 'for' || v === 'against')) {
+    if (v !== line) {
+      addStat(s, 'partyStanding', -5);
+      const leader = s.player.partyId ? s.parties[s.player.partyId].leaderId : '';
+      if (s.npcs[leader]) changeAttitude(s, leader, -8);
+      if (lv.kind === 'budget' && isCoalition(s, s.player.partyId) && s.npcs[s.coalition.pmId]) changeAttitude(s, s.coalition.pmId, -15);
+      notes.push('הצבעת נגד קו הסיעה: מעמד במפלגה −5.');
+    } else addStat(s, 'partyStanding', 1);
+  } else if (v === 'absent' && line !== 'free') {
+    addStat(s, 'partyStanding', -2);
+    notes.push('נעדרת מהצבעה שהסיעה ספרה עליה.');
+  }
+  const decisive = lv.majority
+    ? res.passed && v === 'for' && res.for === lv.majority
+    : (res.passed && v === 'for' && res.for - res.against === 1) || (!res.passed && v === 'against' && res.for - res.against >= -1);
+  if (decisive) {
+    addStat(s, 'fame', 3);
+    addNews(s, `הקול של ${s.player.name} הכריע את ההצבעה על "${b.title}"`, 'neutral', true, undefined, 'ערוץ המשכן');
+    notes.push('הקול שלך הכריע! מוכרות +3.');
+  }
+  const sp = s.npcs[b.sponsor];
+  if (sp && v === 'for') changeAttitude(s, sp.id, 6);
+  if (sp && v === 'against') changeAttitude(s, sp.id, -8);
+  return notes.length ? ' ' + notes.join(' ') : '';
+}
+
+// ---- "להביא נעדרים מהמזנון": הצלת הצבעה צמודה ----
+export const RESCUE_COST = 2;
+
+export function rescueInfo(s: GameState): { need: number; candidates: string[]; desired: 'pass' | 'fail' } | null {
+  const lv = s.liveVote;
+  if (!lv || lv.rescued) return null;
+  const b = s.bills.find((x) => x.id === lv.billId);
+  if (!b) return null;
+  const res = lv.result;
+  const desired = lv.kind === 'own' ? 'pass' : lv.playerVote === 'for' ? 'pass' : lv.playerVote === 'against' ? 'fail' : null;
+  if (!desired || (desired === 'pass') === res.passed) return null;
+  let need: number;
+  if (desired === 'pass') need = lv.majority ? lv.majority - res.for : res.against - res.for + 1;
+  else {
+    if (lv.majority) return null;
+    need = res.for - res.against;
+  }
+  if (need < 1 || need > 3) return null;
+  const f = forecast(s, b);
+  const candidates = res.seats
+    .map((v, i) => ({ v, i, sp: f.seats[i] }))
+    .filter((x) => x.v === 'absent' && x.sp && (desired === 'pass' ? x.sp.pFor > x.sp.pAgainst : x.sp.pAgainst > x.sp.pFor))
+    .map((x) => s.seating[x.i]);
+  return candidates.length ? { need, candidates, desired } : null;
+}
+
+export function rescueVote(s: GameState): string {
+  const info = rescueInfo(s);
+  const lv = s.liveVote;
+  if (!info || !lv) return 'אין את מי להביא.';
+  lv.rescued = true;
+  const want = info.desired === 'pass' ? 'for' : 'against';
+  let got = 0;
+  let tried = 0;
+  for (const id of info.candidates) {
+    if (got >= info.need || s.player.capital < RESCUE_COST) break;
+    s.player.capital -= RESCUE_COST;
+    tried++;
+    const n = s.npcs[id];
+    const p = clamp(0.55 + s.player.skills.negotiation / 300 + (n?.attitude ?? 0) / 300, 0.2, 0.9);
+    if (rand(s) < p) {
+      const i = s.seating.indexOf(id);
+      lv.result.seats[i] = want;
+      lv.flipped.push(i);
+      got++;
+    }
+  }
+  const r = lv.result;
+  r.for = r.seats.filter((x) => x === 'for').length;
+  r.against = r.seats.filter((x) => x === 'against').length;
+  r.absent = r.seats.filter((x) => x === 'absent').length;
+  r.passed = lv.majority ? r.for >= lv.majority : r.for > r.against;
+  if (!tried) return 'אין מספיק הון פוליטי כדי להזעיק אף אחד.';
+  return got >= info.need ? `הבאת ${got} ח"כים מהמזנון ברגע האחרון – התוצאה התהפכה!` : `הצלחת להביא ${got} מתוך ${info.need} שהיו צריכים. לא הספיק.`;
+}
+
+// ---- לחץ על ועדת השרים: אולטימטום וערר ----
+export type PressureRole = 'leader' | 'minister' | 'mk';
+
+export function pressureRole(s: GameState): PressureRole | null {
+  const p = s.player;
+  if (!p.isMK || !p.partyId || !isCoalition(s, p.partyId) || s.coalition.pmId === 'player') return null;
+  if (s.parties[p.partyId].leaderId === 'player') return 'leader';
+  return p.ministry ? 'minister' : 'mk';
+}
+
+const cabinetAgainst = (b: Bill) => b.govPosition === 'oppose' || !!b.cabinetRejected;
+const pressureStage = (b: Bill) => b.stage === 'preliminary' || (b.stage === 'failed' && !!b.cabinetRejected && !b.lastVote);
+
+export function ultimatumBlocked(s: GameState, b: Bill): string | null {
+  if (b.sponsor !== 'player') return 'רק להצעות שלך';
+  if (!cabinetAgainst(b) || !pressureStage(b)) return 'ועדת השרים לא חוסמת את ההצעה';
+  if (!pressureRole(s)) return 'רק מתוך הקואליציה (ולא כראש הממשלה)';
+  if (s.flags[`ult_${b.id}`]) return 'כבר הצבת אולטימטום על ההצעה הזו';
+  if (s.player.capital < 3) return 'נדרש הון פוליטי 3';
+  return null;
+}
+
+function coalitionAlign(s: GameState, b: Bill): number {
+  const lean = billLean(b);
+  const coal = s.coalition.parties.filter((p) => s.parties[p]);
+  const seats = coal.reduce((a, p) => a + s.parties[p].seats, 0) || 1;
+  return coal.reduce((a, p) => a + leanAlignment(s.parties[p].ideology, lean) * s.parties[p].seats, 0) / seats;
+}
+
+export function ultimatumChance(s: GameState, b: Bill): number {
+  const role = pressureRole(s);
+  if (!role) return 0;
+  const party = s.parties[s.player.partyId!];
+  const coal = s.coalition.parties.reduce((a, p) => a + (s.parties[p]?.seats ?? 0), 0);
+  const pivotal = coal - (role === 'leader' ? party.seats : 1) < 61;
+  const pm = s.npcs[s.coalition.pmId];
+  const pmParty = pm?.partyId ? s.parties[pm.partyId] : null;
+  const align = pmParty ? leanAlignment(pmParty.ideology, billLean(b)) : 0;
+  const p = { leader: 0.3, minister: 0.18, mk: 0.07 }[role] + (pivotal ? (role === 'leader' ? 0.35 : 0.15) : 0) + (pm?.attitude ?? 0) / 250 + align * 0.25 + Math.min(s.player.capital, 30) / 100 - (b.scope === 3 ? 0.1 : 0) - (templateById(b.templateId).radical ? 0.4 : 0);
+  return clamp(p, 0.03, 0.9);
+}
+
+function cabinetFlips(s: GameState, b: Bill, how: string) {
+  b.govPosition = 'support';
+  if (b.cabinetRejected) {
+    b.cabinetRejected = false;
+    setStage(s, b, 'first', `${how} – ועדת השרים חזרה בה ואישרה את ההצעה. היא מונחת לקריאה ראשונה.`);
+  } else b.history.push({ week: s.week, text: `${how} – הממשלה תתמוך בהצעה.` });
+}
+
+export function issueUltimatum(s: GameState, b: Bill): { ok: boolean; text: string } {
+  const blocked = ultimatumBlocked(s, b);
+  if (blocked) return { ok: false, text: blocked };
+  const role = pressureRole(s)!;
+  const p = ultimatumChance(s, b);
+  s.player.capital -= 3;
+  s.flags[`ult_${b.id}`] = true;
+  const pm = s.npcs[s.coalition.pmId];
+  if (pm) changeAttitude(s, pm.id, -10);
+  const threat = role === 'leader' ? 'המפלגה שלי פורשת מהקואליציה' : role === 'minister' ? 'אני מתפטר/ת מהממשלה' : 'אני מפסיק/ה להצביע עם הקואליציה';
+  if (rand(s) < p) {
+    cabinetFlips(s, b, 'אחרי אולטימטום');
+    addStat(s, 'fame', 2);
+    addNews(s, `${s.player.name} הציב/ה אולטימטום – והממשלה נכנעה: "${b.title}" תקבל תמיכה`, 'good', true, `"${threat} אם החוק לא עובר."`);
+    return { ok: true, text: `"${threat}" – וזה עבד! הממשלה תתמוך בהצעה.` };
+  }
+  s.eventQueue.push({ eventId: 'ultimatum_refused', ctx: { bill: b.id, npc: pm?.id ?? '', threat } });
+  addNews(s, `ראש הממשלה ל${s.player.name}: "הדלת פתוחה"`, 'bad', true);
+  return { ok: false, text: 'ראש הממשלה לא נבהל. עכשיו צריך להחליט: לממש את האיום או לסגת.' };
+}
+
+export function appealBlocked(s: GameState, b: Bill): string | null {
+  if (b.sponsor !== 'player') return 'רק להצעות שלך';
+  if (!cabinetAgainst(b) || !pressureStage(b)) return 'ועדת השרים לא חוסמת את ההצעה';
+  if (!s.player.ministry) return 'רק שר/ה יכול/ה לערער למליאת הממשלה';
+  if (s.flags[`appeal_${b.id}`]) return 'כבר ערערת';
+  if (s.player.ap < 1) return 'אין זמן';
+  return null;
+}
+
+export function appealChance(s: GameState, b: Bill): number {
+  const pm = s.npcs[s.coalition.pmId];
+  return clamp(0.15 + coalitionAlign(s, b) * 0.4 + (pm?.attitude ?? 0) / 250 + s.player.skills.negotiation / 300, 0.05, 0.8);
+}
+
+export function appealToGovernment(s: GameState, b: Bill): { ok: boolean; text: string } {
+  const blocked = appealBlocked(s, b);
+  if (blocked) return { ok: false, text: blocked };
+  s.player.ap -= 1;
+  s.flags[`appeal_${b.id}`] = true;
+  if (rand(s) < appealChance(s, b)) {
+    cabinetFlips(s, b, 'הערר התקבל במליאת הממשלה');
+    return { ok: true, text: 'מליאת הממשלה קיבלה את הערר!' };
+  }
+  b.history.push({ week: s.week, text: 'מליאת הממשלה דחתה את הערר.' });
+  return { ok: false, text: 'מליאת הממשלה דחתה את הערר.' };
+}
+
+/** הצעה של אחרים (או חוק התקציב) עולה להצבעה בקריאה שלישית – והשחקן מצביע */
+export function queueOtherVote(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
+  const t = templateById(templateId);
+  const b: Bill = {
+    id: newId(s, 'bill'),
+    templateId,
+    title: t.title,
+    sponsor,
+    scope,
+    stage: 'final',
+    stageWeek: s.week,
+    waitUntil: s.week,
+    exemption: false,
+    govPosition: null,
+    committeeId: t.committee,
+    committeeProgress: 0,
+    committeeNeeded: 0,
+    amendments: 0,
+    pushWeek: -1,
+    sessionPending: false,
+    votedThisWeek: false,
+    external: true,
+    government: templateId === 'budget_law' || !!s.npcs[sponsor]?.ministry || undefined,
+    history: [],
+  };
+  b.govPosition = templateId === 'budget_law' ? 'support' : ministerialDecision(s, b);
+  s.bills.push(b);
+  const f = forecast(s, b);
+  const line = s.player.partyId ? f.lines[s.player.partyId] ?? 'free' : 'free';
+  const budget = templateId === 'budget_law';
+  s.eventQueue.push({
+    eventId: budget ? 'budget_vote' : 'plenum_vote',
+    ctx: { bill: b.id, kind: budget ? 'budget' : 'other', line: LINE_NAMES[line], forecast: `${Math.round(f.eFor)} בעד מול ${Math.round(f.eAgainst)} נגד`, npc: s.npcs[sponsor] ? sponsor : '' },
+  });
+  return b;
+}
+
+for (const v of ['for', 'against', 'abstain', 'absent'] as const) {
+  registerSpecial(`cast_${v}`, (s, ctx) => {
+    const b = s.bills.find((x) => x.id === ctx.bill);
+    if (!b) return;
+    startVote(s, b, (ctx.kind as LiveVote['kind']) ?? 'other', s.seating.includes('player') ? v : undefined);
+  });
 }
 
 function onPassed(s: GameState, b: Bill) {

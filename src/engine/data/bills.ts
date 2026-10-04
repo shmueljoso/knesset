@@ -32,6 +32,8 @@ export interface BillTemplate {
   radical?: TransformId;
   /** נכנס לתוקף רק אחרי משאל עם */
   referendum?: boolean;
+  /** לא מופיע בבונה ההצעות (למשל חוק התקציב) */
+  hidden?: boolean;
 }
 
 export const BILL_TEMPLATES: BillTemplate[] = [
@@ -237,6 +239,12 @@ export const BILL_TEMPLATES: BillTemplate[] = [
     sectors: { secular: 3, arab: 3, olim: 1, traditional: -1, religious: -3, haredi: -3 },
     world: { trust: 3 }, weeks: 6, delay: 1, cost: 0, basic: { majority: 80 },
     scopes: ['חוקי היסוד על זכויות', 'כל חוקי היסוד', 'כולל חוק הבחירות'],
+  },
+  {
+    id: 'budget_law', hidden: true, title: 'חוק התקציב', icon: '💰', committee: 'finance', category: 'governance',
+    summary: 'תקציב המדינה לשנה הקרובה. אם לא יעבור עד סוף מרץ – הכנסת מתפזרת.',
+    lean: {}, sectors: {}, world: {}, weeks: 2, delay: 0, cost: 0,
+    scopes: ['תקציב', 'תקציב', 'תקציב'],
   },
   ...EXTRA_BILLS,
   ...RADICAL_BILLS,

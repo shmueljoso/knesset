@@ -22,7 +22,7 @@ function seatPositions() {
 export const VOTE_COLORS = { for: '#4ade80', against: '#f87171', abstain: '#fbbf24', absent: 'transparent' };
 export const VOTE_NAMES = { for: 'בעד', against: 'נגד', abstain: 'נמנע', absent: 'נעדר' };
 
-export function Hemicycle({ votes, probs, onSeat }: { votes?: VoteResult['seats']; probs?: (number | null)[]; onSeat?: (id: string) => void }) {
+export function Hemicycle({ votes, probs, onSeat, highlight }: { votes?: (VoteResult['seats'][number] | null)[]; probs?: (number | null)[]; onSeat?: (id: string) => void; highlight?: number[] }) {
   const g = useGame();
   const pos = useMemo(seatPositions, []);
   const [hover, setHover] = useState<number | null>(null);
@@ -43,8 +43,9 @@ export function Hemicycle({ votes, probs, onSeat }: { votes?: VoteResult['seats'
           let stroke = 'var(--bg2)';
           if (votes) {
             const v = votes[i];
-            fill = VOTE_COLORS[v];
-            if (v === 'absent') stroke = '#475569';
+            fill = v ? VOTE_COLORS[v] : '#1e293b';
+            if (v === 'absent' || !v) stroke = '#475569';
+            if (highlight?.includes(i)) stroke = '#e8c37a';
           } else if (probs) {
             const p = probs[i];
             fill = p === null ? '#e8c37a' : p > 0.65 ? VOTE_COLORS.for : p < 0.35 ? VOTE_COLORS.against : '#94a3b8';

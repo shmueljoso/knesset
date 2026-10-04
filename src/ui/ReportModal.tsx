@@ -1,6 +1,8 @@
 import { dateLabel } from '../engine/calendar';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
-import type { WorldKey } from '../engine/types';
+import { useEffect, useState } from 'react';
+import { allocateSeats } from '../engine/systems/elections';
+import type { GameState, WorldKey } from '../engine/types';
 import { useGame, useStore } from '../store';
 import { Delta } from './common';
 import { Hemicycle } from './Charts';
@@ -100,14 +102,48 @@ export function ReportModal() {
   );
 }
 
+const COUNT_PHASES = [
+  { label: '22:00 · המדגם של ערוץ המשכן', noise: 0.14 },
+  { label: 'נספרו 30% מהקולות', noise: 0.08 },
+  { label: 'נספרו 65% מהקולות', noise: 0.04 },
+  { label: 'נספרו 92% מהקולות', noise: 0.015 },
+  { label: 'תוצאות סופיות, כולל המעטפות הכפולות', noise: 0 },
+];
+
+/** רעש קבוע לכל מפלגה ושלב, כדי שהספירה תיראה אמינה ולא תקפוץ בכל רינדור */
+function noise(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 2001) / 1000 - 1;
+}
+
+function seatsAt(g: GameState, phase: number): Record<string, number> {
+  const e = g.lastElection!;
+  if (phase >= COUNT_PHASES.length - 1) return e.seats;
+  const k = COUNT_PHASES[phase].noise;
+  const votes = Object.fromEntries(Object.entries(e.votes).map(([id, v]) => [id, v * (1 + noise(id + phase) * k)]));
+  const surplus = Object.fromEntries(Object.values(g.parties).map((p) => [p.id, p.surplusPartner]));
+  return allocateSeats(votes, surplus, 120, (g.rules?.threshold ?? 3.25) / 100);
+}
+
 export function ElectionModal() {
   const g = useGame();
   const act = useStore((s) => s.act);
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (phase >= COUNT_PHASES.length - 1) return;
+    const id = setTimeout(() => setPhase((x) => x + 1), phase === 0 ? 2600 : 1800);
+    return () => clearTimeout(id);
+  }, [phase]);
   const e = g.lastElection;
   if (!e) return null;
   const total = Object.values(e.votes).reduce((a, b) => a + b, 0);
+  const last = COUNT_PHASES.length - 1;
+  const final = phase >= last;
+  const prevSeats = phase > 0 ? seatsAt(g, phase - 1) : null;
+  const curSeats = seatsAt(g, phase);
   const rows = Object.values(g.parties)
-    .map((p) => ({ p, seats: e.seats[p.id] ?? 0, pct: ((e.votes[p.id] ?? 0) / total) * 100 }))
+    .map((p) => ({ p, seats: curSeats[p.id] ?? 0, pct: ((e.votes[p.id] ?? 0) / total) * 100 * (1 + noise(p.id + phase) * COUNT_PHASES[phase].noise), prev: prevSeats?.[p.id] }))
     .sort((a, b) => b.seats - a.seats || b.pct - a.pct);
   const pm = g.coalition.pmId === 'player' ? g.player.name : g.npcs[g.coalition.pmId]?.name;
   const open = useStore((s) => s.open);
@@ -119,13 +155,21 @@ export function ElectionModal() {
     <div className="event-overlay">
       <div className="event-card">
         <div className="tiny gold" style={{ fontWeight: 700 }}>🗳️ ליל הבחירות</div>
-        <h2>תוצאות הבחירות לכנסת ה-{e.knesset}</h2>
-        <div style={{ margin: '12px 0' }}>
-          <Hemicycle />
-        </div>
+        <h2>{final ? `תוצאות הבחירות לכנסת ה-${e.knesset}` : `ליל הבחירות לכנסת ה-${e.knesset}`}</h2>
+        <div className={`chip ${final ? 'good' : 'gold'}`} data-testid="count-phase">{COUNT_PHASES[phase].label}</div>
+        {final && (
+          <div style={{ margin: '12px 0' }}>
+            <Hemicycle />
+          </div>
+        )}
+        {!final && (
+          <button className="btn sm" style={{ margin: '8px 0' }} onClick={() => setPhase(COUNT_PHASES.length - 1)}>
+            ⏩ לתוצאות הסופיות
+          </button>
+        )}
         <table className="results">
           <tbody>
-            {rows.map(({ p, seats, pct }) => (
+            {rows.map(({ p, seats, pct, prev }) => (
               <tr key={p.id} style={{ opacity: seats ? 1 : 0.55, fontWeight: p.id === g.player.partyId ? 800 : 400 }}>
                 <td>
                   <span className="party-dot" style={{ background: p.color, marginInlineEnd: 6 }} />
@@ -133,13 +177,14 @@ export function ElectionModal() {
                 </td>
                 <td className="muted small">{pct.toFixed(2)}%</td>
                 <td style={{ textAlign: 'end' }}>
-                  <b>{seats || 'מתחת לחסימה'}</b>
+                  {prev !== undefined && prev !== seats && <span className={seats > prev ? 'good' : 'bad'} style={{ marginInlineEnd: 4 }}>{seats > prev ? '▲' : '▼'}</span>}
+                  <b>{seats || (pct > 2 && !final ? 'על הסף…' : 'מתחת לחסימה')}</b>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="card" style={{ marginTop: 14, textAlign: 'center' }}>
+        {final && <div className="card" style={{ marginTop: 14, textAlign: 'center' }}>
           {e.playerElected ? (
             <>
               <div style={{ fontSize: 36 }}>🎉</div>
@@ -155,14 +200,14 @@ export function ElectionModal() {
           ) : (
             <p className="small muted">לא התמודדת בבחירות האלה.</p>
           )}
-        </div>
-        {pm && !g.negotiation && (
+        </div>}
+        {final && pm && !g.negotiation && (
           <p className="small" style={{ marginTop: 10 }}>
             הממשלה החדשה: <b>{pm}</b> עם {g.coalition.parties.map((c) => g.parties[c].short).join(', ')}.
           </p>
         )}
-        <button className="btn primary block" style={{ marginTop: 12 }} onClick={close}>
-          {g.negotiation ? 'למשא ומתן הקואליציוני ←' : 'המשך'}
+        <button className="btn primary block" style={{ marginTop: 12 }} disabled={!final} onClick={close}>
+          {!final ? 'סופרים קולות…' : g.negotiation ? 'למשא ומתן הקואליציוני ←' : 'המשך'}
         </button>
       </div>
     </div>

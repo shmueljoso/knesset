@@ -2,6 +2,8 @@
 import { addStat } from '../stats';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { chance, pick, rand } from '../rng';
+import { inSession } from '../calendar';
+import { queueOtherVote } from './legislation';
 import type { GameState, Npc } from '../types';
 import { clamp } from '../util';
 import { isCoalition } from './government';
@@ -24,6 +26,11 @@ function npcLawPasses(s: GameState) {
   const n = pick(s, weighted);
   const t = templateById(n.agenda);
   const scope = (1 + Math.floor(rand(s) * 2)) as 1 | 2;
+  // ח"כ השחקן מצביע בעצמו – בהצבעה חיה
+  if (s.player.isMK && inSession(s) && !s.liveVote && !s.eventQueue.some((e) => e.eventId === 'plenum_vote')) {
+    queueOtherVote(s, n.id, t.id, scope);
+    return;
+  }
   const co = s.flags[cosponsorKey(n.id)] === n.agenda;
   onLawPassed(s, { templateId: t.id, title: t.title, scope, sponsor: n.id, coSponsor: co || undefined });
   for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * SCOPE_FACTOR[scope] * 0.6, t.weeks, t.title, t.delay);
@@ -80,7 +87,7 @@ function maybePlot(s: GameState) {
 }
 
 export function tickNpcs(s: GameState) {
-  if (chance(s, 0.05)) npcLawPasses(s);
+  if (chance(s, s.player.isMK ? 0.08 : 0.05)) npcLawPasses(s);
   if (chance(s, 0.015)) npcResigns(s);
   if (chance(s, 0.06)) maybePlot(s);
   // שאפתנות: ח"כים שאפתנים צוברים השפעה לאט

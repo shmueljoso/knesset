@@ -426,7 +426,7 @@ export function MapView() {
 export function NextWeekButton({ block }: { block?: boolean }) {
   const g = useGame();
   const nextWeek = useStore((s) => s.nextWeek);
-  const blocked = g.eventQueue.length > 0;
+  const blocked = g.eventQueue.length > 0 || !!g.liveVote;
   return (
     <button
       className={`btn primary ${block ? 'block' : ''}`}

@@ -683,6 +683,52 @@ EVENTS.push({
   ],
 });
 
+// ---------- מליאה: הצבעות ואולטימטום ----------
+const voteChoices = (budget = false): EventChoice[] => [
+  { label: 'בעד ✅', hint: budget ? 'הממשלה סופרת עליך' : 'אם זה נגד קו הסיעה – מעמד במפלגה נפגע', ops: [{ op: 'special', id: 'cast_for', label: 'הצבעה בעד' }] },
+  { label: 'נגד ❌', hint: budget ? 'אם התקציב נופל – בחירות' : 'אם זה נגד קו הסיעה – מעמד במפלגה נפגע', ops: [{ op: 'special', id: 'cast_against', label: 'הצבעה נגד' }] },
+  { label: 'להימנע', ops: [{ op: 'special', id: 'cast_abstain', label: 'נמנע/ת' }] },
+  { label: 'לא להגיע להצבעה', hint: 'לפעמים הכי חכם להיעלם', ops: [{ op: 'special', id: 'cast_absent', label: 'נעדר/ת' }] },
+];
+
+EVENTS.push(
+  {
+    id: 'plenum_vote', queued: true, icon: '🗳️',
+    title: 'הצבעה במליאה: {bill}',
+    body: 'ההצעה של {npc} עולה הערב לקריאה שנייה ושלישית. עמדת הסיעה שלך: {line}. ספירת הקולות במסדרונות: {forecast}. השוטרים של הכנסת סוגרים את הדלתות – איך את/ה מצביע/ה?',
+    choices: voteChoices(),
+  },
+  {
+    id: 'budget_vote', queued: true, icon: '💰',
+    title: 'הלילה: הצבעה על תקציב המדינה',
+    body: 'זה הרגע של הממשלה. אם התקציב לא עובר עד סוף מרץ – הכנסת מתפזרת אוטומטית. עמדת הסיעה שלך: {line}. ספירה במסדרונות: {forecast}.',
+    choices: voteChoices(true),
+  },
+  {
+    id: 'ultimatum_refused', queued: true, icon: '😤',
+    title: 'ראש הממשלה קורא את הבלוף',
+    body: '"{threat}"? {npc} חייך/ה: "הדלת פתוחה." עכשיו כל העיתונאים שואלים רק דבר אחד – תממש/י או תתקפל/י?',
+    choices: [
+      {
+        label: 'לממש: המפלגה פורשת מהקואליציה', hint: 'השרים שלכם מאבדים את התיקים',
+        requires: (s) => (s.player.partyId && s.parties[s.player.partyId]?.leaderId === 'player' && isCoalition(s, s.player.partyId) ? null : 'רק ליו"ר מפלגה שותפה'),
+        ops: [{ op: 'special', id: 'quit_coalition', label: 'פרישה מהקואליציה' }, { op: 'fame', d: 4 }, { op: 'consistency', d: 5 }],
+      },
+      {
+        label: 'לממש: להתפטר מהממשלה',
+        requires: (s) => (s.player.ministry ? null : 'רק לשרים'),
+        ops: [{ op: 'special', id: 'resign', label: 'התפטרות' }, { op: 'consistency', d: 5 }],
+      },
+      {
+        label: 'לממש: מרד – להצביע נגד הקואליציה', hint: 'מוכרות ועקביות, על חשבון המפלגה',
+        requires: (s) => (s.player.isMK ? null : 'רק לח"כים'),
+        ops: [{ op: 'partyStanding', d: -8 }, { op: 'fame', d: 3 }, { op: 'consistency', d: 4 }, { op: 'att', who: '@pm', d: -10 }, { op: 'stability', d: -5 }],
+      },
+      { label: 'לסגת מהאיום', hint: 'איום סרק זוכרים', ops: [{ op: 'reputation', d: -4 }, { op: 'capital', d: -2 }, { op: 'att', who: '@pm', d: 4 }] },
+    ],
+  },
+);
+
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id);
 
 export function debtCollectCandidate(s: GameState): Ctx | null {
