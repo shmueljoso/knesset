@@ -9,7 +9,8 @@ import { listsOpen, mergeBlocked, mergeChance, npcSplit, playerLeads, spawnParty
 import { addNews } from '../systems/news';
 import { addMomentum, addWorldEffect } from '../systems/opinion';
 import type { GameState, Party } from '../types';
-import { ideologyDistance } from '../util';
+import { ideologyDistance, leanAlignment } from '../util';
+import { BILL_TEMPLATES } from './bills';
 import type { GameEvent } from './events';
 
 export interface ShockDef {
@@ -206,6 +207,20 @@ export const SHOCKS: ShockDef[] = [
       addWorldEffect(s, 'cohesion', -6, 4, 'מחאת הגיוס');
       addNews(s, 'הפגנת ענק נגד גיוס חרדים חוסמת את הכניסה לירושלים; מנגד – מחאת המילואימניקים', 'bad', false, undefined, 'ערוץ המשכן');
       return {};
+    },
+  },
+  {
+    id: 'radical_motion', weight: 2,
+    setup: (s) => {
+      const radicals = BILL_TEMPLATES.filter((t) => t.radical && !(s.transforms ?? []).some((x) => x.id === t.radical));
+      const pairs = Object.values(s.npcs)
+        .filter((n) => n.isMK && n.notable)
+        .flatMap((n) => radicals.map((t) => ({ n, t, a: leanAlignment(n.ideology, t.lean) })))
+        .filter((x) => x.a > 0.55);
+      if (!pairs.length) return null;
+      const { n, t } = pick(s, pairs);
+      addNews(s, `${n.name} הגיש/ה את "${t.title}". "הצעה הזויה", אומרים בכנסת`, 'neutral', false, undefined, 'ערוץ המשכן');
+      return { npc: n.id, title: t.title, lean: JSON.stringify(t.lean) };
     },
   },
   {

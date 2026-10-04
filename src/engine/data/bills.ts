@@ -1,4 +1,5 @@
-import type { Ideology, IssueId, Sector, WorldKey } from '../types';
+import type { Ideology, IssueId, Sector, TransformId, WorldKey } from '../types';
+import { EXTRA_BILLS, RADICAL_BILLS } from './moreBills';
 
 export type RuleId = 'threshold' | 'norwegian' | 'termLimit' | 'override' | 'entrench' | 'equality';
 
@@ -26,7 +27,11 @@ export interface BillTemplate {
   rule?: RuleId;
   /** הסיכוי שבג"ץ יפסול את החוק אם תוגש עתירה (0-1) */
   petitionRisk?: number;
-  category: 'economy' | 'society' | 'security' | 'governance' | 'basic';
+  category: 'economy' | 'society' | 'security' | 'governance' | 'basic' | 'radical';
+  /** הצעה מרחיקת לכת: אם תעבור – המדינה משתנה מהיסוד */
+  radical?: TransformId;
+  /** נכנס לתוקף רק אחרי משאל עם */
+  referendum?: boolean;
 }
 
 export const BILL_TEMPLATES: BillTemplate[] = [
@@ -233,6 +238,8 @@ export const BILL_TEMPLATES: BillTemplate[] = [
     world: { trust: 3 }, weeks: 6, delay: 1, cost: 0, basic: { majority: 80 },
     scopes: ['חוקי היסוד על זכויות', 'כל חוקי היסוד', 'כולל חוק הבחירות'],
   },
+  ...EXTRA_BILLS,
+  ...RADICAL_BILLS,
 ];
 
 export const templateById = (id: string) => BILL_TEMPLATES.find((t) => t.id === id)!;

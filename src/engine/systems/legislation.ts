@@ -114,6 +114,12 @@ export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose'
   if (s.coalition.agreement.some((a) => a.status === 'pending' && a.demand.kind === 'veto' && a.demand.ref === b.templateId)) score -= 1;
   score -= templateById(b.templateId).cost * SCOPE_FACTOR[b.scope] * 0.04;
   if (s.flags[`minlobby_${b.id}`]) score += 0.25;
+  // הצעה מרחיקת לכת: הממשלה תומכת רק אם מפלגת ראש הממשלה בעד בלב שלם
+  if (templateById(b.templateId).radical) {
+    const pmParty = s.coalition.pmId === 'player' ? s.player.partyId : s.npcs[s.coalition.pmId]?.partyId;
+    const pmAlign = pmParty && s.parties[pmParty] ? leanAlignment(s.parties[pmParty].ideology, lean) : 0;
+    return pmAlign > 0.75 && coalAlign > 0.55 ? 'support' : pmAlign < 0.45 ? 'oppose' : 'free';
+  }
   if (score > 0.35) return 'support';
   if (score < 0.05) return 'oppose';
   return 'free';

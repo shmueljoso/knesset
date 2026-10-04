@@ -8,7 +8,7 @@ import { leanAlignment } from './util';
 /** "הנושא" של דמות: אחת משלוש התבניות הקרובות לה אידיאולוגית. */
 export function pickAgenda(n: Npc, seed: number): string {
   const rnd = makeLocalRng(seed);
-  const ranked = BILL_TEMPLATES.filter((t) => Object.keys(t.lean).length && !t.rule)
+  const ranked = BILL_TEMPLATES.filter((t) => Object.keys(t.lean).length && !t.rule && !t.radical)
     .map((t) => ({ id: t.id, a: leanAlignment(n.ideology, t.lean) }))
     .sort((a, b) => b.a - a.a);
   return ranked[Math.floor(rnd() * 3)]?.id ?? ranked[0].id;
@@ -35,6 +35,7 @@ export function ensurePhase3(g: GameState) {
   g.scandal ??= null;
   g.mod ??= null;
   g.settings ??= { drama: 'normal' };
+  g.transforms ??= [];
   if (!g.missions.length && !g.missionsDone.length) checkMissions(g);
   g.career ??= {
     mkTerms: g.player.isMK ? 1 : 0,

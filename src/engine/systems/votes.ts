@@ -37,6 +37,11 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
   if (rule === 'threshold') return p.seats >= 12 ? 'for' : 'against';
   if (rule === 'norwegian') return isCoalition(s, partyId) ? 'for' : 'against';
   if (rule === 'termLimit') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'against' : isCoalition(s, partyId) ? 'free' : 'for';
+  // הצעה מרחיקת לכת: אין משמעת קואליציונית – כל מפלגה לפי המצפון והבוחרים
+  if (templateById(b.templateId).radical) {
+    if (sp === partyId) return align > 0.55 ? 'for' : 'free';
+    return align > 0.7 ? 'for' : align < 0.4 ? 'against' : 'free';
+  }
   if (isCoalition(s, partyId)) {
     if (b.govPosition === 'support') return 'for';
     if (b.govPosition === 'oppose') return align > 0.75 ? 'free' : 'against';
@@ -69,6 +74,8 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
     if (debtsWith(s, n.id, 'owes_player').length) score += 0.4;
     score += caucusBonus(s, n.id, b.templateId);
   }
+  // מרחיק לכת: פחד מההשלכות ומשמירה על הסטטוס קוו
+  if (templateById(b.templateId).radical) score -= n.traits.includes('principled') && align > 0.7 ? 0.2 : 0.9;
   let absent = ABSENT_BASE[b.stage] ?? 0.2;
   // ח"כ קואליציה שתומך אבל הממשלה מתנגדת – יעדיף להיעדר מאשר להפר משמעת
   if (line === 'against' && score > 0) absent += 0.25;

@@ -92,6 +92,18 @@ export interface Party {
 
 export type Drama = 'calm' | 'normal' | 'wild';
 
+export type TransformId =
+  | 'peace' | 'annexation' | 'halacha' | 'secular' | 'constitution' | 'sovereignty'
+  | 'presidential' | 'ubi' | 'libertarian' | 'volunteer' | 'citizens' | 'emergency';
+
+/** שינוי משטר/אופי המדינה שנכנס לתוקף */
+export interface Transform {
+  id: TransformId;
+  week: number;
+  scope: 1 | 2 | 3;
+  sponsor: string;
+}
+
 export interface Settings {
   drama: Drama;
 }
@@ -313,6 +325,7 @@ export interface GameState {
   career: CareerStats;
   mod: string | null;
   settings: Settings;
+  transforms: Transform[];
 }
 
 export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';
@@ -334,6 +347,8 @@ export interface Rules {
   override: boolean;
   entrench: boolean;
   equality: boolean;
+  noReview?: boolean; // ביטול הביקורת השיפוטית
+  presidential?: boolean; // שיטה נשיאותית: אין אי-אמון ואין בחירות מוקדמות
 }
 
 export interface Caucus {

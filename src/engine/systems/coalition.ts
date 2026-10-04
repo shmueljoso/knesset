@@ -69,8 +69,9 @@ export function generateDemands(s: GameState, partyId: string): { demands: Deman
   demands.push({ kind: 'budget', amount: Math.max(0.5, Math.round(p.seats * 0.12 * 10) / 10), sector: mainSector(s, partyId) });
   weights.push(10);
   const scored = BILL_TEMPLATES.map((t) => ({ t, a: leanAlignment(p.ideology, t.lean) })).sort((a, b) => b.a - a.a);
-  if (scored[0].a > 0.5) {
-    demands.push({ kind: 'bill', ref: scored[0].t.id });
+  const wish = scored.find((x) => !x.t.radical);
+  if (wish && wish.a > 0.5) {
+    demands.push({ kind: 'bill', ref: wish.t.id });
     weights.push(12);
   }
   const worst = scored[scored.length - 1];
@@ -407,6 +408,7 @@ export function partyQuits(s: GameState, partyId: string, reason: string) {
 
 /** אי-אמון קונסטרוקטיבי: צריך 61 ח"כים שתומכים בממשלה חלופית. */
 export function tryNoConfidence(s: GameState): { passed: boolean; text: string } {
+  if (s.rules.presidential) return { passed: false, text: 'בשיטה הנשיאותית הכנסת לא יכולה להפיל את הממשלה באי-אמון.' };
   const pm = pmParty(s);
   const alt = proposeCoalition(s, [pm]);
   const altSeats = coalitionSeats(s, alt);

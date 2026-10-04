@@ -151,7 +151,7 @@ export function applyRecruits(s: GameState) {
 // ---------- שדולות ----------
 
 export function issueLean(issue: IssueId): Partial<Ideology> {
-  const ts = BILL_TEMPLATES.filter((t) => t.issue === issue && Object.keys(t.lean).length);
+  const ts = BILL_TEMPLATES.filter((t) => t.issue === issue && !t.radical && Object.keys(t.lean).length);
   const out: Partial<Ideology> = {};
   for (const t of ts) for (const [k, v] of Object.entries(t.lean)) out[k as keyof Ideology] = (out[k as keyof Ideology] ?? 0) + v! / ts.length;
   return out;

@@ -1,5 +1,6 @@
 // סוגיות בוערות: העולם "זוכר" מה חוקקו, מחאות נרגעות כשהבעיה נפתרת, וחוקים משנים את כללי המשחק.
 import { SCOPE_FACTOR, templateById } from '../data/bills';
+import { onRadicalPassed } from './transforms';
 import { ISSUES } from '../data/issues';
 import { rand } from '../rng';
 import type { GameState, IssueId, LawRecord } from '../types';
@@ -73,6 +74,7 @@ export function onLawPassed(s: GameState, rec: Omit<LawRecord, 'week'>) {
   for (const [eventId, delay] of t.aftermath ?? []) scheduleEvent(s, eventId, delay, { law: t.id, title: t.title });
   if (t.petitionRisk) scheduleEvent(s, 'petition', 5, { law: t.id, title: t.title });
   if (t.rule) applyRule(s, t.rule, rec.scope);
+  if (t.radical) onRadicalPassed(s, t.id, rec.scope, rec.sponsor);
 }
 
 function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>, scope: 1 | 2 | 3) {
@@ -106,6 +108,7 @@ const ruleTemplate = (rule: string) => ({ threshold: 'threshold', norwegian: 'no
 /** הסיכוי שבג"ץ יפסול חוק */
 export function strikeChance(s: GameState, templateId: string): number {
   const t = templateById(templateId);
+  if (s.rules.noReview) return 0;
   let p = t.petitionRisk ?? 0;
   if (s.rules.equality) p *= 1.3;
   if (s.rules.entrench) p *= 1.2;

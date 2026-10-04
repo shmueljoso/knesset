@@ -1,0 +1,163 @@
+// "מדינה אחרת": מה כל שינוי משטר עושה, משאל העם ואירועי ההמשך.
+import type { TransformId } from '../types';
+import type { GameEvent } from './events';
+
+export interface TransformInfo {
+  name: string;
+  icon: string;
+  /** שורה למסך הלוח: איך המדינה נראית עכשיו */
+  now: string;
+  /** כותרת ביום שהשינוי נכנס לתוקף */
+  headline: string;
+}
+
+export const TRANSFORM_INFO: Record<TransformId, TransformInfo> = {
+  peace: { name: 'שלום', icon: '🕊️', now: 'ישראל חתמה על הסכם קבע. שגרירויות נפתחות, התנחלויות מפונות, והמחלוקת מפלגת את הרחוב.', headline: 'היסטוריה: הסכם השלום הכולל נכנס לתוקף' },
+  annexation: { name: 'סיפוח', icon: '🗺️', now: 'החוק הישראלי חל על כל השטחים. העולם מגיב בסנקציות, ושאלת האזרחות פתוחה.', headline: 'הכנסת החילה ריבונות. העולם בהלם, השטח בוער' },
+  halacha: { name: 'מדינת הלכה', icon: '🕍', now: 'משפט התורה מעל החוק האזרחי. השבת ממלכתית, בתי הדין הרבניים פוסקים, וחילונים אורזים מזוודות.', headline: 'חוק יסוד: התורה נכנס לתוקף. ישראל היא מדינת הלכה' },
+  secular: { name: 'הפרדת דת ומדינה', icon: '🗽', now: 'אין רבנות ראשית ואין תקציבי ישיבות. נישואים אזרחיים, אוטובוסים בשבת, והציבור החרדי בחזית.', headline: 'הדת והמדינה הופרדו. הרבנות הראשית פורקה' },
+  constitution: { name: 'חוקה', icon: '📜', now: 'לישראל יש חוקה נוקשה עם מגילת זכויות. שינוי שלה מחייב 80 ח"כים.', headline: 'יום החוקה: לישראל יש חוקה' },
+  sovereignty: { name: 'ריבונות הכנסת', icon: '👑', now: 'בית המשפט לא יכול לפסול חוקים. לרוב בכנסת יש כוח בלתי מוגבל, והרחוב לא נרגע.', headline: 'הביקורת השיפוטית בוטלה. "לכנסת המילה האחרונה"' },
+  presidential: { name: 'שיטה נשיאותית', icon: '🏛️', now: 'הממשלה לא תלויה בקואליציה: אין אי-אמון ואין בחירות מוקדמות. כוח המיקוח של המפלגות הקטנות קרס.', headline: 'ישראל עוברת לשיטה נשיאותית' },
+  ubi: { name: 'הכנסה בסיסית', icon: '💸', now: 'כל אזרח מקבל הכנסה בסיסית חודשית. העוני צונח, הגירעון מזנק, והאינפלציה מאיימת.', headline: 'התשלום הראשון של ההכנסה הבסיסית יצא לדרך' },
+  libertarian: { name: 'מדינה מינימלית', icon: '🦅', now: 'כמעט אין מס הכנסה, החברות הממשלתיות הופרטו, והשוק פרוע. הצמיחה מזנקת – וגם הפערים.', headline: 'המהפכה הליברטריאנית: מס הכנסה בוטל לרוב האזרחים' },
+  volunteer: { name: 'צבא מקצועי', icon: '🎖️', now: 'אין גיוס חובה. צה"ל הוא צבא מקצועי בתשלום, והוויכוח על השוויון בנטל נגמר – בדרך אחרת.', headline: 'סוף עידן: גיוס החובה בוטל' },
+  citizens: { name: 'מדינת כל אזרחיה', icon: '🧩', now: 'חוק הלאום בוטל, הסמלים משתנים, והשאלה "מדינה יהודית?" חוזרת לכל שולחן שבת.', headline: 'חוק הלאום בוטל: "מדינת כל אזרחיה"' },
+  emergency: { name: 'שעת חירום', icon: '🚨', now: 'הבחירות נדחו והממשלה פועלת בתקנות לשעת חירום. האופוזיציה קוראת לזה הפיכה.', headline: 'הבחירות נדחו. הממשלה הכריזה על שעת חירום' },
+};
+
+const T = (title: string, icon: string, body: string, choices: GameEvent['choices']): GameEvent => ({ id: '', queued: true, title, icon, body, choices });
+
+export const TRANSFORM_EVENTS: GameEvent[] = [
+  {
+    id: 'referendum', queued: true, icon: '🗳️',
+    title: 'משאל עם: {title}',
+    body: 'הכנסת אישרה, ועכשיו העם מחליט. הסקר האחרון לפני ההצבעה: {forecast}% בעד. קמפיינים, הפגנות ושלטי חוצות בכל צומת. איפה את/ה?',
+    choices: [
+      { label: 'לצאת לקמפיין "כן" ענק', hint: 'מגדיל את התמיכה לפי המוכרות שלך', ops: [{ op: 'money', d: -40 }, { op: 'special', id: 'ref_yes', label: 'קמפיין בעד' }] },
+      { label: 'להוביל את מחנה ה"לא"', hint: 'מקטין את התמיכה לפי המוכרות שלך', ops: [{ op: 'money', d: -20 }, { op: 'special', id: 'ref_no', label: 'קמפיין נגד' }] },
+      { label: 'להשאיר את ההחלטה לעם', ops: [{ op: 'special', id: 'ref_neutral', label: 'ההצבעה מתקיימת' }] },
+    ],
+  },
+  {
+    id: 'radical_court', queued: true, icon: '⚖️',
+    title: 'בג"ץ פסל את "{title}"',
+    body: 'בהרכב מורחב, ברוב גדול: "החוק פוגע בליבת הדמוקרטיה". הממשלה צריכה להחליט אם לציית. מדינה שלמה עוצרת את הנשימה.',
+    choices: [
+      { label: 'לכבד את פסק הדין', hint: 'השינוי מתבטל', ops: [{ op: 'special', id: 'undo_transform', label: 'החוק מבוטל' }, { op: 'reputation', d: 3 }] },
+      { label: 'להתעלם מפסק הדין', hint: 'משבר חוקתי מלא', ops: [{ op: 'special', id: 'defy_court', label: 'השינוי נשאר · אמון ולכידות קורסים' }, { op: 'reputation', d: -4 }] },
+    ],
+  },
+  {
+    id: 'radical_motion', queued: true, icon: '🌋',
+    title: '{npc} מגיש/ה: "{title}"',
+    body: 'ח"כ {npc} הניח/ה על שולחן הכנסת הצעה מרחיקת לכת. אף אחד לא מאמין שהיא תעבור – אבל כולם צריכים להגיב.',
+    choices: [
+      { label: 'לחתום כשותף/ה להצעה', hint: 'עמדה קיצונית, הרבה כותרות', dyn: (_s, c) => [{ op: 'stance', lean: JSON.parse(c.lean ?? '{}'), d: 2.5 }, { op: 'fame', d: 3 }, { op: 'reputation', d: -3 }, { op: 'att', who: '@ctx', d: 20 }], result: 'כצפוי, ההצעה נקברה בקריאה הטרומית – אבל השם שלך עליה.' },
+      { label: 'לגנות: "הזיה מסוכנת"', ops: [{ op: 'reputation', d: 2 }, { op: 'att', who: '@ctx', d: -15 }, { op: 'fame', d: 1 }], result: 'ההצעה נפלה בקריאה טרומית ברוב גדול.' },
+      { label: 'להתעלם', ops: [{ op: 'log', text: 'ההצעה נפלה בקריאה טרומית.' }] },
+    ],
+  },
+  // ---- שלום ----
+  { ...T('ניסיון לטרפד את ההסכם', '💥', 'ארגוני טרור משני הצדדים מנסים לפוצץ את ההסכם בגל פיגועים. הממשלה תחת לחץ להשעות את היישום.', [
+    { label: 'להמשיך ביישום בכל מחיר', ops: [{ op: 'world', key: 'security', d: -3, weeks: 3 }, { op: 'reputation', d: 2 }, { op: 'stance', lean: { security: -60 }, d: 1.5 }] },
+    { label: 'לדרוש השעיה עד שיחזור השקט', ops: [{ op: 'stance', lean: { security: 60 }, d: 1.5 }, { op: 'fame', d: 1.5 }] },
+  ]), id: 'peace_spoilers' },
+  { ...T('הפינוי', '🚜', 'עשרות אלפי מתיישבים מסרבים לעזוב. נוער גבעות מתבצר, ושוטרים וחיילים בוכים מול המצלמות.', [
+    { label: 'לתמוך בפינוי בכוח', ops: [{ op: 'swing', lean: { security: -70 }, d: 1.5, label: 'מחנה השלום מתחזק' }, { op: 'world', key: 'cohesion', d: -5, weeks: 6 }, { op: 'approval', sector: 'religious', d: -4 }] },
+    { label: 'להציע פיצוי נדיב והסכמה', ops: [{ op: 'money', d: -10 }, { op: 'world', key: 'cohesion', d: 2, weeks: 6 }, { op: 'reputation', d: 2 }] },
+    { label: 'להצטרף למתבצרים', ops: [{ op: 'stance', lean: { security: 90, religion: 50 }, d: 3 }, { op: 'fame', d: 3 }, { op: 'reputation', d: -4 }] },
+  ]), id: 'peace_evacuation' },
+  { ...T('דיבידנד השלום', '📈', 'השקעות זרות זורמות, טיסות ישירות לריאד, ותקציב הביטחון קטן. הכלכלה בפריחה.', [
+    { label: 'לקחת קרדיט', ops: [{ op: 'fame', d: 2 }, { op: 'momentum', party: '@player', d: 1 }] },
+    { label: 'לדרוש שהדיבידנד יגיע לפריפריה', ops: [{ op: 'approval', sector: 'traditional', d: 3 }, { op: 'world', key: 'affordability', d: 3, weeks: 20 }] },
+  ]), id: 'peace_dividend' },
+  // ---- סיפוח ----
+  { ...T('התקוממות בשטחים', '🔥', 'אחרי הסיפוח פורצת התקוממות רחבה. הצבא בכוננות שיא והמילואים מגויסים.', [
+    { label: 'יד קשה', ops: [{ op: 'stance', lean: { security: 85 }, d: 2 }, { op: 'world', key: 'security', d: 2, weeks: 6 }] },
+    { label: 'לקרוא למשא ומתן על מעמד התושבים', ops: [{ op: 'stance', lean: { security: -40 }, d: 1.5 }, { op: 'reputation', d: 1 }] },
+  ]), id: 'annex_intifada' },
+  { ...T('סנקציות', '🚫', 'האיחוד האירופי מקפיא את הסכם הסחר, חברות טכנולוגיה עוזבות, והשקל צולל.', [
+    { label: '"לא נתכופף"', ops: [{ op: 'stance', lean: { security: 70 }, d: 1.5 }, { op: 'world', key: 'economy', d: -2, weeks: 10 }] },
+    { label: 'לדרוש מהממשלה להציל את הכלכלה', ops: [{ op: 'reputation', d: 1.5 }, { op: 'fame', d: 1 }] },
+  ]), id: 'annex_sanctions' },
+  { ...T('שאלת האזרחות', '🪪', 'מיליוני פלסטינים חיים עכשיו בשטח ריבוני – בלי זכות הצבעה. העולם קורא לזה אפרטהייד; מנגד, אזרחות מלאה תשנה את הדמוגרפיה.', [
+    { label: 'אזרחות מלאה לכולם', hint: 'מדינה אחת – מפת הכוח משתנה', ops: [{ op: 'swing', lean: { security: -80 }, d: 6, label: 'המפלגות הערביות מזנקות' }, { op: 'world', key: 'cohesion', d: -6, weeks: 10 }, { op: 'world', key: 'economy', d: 5, weeks: 30 }] },
+    { label: 'תושבות בלי הצבעה', ops: [{ op: 'world', key: 'trust', d: -5, weeks: 10 }, { op: 'world', key: 'economy', d: -6, weeks: 30 }, { op: 'stance', lean: { security: 80 }, d: 1.5 }] },
+  ]), id: 'annex_citizenship' },
+  // ---- מדינת הלכה ----
+  { ...T('השבת הממלכתית הראשונה', '🕯️', 'המדינה נעצרת: אין תחבורה, אין מסחר, אין שידורים. במרכז תל אביב אלפים מפגינים במוצאי שבת.', [
+    { label: 'להצטרף להפגנה', ops: [{ op: 'stance', lean: { religion: -80 }, d: 2.5 }, { op: 'fame', d: 2 }] },
+    { label: 'לחגוג עם המתפללים בכותל', ops: [{ op: 'stance', lean: { religion: 85 }, d: 2.5 }, { op: 'fame', d: 1.5 }] },
+  ]), id: 'halacha_shabbat' },
+  { ...T('ההגירה', '✈️', 'תורים ארוכים בשגרירויות פורטוגל וגרמניה. חברות הייטק מעבירות מטה, ורופאים עוזבים בחבורות.', [
+    { label: 'לקרוא לחילונים להישאר ולהיאבק', ops: [{ op: 'approval', sector: 'secular', d: 4 }, { op: 'fame', d: 2 }] },
+    { label: '"מי שרוצה ללכת – שילך"', ops: [{ op: 'approval', sector: 'haredi', d: 3 }, { op: 'approval', sector: 'secular', d: -6 }] },
+  ]), id: 'halacha_exodus' },
+  { ...T('תנועת ההתנגדות החילונית', '✊', 'מאות אלפים חותמים על "אמנת החופש". מנהיגי המחאה מודיעים על מפלגה חדשה.', [
+    { label: 'לעמוד בראשה', hint: 'רק אם את/ה לא יו"ר מפלגה', requires: (s) => (s.player.isMK || (s.player.partyId && s.parties[s.player.partyId]?.leaderId === 'player') ? 'רק למי שלא ח"כ ולא יו"ר' : null), ops: [{ op: 'special', id: 'resistance_party', label: 'מפלגה חדשה בראשותך' }] },
+    { label: 'לתמוך מבחוץ', ops: [{ op: 'special', id: 'resistance_party_npc', label: 'מפלגה חדשה קמה' }, { op: 'stance', lean: { religion: -70 }, d: 1.5 }] },
+    { label: 'לגנות את המרד', ops: [{ op: 'special', id: 'resistance_party_npc', label: 'מפלגה חדשה קמה' }, { op: 'stance', lean: { religion: 70 }, d: 1.5 }] },
+  ]), id: 'halacha_resistance' },
+  // ---- הפרדת דת ומדינה ----
+  { ...T('המרד החרדי', '📣', 'עצרות ענק, חסימות כבישים וקריאה ל"מלחמת קודש" על עולם התורה. הישיבות בלי תקציב.', [
+    { label: 'להציע קרן מעבר לישיבות', ops: [{ op: 'money', d: -5 }, { op: 'approval', sector: 'haredi', d: 4 }, { op: 'world', key: 'cohesion', d: 3, weeks: 8 }] },
+    { label: 'לא לזוז מילימטר', ops: [{ op: 'stance', lean: { religion: -80 }, d: 2 }, { op: 'world', key: 'cohesion', d: -3, weeks: 6 }] },
+  ]), id: 'secular_revolt' },
+  { ...T('החתונה האזרחית הראשונה', '💍', 'אלפי זוגות בתור במשרדי הרישום. חלקם חיכו לזה עשרים שנה.', [
+    { label: 'להגיע ולברך', ops: [{ op: 'approval', sector: 'olim', d: 3 }, { op: 'approval', sector: 'secular', d: 2 }, { op: 'fame', d: 1 }] },
+    { label: 'להשאיר את זה לזוגות', ops: [{ op: 'reputation', d: 1 }] },
+  ]), id: 'secular_wedding' },
+  // ---- חוקה ----
+  { ...T('יום החוקה', '🎆', 'טקס בכנסת, חגיגות בכיכרות ומגילה בכל כיתה. ההיסטוריונים כבר כותבים את הפרק.', [
+    { label: 'לנאום בטקס', ops: [{ op: 'fame', d: 3 }, { op: 'reputation', d: 3 }] },
+  ]), id: 'constitution_day' },
+  // ---- ריבונות הכנסת ----
+  { ...T('הרחוב רותח', '🔥', 'חסימת נתיבי איילון, שביתה כללית מוכרזת, ואלפי מילואימניקים מודיעים שלא יתייצבו.', [
+    { label: 'להצטרף למחאה', ops: [{ op: 'stance', lean: { judiciary: -80 }, d: 2.5 }, { op: 'fame', d: 2.5 }] },
+    { label: 'לגנות את "הסרבנות"', ops: [{ op: 'stance', lean: { judiciary: 80 }, d: 2.5 }, { op: 'fame', d: 1.5 }] },
+    { label: 'לקרוא לדיאלוג', ops: [{ op: 'reputation', d: 2 }, { op: 'world', key: 'cohesion', d: 1, weeks: 4 }] },
+  ]), id: 'sovereign_protest' },
+  { ...T('הורדת דירוג האשראי', '📉', 'שלוש סוכנויות הדירוג מורידות את ישראל. הריבית על המשכנתאות קופצת.', [
+    { label: 'להאשים את "המדליפים מבפנים"', ops: [{ op: 'stance', lean: { judiciary: 70 }, d: 1 }, { op: 'reputation', d: -1 }] },
+    { label: 'לדרוש לבטל את החוק', ops: [{ op: 'stance', lean: { judiciary: -70 }, d: 1 }, { op: 'reputation', d: 1 }] },
+  ]), id: 'sovereign_downgrade' },
+  // ---- נשיאותית ----
+  { ...T('ממשלה בלי קואליציה', '🏛️', 'לראשונה, ראש הממשלה ממנה שרים מקצועיים מחוץ לכנסת. הח"כים מגלים שכוח הסחטנות שלהם נעלם.', [
+    { label: 'לברך על היציבות', ops: [{ op: 'reputation', d: 2 }] },
+    { label: 'להזהיר מ"דיקטטורה נבחרת"', ops: [{ op: 'fame', d: 2 }, { op: 'stance', lean: { judiciary: -50 }, d: 1 }] },
+  ]), id: 'presidential_first' },
+  // ---- הכנסה בסיסית ----
+  { ...T('יום התשלום', '💸', 'ביום ראשון בבוקר, כל אזרח מקבל הודעה מהבנק. ברשתות: צילומי מסך, דמעות ובדיחות.', [
+    { label: 'לחגוג עם הציבור', ops: [{ op: 'approval', sector: 'all', d: 2 }, { op: 'fame', d: 2 }] },
+  ]), id: 'ubi_payday' },
+  { ...T('האינפלציה מרימה ראש', '🎈', 'המחירים עולים, בנק ישראל מעלה ריבית, והאוצר מזהיר מקריסה תקציבית.', [
+    { label: 'להגן על ההכנסה הבסיסית', ops: [{ op: 'stance', lean: { econ: -80 }, d: 1.5 }, { op: 'world', key: 'economy', d: -2, weeks: 10 }] },
+    { label: 'להציע לצמצם את הסכום', ops: [{ op: 'world', key: 'economy', d: 3, weeks: 10 }, { op: 'world', key: 'affordability', d: -3, weeks: 10 }, { op: 'consistency', d: -3 }] },
+  ]), id: 'ubi_inflation' },
+  // ---- ליברטריאני ----
+  { ...T('שביתה כללית', '🛑', 'ההסתדרות משביתה את המשק נגד ההפרטות והפיטורים במגזר הציבורי.', [
+    { label: 'לעמוד מול ההסתדרות', ops: [{ op: 'stance', lean: { econ: 85 }, d: 2 }, { op: 'world', key: 'economy', d: -2, weeks: 4 }] },
+    { label: 'לדרוש רשת ביטחון', ops: [{ op: 'stance', lean: { econ: -50 }, d: 1.5 }, { op: 'world', key: 'cohesion', d: 2, weeks: 8 }] },
+  ]), id: 'lib_strike' },
+  { ...T('הבום', '🚀', 'הבורסה בשיא כל הזמנים, יוניקורנים חדשים כל שבוע – והפערים מהגדולים בעולם המערבי.', [
+    { label: 'לקחת קרדיט', ops: [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'secular', d: 2 }] },
+    { label: 'להתריע על הפערים', ops: [{ op: 'approval', sector: 'traditional', d: 2 }, { op: 'approval', sector: 'arab', d: 2 }] },
+  ]), id: 'lib_boom' },
+  // ---- צבא מקצועי ----
+  { ...T('המחזור הראשון של הצבא המקצועי', '🎖️', 'פחות מתגייסים ממה שקיוו, שכר גבוה מהצפוי, והמילואים מגורדים עד הסוף.', [
+    { label: 'להעלות שכר ללוחמים', ops: [{ op: 'money', d: -5 }, { op: 'world', key: 'security', d: 3, weeks: 20 }, { op: 'world', key: 'economy', d: -2, weeks: 20 }] },
+    { label: 'להציע להחזיר שירות חובה חלקי', ops: [{ op: 'consistency', d: -3 }, { op: 'world', key: 'security', d: 2, weeks: 20 }] },
+  ]), id: 'volunteer_first' },
+  // ---- מדינת כל אזרחיה ----
+  { ...T('מלחמת הסמלים', '🏳️', 'ועדה ציבורית מציעה המנון ודגל חדשים. הדיון בכנסת הופך לקרב צעקות.', [
+    { label: 'לתמוך בסמלים משותפים', ops: [{ op: 'stance', lean: { religion: -50, security: -60 }, d: 2 }, { op: 'world', key: 'cohesion', d: 2, weeks: 30 }] },
+    { label: 'להיאבק על התקווה ועל הדגל', ops: [{ op: 'stance', lean: { religion: 40, security: 60 }, d: 2 }, { op: 'fame', d: 2 }] },
+  ]), id: 'citizens_symbols' },
+  // ---- שעת חירום ----
+  { ...T('"זו הפיכה"', '🚨', 'מיליון בני אדם ברחובות, שביתה כללית ומכתב של ראשי מערכת הביטחון לשעבר. העולם עוקב.', [
+    { label: 'להוביל את המחאה', ops: [{ op: 'stance', lean: { judiciary: -90 }, d: 3 }, { op: 'fame', d: 4 }] },
+    { label: 'להגן על הממשלה', ops: [{ op: 'stance', lean: { judiciary: 90 }, d: 2 }, { op: 'att', who: '@pm', d: 15 }, { op: 'reputation', d: -4 }] },
+    { label: 'להציע פשרה: בחירות בעוד חצי שנה', ops: [{ op: 'special', id: 'emergency_compromise', label: 'הבחירות יוקדמו – אם יסכימו' }] },
+  ]), id: 'emergency_streets' },
+];

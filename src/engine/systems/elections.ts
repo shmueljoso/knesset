@@ -256,6 +256,10 @@ export function completeCoalition(s: GameState, coalition: string[]) {
 
 export function callEarlyElections(s: GameState, reason: string) {
   if (s.electionWeek - s.week <= 14) return;
+  if (s.rules.presidential) {
+    addNews(s, `${reason} – אבל בשיטה הנשיאותית אין בחירות מוקדמות. הממשלה ממשיכה`, 'neutral');
+    return;
+  }
   s.electionWeek = s.week + 13;
   s.primariesWeek = s.week + 5;
   addNews(s, `${reason} – הכנסת התפזרה, בחירות בעוד כ-90 יום`, 'bad', false, undefined, 'ערוץ המשכן');

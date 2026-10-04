@@ -32,6 +32,8 @@ import { Empty, Sheet } from './common';
 import { LawBook } from './Issues';
 import { ISSUES } from '../engine/data/issues';
 import { requiredMajority, strikeChance } from '../engine/systems/issues';
+import { TRANSFORM_INFO } from '../engine/data/transforms';
+import { hasTransform, publicSupport } from '../engine/systems/transforms';
 
 function Pipeline({ b }: { b: Bill }) {
   const idx = b.stage === 'failed' ? STAGES.indexOf(b.history.length > 2 ? 'preliminary' : 'tabled') : STAGES.indexOf(b.stage);
@@ -350,6 +352,7 @@ const CATEGORIES: [string, string][] = [
   ['security', 'ביטחון'],
   ['governance', 'ממשל'],
   ['basic', 'חוקי יסוד'],
+  ['radical', '🌋 מהפכות'],
 ];
 
 export function BillBuilder() {
@@ -432,7 +435,18 @@ export function BillBuilder() {
           {t.basic && <span className="chip gold">חוק יסוד: דרוש רוב של {requiredMajority(g, t.id)} בקריאה השלישית</span>}
           {t.rule && <span className="chip gold">משנה את כללי המשחק</span>}
           {t.petitionRisk ? <span className="chip warn">סיכון פסילה בבג"ץ: {Math.round(strikeChance(g, t.id) * 100)}%</span> : null}
+          {t.referendum && <span className="chip gold">דורש משאל עם · סקר: {publicSupport(g, t.id)}% בעד</span>}
         </div>
+        {t.radical && (
+          <div className="card small" style={{ background: 'var(--bg)', margin: '0 0 10px' }} data-testid="radical-info">
+            <b>🌋 הצעה מרחיקת לכת</b>
+            <div className="muted">אין משמעת קואליציונית: כל ח"כ מצביע לפי המצפון והפחד מההשלכות. כמעט אין סיכוי שתעבור.</div>
+            <div style={{ marginTop: 6 }}>
+              <b>אם תעבור{t.referendum ? ' ותאושר במשאל עם' : ''}:</b> {TRANSFORM_INFO[t.radical].now}
+            </div>
+            {hasTransform(g, t.radical) && <div className="gold">השינוי הזה כבר בתוקף.</div>}
+          </div>
+        )}
         <div className="small muted" style={{ marginBottom: 6 }}>היקף ההצעה</div>
         <div className="seg">
           {([1, 2, 3] as const).map((sc) => (

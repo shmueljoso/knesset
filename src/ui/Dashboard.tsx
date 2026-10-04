@@ -1,5 +1,6 @@
 import { inSession, SESSION_NAMES, sessionOf, shortDateLabel } from '../engine/calendar';
 import { SKILL_NAMES } from '../engine/ops';
+import { TRANSFORM_INFO } from '../engine/data/transforms';
 import { isCoalition } from '../engine/systems/government';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import type { Skill, WorldKey } from '../engine/types';
@@ -127,6 +128,23 @@ export function Dashboard() {
         <PowerCard />
 
         <IssuesCard />
+
+        {g.transforms?.length > 0 && (
+          <div className="card" data-testid="transforms">
+            <div className="card-title">
+              <h3>🧭 מדינה אחרת</h3>
+            </div>
+            {g.transforms.map((x) => (
+              <div key={x.id} className="small" style={{ marginBottom: 6 }}>
+                <b>
+                  {TRANSFORM_INFO[x.id].icon} {TRANSFORM_INFO[x.id].name}
+                </b>{' '}
+                <span className="tiny muted">(מאז {shortDateLabel(g, x.week)}{x.sponsor === 'player' ? ' · ביוזמתך' : ''})</span>
+                <div className="muted">{TRANSFORM_INFO[x.id].now}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <GovernmentCard />
 

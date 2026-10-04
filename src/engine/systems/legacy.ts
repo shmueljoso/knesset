@@ -1,5 +1,6 @@
 // סוף הקריירה: ציון, תואר וסיכום מורשת.
 import { templateById } from '../data/bills';
+import { TRANSFORM_INFO } from '../data/transforms';
 import type { GameState, LawRecord } from '../types';
 
 export const ENDINGS: Record<string, { title: string; text: string; canContinue: boolean }> = {
@@ -38,6 +39,7 @@ export function computeLegacy(s: GameState): Legacy {
   const worldDelta = worldNow - s.career.startWorld;
   let score =
     laws.reduce((acc, l) => acc + 12 + (templateById(l.templateId).basic ? 8 : 0), 0) +
+    (s.transforms ?? []).filter((x) => x.sponsor === 'player').length * 40 +
     coLaws.length * 5 +
     (a.includes('elected') ? 15 : 0) +
     (a.includes('chair') ? 10 : 0) +
@@ -71,6 +73,7 @@ export function computeLegacy(s: GameState): Legacy {
   if (enemies >= 8) tags.push('הרבה אויבים');
   if (allies >= 15) tags.push('אמן/ית הקשרים');
   if (worldDelta >= 5) tags.push('השאיר/ה את המדינה במצב טוב יותר');
+  for (const x of s.transforms ?? []) if (x.sponsor === 'player') tags.push(`שינה/תה את פני המדינה: ${TRANSFORM_INFO[x.id].name}`);
   return { score, title, laws, coLaws, roles, allies, enemies, worldDelta, tags };
 }
 
