@@ -129,6 +129,25 @@ export function Dashboard() {
 
         <IssuesCard />
 
+        {Object.entries(g.windows ?? {}).some(([, w]) => (w ?? 0) > g.week) && (
+          <div className="card" data-testid="windows">
+            <div className="card-title">
+              <h3>🪟 חלונות הזדמנויות</h3>
+            </div>
+            {Object.entries(g.windows)
+              .filter(([, w]) => (w ?? 0) > g.week)
+              .map(([id, w]) => (
+                <div key={id} className="small" style={{ marginBottom: 4 }}>
+                  <b>
+                    {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].icon} {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].name}
+                  </b>{' '}
+                  <span className="tiny muted">עוד {(w ?? 0) - g.week} שבועות</span>
+                </div>
+              ))}
+            <p className="tiny muted" style={{ margin: '6px 0 0' }}>אחרי זעזוע, רעיון שהיה הזוי נשמע פתאום אפשרי. חקיקה ← 🌋 מהפכות. גם הממשלה עלולה לנסות.</p>
+          </div>
+        )}
+
         {g.transforms?.length > 0 && (
           <div className="card" data-testid="transforms">
             <div className="card-title">

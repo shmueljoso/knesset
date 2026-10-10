@@ -38,6 +38,10 @@ export function ensurePhase3(g: GameState) {
   g.transforms ??= [];
   g.liveVote ??= null;
   g.customEvents ??= [];
+  g.windows ??= {};
+  g.president ??= null;
+  g.presidentRace ??= null;
+  g.presidentNextWeek ??= g.week + 40 + (g.seed % 250);
   g.lastPrimaries ??= null;
   // הצעות ממשלתיות שנגנזו בוועדת השרים לפני שהיה דגל לכך
   for (const b of g.bills) if (b.stage === 'failed' && b.government && b.cabinetRejected === undefined && b.history.some((h) => h.text.includes('ועדת השרים לא אישרה'))) b.cabinetRejected = true;

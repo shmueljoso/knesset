@@ -7,6 +7,7 @@ import { addNews } from './news';
 import { changeApproval, takeStance } from './opinion';
 import { log } from './report';
 import { resignMinistry } from './ministry';
+import { pardonBonus } from './president';
 
 export const SCANDAL_STAGES = ['', 'בדיקה מקדמית', 'חקירה פלילית', 'המלצות המשטרה', 'שימוע אצל היועמ"ש', 'כתב אישום'];
 
@@ -101,7 +102,7 @@ export function scandalPardon(s: GameState): string {
   const sc = s.scandal;
   if (!sc) return '';
   s.player.reputation = clamp(s.player.reputation - 4, 0, 100);
-  if (rand(s) < 0.15 + s.player.reputation / 400) {
+  if (rand(s) < 0.15 + s.player.reputation / 400 + pardonBonus(s)) {
     s.scandal = null;
     s.player.consistency = clamp(s.player.consistency - 3, 0, 100);
     addNews(s, `הנשיא העניק חנינה ל${s.player.name}. סערה ציבורית`, 'neutral', true);

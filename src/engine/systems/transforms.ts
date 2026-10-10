@@ -8,6 +8,7 @@ import { SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '
 import { bumpIssue, scheduleEvent } from './issues';
 import { listsOpen, spawnParty } from './mergers';
 import { addNews } from './news';
+import { windowOpen } from './climate';
 import { addMomentum, addWorldEffect } from './opinion';
 import { foundParty } from './parties';
 import { log } from './report';
@@ -15,11 +16,13 @@ import { log } from './report';
 export const hasTransform = (s: GameState, id: TransformId) => (s.transforms ?? []).some((t) => t.id === id);
 
 /** תמיכת הציבור (באחוזים) בהצעה, לפי עמדות המגזרים */
-export function publicSupport(_s: GameState, templateId: string): number {
+export function publicSupport(s: GameState, templateId: string): number {
   const t = templateById(templateId);
   let sum = 0;
   for (const sec of SECTORS) sum += SECTOR_WEIGHTS[sec] * clamp(0.5 + 0.5 * leanAlignment(SECTOR_IDEOLOGY[sec], t.lean), 0.05, 0.95);
-  return Math.round(sum * 100 + 10); // +10: "הכנסת כבר אישרה" נותן לגיטימציה
+  // +10: "הכנסת כבר אישרה" נותן לגיטימציה; חלון הזדמנויות מזיז את דעת הקהל
+  const window = t.radical && windowOpen(s, t.radical) ? 12 : 0;
+  return Math.round(sum * 100 + 10 + window);
 }
 
 /** נקרא כשהצעה מרחיקת לכת עוברת בקריאה שלישית */

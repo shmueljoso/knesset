@@ -5,6 +5,7 @@ import { Dashboard } from './Dashboard';
 import { LegacyModal } from './Legacy';
 import { LiveVoteModal } from './LiveVote';
 import { PrimariesNight } from './PrimariesNight';
+import { PresidentRace } from './PresidentRace';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -90,7 +91,7 @@ export function GameScreen() {
       <TabBar />
       {tab === 'map' && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
-      {g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
+      {g.flags.showPresident && g.presidentRace?.winner ? <PresidentRace /> : g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
       <Toasts />
     </>
   );

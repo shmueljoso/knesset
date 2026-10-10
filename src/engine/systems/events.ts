@@ -12,8 +12,9 @@ import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
 import { scandalAttack, scandalCooperate, scandalPardon, scandalStepDown } from './scandals';
-import { changeApproval } from './opinion';
-import { reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
+import { bumpIssue, reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
+import { openWindow } from './climate';
+import { addWorldEffect, changeApproval } from './opinion';
 import { templateById } from '../data/bills';
 import { leanAlignment } from '../util';
 
@@ -244,6 +245,18 @@ registerSpecial('scandal_coop', (s) => scandalCooperate(s));
 registerSpecial('scandal_attack', (s) => scandalAttack(s));
 registerSpecial('scandal_step', (s) => scandalStepDown(s));
 registerSpecial('scandal_pardon', (s) => scandalPardon(s));
+registerSpecial('court_draft_ruling', (s) => {
+  bumpIssue(s, 'draft', 25);
+  for (const p of s.coalition.parties) if ((s.parties[p]?.ideology.religion ?? 0) > 70) changeSatisfaction(s, p, -12);
+  recomputeStability(s);
+});
+registerSpecial('court_bypass', (s) => {
+  addWorldEffect(s, 'trust', -4, 6, 'עקיפת בג"ץ');
+  for (const p of s.coalition.parties) if ((s.parties[p]?.ideology.religion ?? 0) > 70) changeSatisfaction(s, p, 6);
+  if (!s.rules.override) openWindow(s, 'sovereignty', 16, 'אחרי פסק הדין');
+  recomputeStability(s);
+});
+registerSpecial('court_window', (s) => openWindow(s, 'sovereignty', 16, 'הסערה סביב עילת הסבירות'));
 registerSpecial('wish_broken', (s, ctx) => {
   scheduleEvent(s, 'npc_wish_broken', 4 + Math.floor(rand(s) * 6), { npc: ctx.npc });
 });

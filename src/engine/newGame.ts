@@ -1,5 +1,5 @@
 import { backgroundById } from './data/backgrounds';
-import { makeName } from './data/names';
+import { guessGender, makeName } from './data/names';
 import { makeAvatar } from './avatarGen';
 import { INITIAL_COALITION, PARTY_DEFS, SURPLUS_PAIRS, type NamePoolId } from './data/parties';
 import { makeLocalRng } from './rng';
@@ -124,6 +124,12 @@ export function createGame(opts: NewGameOptions): GameState {
       if (real) {
         npc.name = real;
         used.add(real);
+        // מגדר לפי השם הפרטי (שמות אמיתיים); ברירת מחדל: זכר
+        const gender = guessGender(real) ?? 'm';
+        if (gender !== npc.gender) {
+          npc.gender = gender;
+          npc.avatar = makeAvatar(rnd, gender, 'jewish');
+        }
       }
       npc.isMK = r < def.seats;
       npc.bio += ` ${r === 0 ? 'יו"ר' : 'חבר/ת'} ${def.name}.`;

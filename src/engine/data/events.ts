@@ -8,6 +8,7 @@ import { isHot } from '../systems/issues';
 import type { GameState, IssueId, Npc } from '../types';
 import { BILL_TEMPLATES } from './bills';
 import { issueLean } from '../systems/influence';
+import { playerCanRunForPresident } from '../systems/president';
 import { SHOCK_EVENTS } from './shocks';
 import { TRANSFORM_EVENTS } from './transforms';
 
@@ -909,6 +910,56 @@ EVENTS.push(
     choices: [
       { label: 'להתנצל ולפצות', ops: [{ op: 'capital', d: -2 }, { op: 'att', who: '@ctx', d: -8 }] },
       { label: 'להכחיש', ops: [{ op: 'att', who: '@ctx', d: -25 }, { op: 'reputation', d: -2 }, { op: 'memory', who: '@ctx', text: 'הבטיח/ה ולא קיים/ה', d: -20 }] },
+    ],
+  },
+);
+
+// ---------- בחירת נשיא/ת המדינה ----------
+EVENTS.push({
+  id: 'president_ballot', queued: true, icon: '🏛️',
+  title: 'הבחירות לנשיאות המדינה',
+  body: 'הכנסת בוחרת נשיא/ה בהצבעה חשאית. בסבב הראשון והשני צריך 61 קולות; בשלישי – מספיק רוב. המועמדים: {c0Name}, {c1Name}{c2Sep}. כולם מתקשרים אליך.',
+  choices: [
+    { label: 'להצביע ל{c0Name}', ops: [{ op: 'special', id: 'president_vote_0', label: 'פתק בקלפי' }] },
+    { label: 'להצביע ל{c1Name}', ops: [{ op: 'special', id: 'president_vote_1', label: 'פתק בקלפי' }] },
+    { label: 'להצביע ל{c2Name}', requires: (_s, c) => (c.c2 ? null : 'אין מועמד/ת שלישי/ת'), ops: [{ op: 'special', id: 'president_vote_2', label: 'פתק בקלפי' }] },
+    { label: 'להתמודד בעצמי', hint: 'אם תנצח/י – הקריירה הפוליטית מסתיימת בפסגה', requires: (s) => (playerCanRunForPresident(s) ? null : 'דרושים מוכרות 55+, מוניטין 60+ ובלי חקירה'), ops: [{ op: 'special', id: 'president_run', label: 'מועמדות לנשיאות' }] },
+    { label: 'פתק לבן', ops: [{ op: 'special', id: 'president_blank', label: 'פתק לבן' }] },
+  ],
+});
+
+// ---------- בג"ץ ככוח עצמאי ----------
+const courtActive = (s: GameState) => !s.rules.noReview && (!s.rules.packedCourt || s.week % 3 === 0);
+EVENTS.push(
+  {
+    id: 'court_draft', icon: '⚖️', weight: 1.5, cooldown: 60,
+    title: 'בג"ץ: המדינה חייבת לגייס בני ישיבות',
+    body: 'בהרכב של תשעה שופטים קבע בית המשפט שאין בסיס חוקי לפטור הגורף. המפלגות החרדיות מאיימות לפרק את הממשלה, והמילואימניקים חוגגים מול הבניין.',
+    when: (s) => courtActive(s) && !(s.transforms ?? []).some((t) => t.id === 'volunteer'),
+    choices: [
+      { label: 'לכבד את פסק הדין', ops: [{ op: 'special', id: 'court_draft_ruling', label: 'החרדים זועמים' }, { op: 'stance', lean: { judiciary: -50, religion: -40 }, d: 1.5 }] },
+      { label: 'לקרוא לחוקק לעקוף את הפסיקה', hint: 'התגברות – אם יש', ops: [{ op: 'special', id: 'court_bypass', label: 'משבר עם בית המשפט' }, { op: 'stance', lean: { judiciary: 70, religion: 60 }, d: 1.5 }] },
+      { label: 'לשתוק', ops: [{ op: 'special', id: 'court_draft_ruling', label: 'החרדים זועמים' }] },
+    ],
+  },
+  {
+    id: 'court_appointment', icon: '⚖️', weight: 1.5, cooldown: 60,
+    title: 'בג"ץ פסל מינוי של שר',
+    body: '"פגם חמור בשיקול הדעת": בית המשפט פסל את מינויו של שר עם עבר פלילי. ראש הממשלה צריך להחליט אם לציית.',
+    when: (s) => courtActive(s) && !!s.npcs[s.coalition.pmId],
+    choices: [
+      { label: 'לברך: "אף אחד לא מעל החוק"', ops: [{ op: 'reputation', d: 2 }, { op: 'att', who: '@pm', d: -6 }, { op: 'world', key: 'trust', d: 2, weeks: 6 }] },
+      { label: 'לתקוף: "השופטים מינו את עצמם לממשלה"', ops: [{ op: 'stance', lean: { judiciary: 75 }, d: 2 }, { op: 'att', who: '@pm', d: 6 }, { op: 'fame', d: 1.5 }] },
+    ],
+  },
+  {
+    id: 'court_reasonable', icon: '⚖️', weight: 1.2, cooldown: 70,
+    title: 'בג"ץ ביטל החלטת ממשלה ב"עילת הסבירות"',
+    body: 'החלטה כלכלית של הממשלה בוטלה כ"בלתי סבירה באופן קיצוני". בקואליציה מדברים על "הפיכה שיפוטית"; באופוזיציה – על "שומרי הסף".',
+    when: courtActive,
+    choices: [
+      { label: 'להגן על בית המשפט', ops: [{ op: 'stance', lean: { judiciary: -70 }, d: 1.5 }, { op: 'world', key: 'trust', d: 2, weeks: 6 }] },
+      { label: 'לקרוא לבטל את עילת הסבירות', ops: [{ op: 'stance', lean: { judiciary: 70 }, d: 1.5 }, { op: 'special', id: 'court_window', label: 'הרעיון "ריבונות הכנסת" מתחמם' }] },
     ],
   },
 );

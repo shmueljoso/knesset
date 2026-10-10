@@ -6,6 +6,7 @@ import { isCoalition } from './government';
 import { debtsWith } from './relationships';
 import { requiredMajority } from './issues';
 import { caucusBonus } from './influence';
+import { radicalClimate } from './climate';
 
 export type Line = 'for' | 'against' | 'free';
 export const LINE_NAMES: Record<Line, string> = { for: 'בעד', against: 'נגד', free: 'חופש הצבעה' };
@@ -21,6 +22,14 @@ export function billLean(b: Bill): Partial<Ideology> {
   const out: Partial<Ideology> = {};
   for (const ax of AXES) if (t.lean[ax] !== undefined) out[ax] = t.lean[ax]! * f;
   return out;
+}
+
+/** חלון אוברטון: כשהאקלים תומך, הרעיון הקיצוני נתפס כמתון יותר – ויותר ח"כים רואים בו "של המחנה שלהם" */
+export function effectiveLean(s: GameState, b: Bill): Partial<Ideology> {
+  const lean = billLean(b);
+  if (!templateById(b.templateId).radical) return lean;
+  const k = 1 - 0.4 * radicalClimate(s, b.templateId).bonus;
+  return Object.fromEntries(Object.entries(lean).map(([a, v]) => [a, (v ?? 0) * k]));
 }
 
 export function sponsorParty(s: GameState, b: Bill): string | null {
@@ -43,19 +52,22 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
     }
     return (b.altCoalition ?? []).includes(partyId) ? 'for' : 'free';
   }
-  const align = leanAlignment(p.ideology, billLean(b));
+  const align = leanAlignment(p.ideology, effectiveLean(s, b));
   const sp = sponsorParty(s, b);
+  // הצעה מרחיקת לכת: אין משמעת קואליציונית – כל מפלגה לפי המצפון והבוחרים
+  if (templateById(b.templateId).radical) {
+    const c = radicalClimate(s, b.templateId).bonus;
+    if (sp === partyId) return align > 0.55 - 0.2 * c ? 'for' : 'free';
+    // ממשלה תמימת דעים או חלון הזדמנויות: הקואליציה מתיישרת מאחורי הממשלה
+    if (isCoalition(s, partyId) && b.govPosition === 'support' && c >= 0.3 && align > 0.25) return 'for';
+    return align > 0.7 - 0.25 * c ? 'for' : align < 0.4 - 0.08 * c ? 'against' : 'free';
+  }
   if (sp === partyId) return align < -0.3 ? 'free' : 'for';
   // חוקים שמשנים את כללי המשחק: כל מפלגה מצביעה לפי האינטרס שלה
   const rule = templateById(b.templateId).rule;
   if (rule === 'threshold') return p.seats >= 12 ? 'for' : 'against';
   if (rule === 'norwegian') return isCoalition(s, partyId) ? 'for' : 'against';
   if (rule === 'termLimit') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'against' : isCoalition(s, partyId) ? 'free' : 'for';
-  // הצעה מרחיקת לכת: אין משמעת קואליציונית – כל מפלגה לפי המצפון והבוחרים
-  if (templateById(b.templateId).radical) {
-    if (sp === partyId) return align > 0.55 ? 'for' : 'free';
-    return align > 0.7 ? 'for' : align < 0.4 ? 'against' : 'free';
-  }
   if (isCoalition(s, partyId)) {
     if (b.govPosition === 'support') return 'for';
     if (b.govPosition === 'oppose') return align > 0.75 ? 'free' : 'against';
@@ -79,7 +91,7 @@ export interface SeatProb {
 }
 
 export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
-  const align = leanAlignment(n.ideology, billLean(b));
+  const align = leanAlignment(n.ideology, effectiveLean(s, b));
   let score = line === 'for' ? 1.3 : line === 'against' ? -1.3 : 0;
   score += align * (n.traits.includes('principled') ? 1.7 : 1.1);
   if (b.sponsor === 'player') {
@@ -89,13 +101,18 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
     score += caucusBonus(s, n.id, b.templateId);
   }
   // מרחיק לכת: פחד מההשלכות ומשמירה על הסטטוס קוו
-  if (templateById(b.templateId).radical) score -= n.traits.includes('principled') && align > 0.7 ? 0.2 : 0.9;
+  if (templateById(b.templateId).radical) {
+    const c = radicalClimate(s, b.templateId).bonus;
+    score -= (n.traits.includes('principled') && align > 0.7 ? 0.2 : 0.9) * (1 - c);
+    if (align > 0.3) score += c * 0.5; // מצב הרוח הציבורי מושך את התומכים להצביע
+  }
   let absent = ABSENT_BASE[b.stage] ?? 0.2;
   // ח"כ קואליציה שתומך אבל הממשלה מתנגדת – יעדיף להיעדר מאשר להפר משמעת
   if (line === 'against' && score > 0) absent += 0.25;
   if (Math.abs(score) < 0.5) absent += 0.1;
   absent = Math.min(0.8, absent);
   if (b.templateId === 'budget_law' || b.templateId === 'no_confidence') absent = line === 'free' ? 0.25 : 0.03; // הצבעות גורליות: כולם מתייצבים
+  else if (b.stage === 'final' && templateById(b.templateId).basic) absent = Math.min(absent, line === 'free' ? 0.15 : 0.05); // חוק יסוד: מגייסים את כולם
   const pAbstain = 0.04;
   const pv = 1 - absent - pAbstain;
   const pf = sigmoid(2.2 * score);

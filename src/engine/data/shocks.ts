@@ -5,6 +5,7 @@ import { pick, rand } from '../rng';
 import { callEarlyElections } from '../systems/elections';
 import { isCoalition } from '../systems/government';
 import { bumpIssue, scheduleEvent } from '../systems/issues';
+import { openWindow } from '../systems/climate';
 import { listsOpen, mergeBlocked, mergeChance, npcSplit, playerLeads, spawnParty, type Archetype } from '../systems/mergers';
 import { addNews } from '../systems/news';
 import { addMomentum, addWorldEffect } from '../systems/opinion';
@@ -75,6 +76,7 @@ export const SHOCKS: ShockDef[] = [
       const p = spawnParty(s, ARCH.social);
       bumpIssue(s, 'cost', 25);
       bumpIssue(s, 'housing', 15);
+      openWindow(s, 'ubi', 26, 'מחאת האוהלים');
       for (const id of s.coalition.parties) addMomentum(s, id, -1);
       addNews(s, `מאות אלפים בכיכר: מחאת יוקר המחיה הופכת למפלגה – "${p.name}"`, 'bad', false, undefined, 'ערוץ המשכן');
       return { party: p.id, npc: p.leaderId };
@@ -89,6 +91,8 @@ export const SHOCKS: ShockDef[] = [
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, (p.ideology.security / 100) * 3);
       for (const id of s.coalition.parties) addMomentum(s, id, 1.5); // התלכדות סביב הדגל
       scheduleEvent(s, 'shock_war_after', 10);
+      openWindow(s, 'annexation', 26, 'אחרי המלחמה');
+      openWindow(s, 'emergency', 12, 'בצל המלחמה');
       if (rand(s) < 0.5) scheduleEvent(s, 'commission_report', 40);
       addNews(s, 'מבצע צבאי רחב: אזעקות בכל הארץ, מילואים בהיקף נרחב', 'bad', false, undefined, 'ערוץ המשכן');
       return {};
@@ -103,6 +107,8 @@ export const SHOCKS: ShockDef[] = [
       for (const id of s.coalition.parties) addMomentum(s, id, -6);
       for (const p of seated(s)) if (!s.coalition.parties.includes(p.id)) addMomentum(s, p.id, 2);
       addNews(s, 'מחדל ביטחוני חמור: הציבור דורש ועדת חקירה ממלכתית', 'bad', false, undefined, 'ערוץ המשכן');
+      openWindow(s, 'constitution', 30, 'אחרי המחדל');
+      openWindow(s, 'presidential', 30, 'אחרי המחדל: "השיטה קרסה"');
       scheduleEvent(s, 'commission_report', 30);
       return {};
     },
@@ -116,6 +122,8 @@ export const SHOCKS: ShockDef[] = [
       for (const id of s.coalition.parties) addMomentum(s, id, -3);
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, (-p.ideology.econ / 100) * 2);
       addNews(s, 'קריסה בבורסה, השקל צולל: "המשבר הכלכלי החמור בעשור"', 'bad', false, undefined, 'ערוץ המשכן');
+      openWindow(s, 'ubi', 30, 'המשבר הכלכלי');
+      openWindow(s, 'libertarian', 30, 'המשבר הכלכלי');
       return {};
     },
   },
@@ -126,6 +134,7 @@ export const SHOCKS: ShockDef[] = [
       const pool = seated(s).filter((p) => npcLed(p) && p.seats >= 4 && s.npcs[p.leaderId]);
       const p = own && pool.includes(own) && s.player.isMK && rand(s) < 0.3 ? own : pick(s, pool);
       addMomentum(s, p.id, -7);
+      if (p.leaderId === s.coalition.pmId) openWindow(s, 'sovereignty', 20, 'אחרי כתב האישום נגד ראש הממשלה');
       addNews(s, `היועמ"ש החליט: כתב אישום נגד ${s.npcs[p.leaderId].name}, יו"ר ${p.name}`, 'bad', p.id === s.player.partyId, undefined, 'ערוץ המשכן');
       return { party: p.id, npc: p.leaderId };
     },
@@ -196,6 +205,7 @@ export const SHOCKS: ShockDef[] = [
       if (!pmParty) return null;
       addMomentum(s, pmParty, 5);
       addWorldEffect(s, 'security', 6, 8, 'הסכם מדיני');
+      openWindow(s, 'peace', 40, 'אחרי פריצת הדרך');
       addWorldEffect(s, 'economy', 4, 8, 'הסכם מדיני');
       addNews(s, 'פריצת דרך: ישראל ומדינה ערבית גדולה חותמות על הסכם נורמליזציה', 'good', false, undefined, 'ערוץ המשכן');
       return { party: pmParty };
@@ -207,6 +217,8 @@ export const SHOCKS: ShockDef[] = [
       bumpIssue(s, 'draft', 30);
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, p.ideology.religion > 60 ? 1.2 : (-p.ideology.religion / 100) * 2.5);
       addWorldEffect(s, 'cohesion', -6, 4, 'מחאת הגיוס');
+      openWindow(s, 'volunteer', 30, 'מחאת הגיוס');
+      openWindow(s, 'secular', 20, 'מחאת הגיוס');
       addNews(s, 'הפגנת ענק נגד גיוס חרדים חוסמת את הכניסה לירושלים; מנגד – מחאת המילואימניקים', 'bad', false, undefined, 'ערוץ המשכן');
       return {};
     },

@@ -356,6 +356,10 @@ export interface GameState {
   transforms: Transform[];
   liveVote: LiveVote | null;
   customEvents: CustomEvent[];
+  windows: Partial<Record<TransformId, number>>; // חלונות הזדמנויות למהפכות: עד איזה שבוע
+  president: { id: string; name: string; sinceWeek: number } | null;
+  presidentNextWeek: number;
+  presidentRace: { candidates: string[]; rounds: { candidates: string[]; counts: number[] }[]; winner: string | null; playerVote: string | null } | null;
   lastPrimaries: { partyId: string; primaries: boolean; list: string[]; playerPos: number; realistic: number; week: number } | null;
 }
 

@@ -10,12 +10,13 @@ import { onBillPassed, onBudgetPassed } from './coalition';
 import { callEarlyElections, completeCoalition } from './elections';
 import { resetMinistryBudget } from './ministry';
 import { onLawPassed, requiredMajority } from './issues';
+import { radicalClimate } from './climate';
 import { isCoalition, proposeCoalition } from './government';
 import { addNews } from './news';
 import { addWorldEffect, changeApproval, takeStance } from './opinion';
 import { addDebt, changeAttitude, reactToLaw } from './relationships';
 import { log } from './report';
-import { LINE_NAMES, billImpact, billLean, forecast, runVote, sponsorParty } from './votes';
+import { LINE_NAMES, billImpact, billLean, effectiveLean, forecast, runVote, sponsorParty } from './votes';
 
 export const STAGES: BillStage[] = ['tabled', 'ministerial', 'preliminary', 'committee1', 'first', 'committee2', 'final', 'passed'];
 export const STAGE_NAMES: Record<BillStage, string> = {
@@ -101,7 +102,7 @@ function setStage(s: GameState, b: Bill, stage: BillStage, text: string) {
 }
 
 export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose' | 'free' {
-  const lean = billLean(b);
+  const lean = effectiveLean(s, b);
   const coal = s.coalition.parties;
   const totalSeats = coal.reduce((a, p) => a + s.parties[p].seats, 0) || 1;
   const coalAlign = coal.reduce((a, p) => a + leanAlignment(s.parties[p].ideology, lean) * s.parties[p].seats, 0) / totalSeats;
@@ -120,7 +121,8 @@ export function ministerialDecision(s: GameState, b: Bill): 'support' | 'oppose'
   if (templateById(b.templateId).radical) {
     const pmParty = s.coalition.pmId === 'player' ? s.player.partyId : s.npcs[s.coalition.pmId]?.partyId;
     const pmAlign = pmParty && s.parties[pmParty] ? leanAlignment(s.parties[pmParty].ideology, lean) : 0;
-    return pmAlign > 0.75 && coalAlign > 0.55 ? 'support' : pmAlign < 0.45 ? 'oppose' : 'free';
+    const c = radicalClimate(s, b.templateId).bonus;
+    return pmAlign > 0.75 - 0.3 * c && coalAlign > 0.55 - 0.3 * c ? 'support' : pmAlign < 0.45 - 0.2 * c ? 'oppose' : 'free';
   }
   if ((s.coalition.pmId === 'player' && b.sponsor === 'player') || s.flags[`ultok_${b.id}`]) return 'support';
   if (score > 0.35) return 'support';
@@ -491,7 +493,7 @@ export function ultimatumChance(s: GameState, b: Bill): number {
   const pm = s.npcs[s.coalition.pmId];
   const pmParty = pm?.partyId ? s.parties[pm.partyId] : null;
   const align = pmParty ? leanAlignment(pmParty.ideology, billLean(b)) : 0;
-  const p = { leader: 0.3, minister: 0.18, mk: 0.07 }[role] + (pivotal ? (role === 'leader' ? 0.35 : 0.15) : 0) + (pm?.attitude ?? 0) / 250 + align * 0.25 + Math.min(s.player.capital, 30) / 100 - (b.scope === 3 ? 0.1 : 0) - (templateById(b.templateId).radical ? 0.4 : 0);
+  const p = { leader: 0.3, minister: 0.18, mk: 0.07 }[role] + (pivotal ? (role === 'leader' ? 0.35 : 0.15) : 0) + (pm?.attitude ?? 0) / 250 + align * 0.25 + Math.min(s.player.capital, 30) / 100 - (b.scope === 3 ? 0.1 : 0) - (templateById(b.templateId).radical ? 0.4 * (1 - radicalClimate(s, b.templateId).bonus) : 0);
   return clamp(p, 0.03, 0.9);
 }
 
@@ -559,7 +561,7 @@ export function appealToGovernment(s: GameState, b: Bill): { ok: boolean; text: 
   return { ok: false, text: 'מליאת הממשלה דחתה את הערר.' };
 }
 
-function queueBill(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
+export function queueBill(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
   const t = templateById(templateId);
   const b: Bill = {
     id: newId(s, 'bill'),

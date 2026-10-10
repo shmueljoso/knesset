@@ -51,3 +51,12 @@ export function makeName(rnd: () => number, pool: NamePoolId, gender: Gender, us
   used.add(fallback);
   return fallback;
 }
+
+/** שמות פרטיים נשיים נפוצים (לזיהוי מגדר של שמות אמיתיים מקובצי תרחיש) */
+const EXTRA_FEMALE = ['גולדה', 'שולמית', 'גאולה', 'אורנה', 'מיקי', 'מרב', 'תמר', 'שלי', 'איילת', 'מירי', 'גילה', 'יפעת', 'עידית', 'מאי', 'שושנה', 'אורה', 'דליה', 'ציפי', 'פנינה', 'רינה', 'עליזה', 'שרן', 'קארין', 'אתי', 'לאה', 'שרה', 'יעל', 'קטי', 'פזית', 'אילנה', 'נעמה', 'יוליה', 'סתיו', 'אביטל', 'מיכאלה', 'זהבה', 'עדנה', 'נאווה', 'עינב', 'יסמין', 'אמירה'];
+export function guessGender(fullName: string): Gender | null {
+  const first = fullName.trim().split(/\s+/)[0];
+  if (EXTRA_FEMALE.includes(first) || Object.values(NAME_POOLS).some((p) => p.f.includes(first))) return 'f';
+  if (Object.values(NAME_POOLS).some((p) => p.m.includes(first))) return 'm';
+  return null;
+}

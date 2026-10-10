@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { INTERACTIONS, interact, interactionBlocked } from '../engine';
 import { LOCATIONS } from '../engine/data/locations';
-import { isCoalition } from '../engine/systems/government';
+import { isCoalition, ministryTitle } from '../engine/systems/government';
 import { TRAIT_INFO, attitudeColor, attitudeLabel, debtsWith } from '../engine/systems/relationships';
 import type { Npc } from '../engine/types';
 import { AXES, AXIS_NAMES } from '../engine/util';
@@ -68,6 +68,7 @@ export function PeopleView() {
             </button>
           ))}
         </div>
+        {filter === 'gov' && <GovernmentRoster />}
         <div className="small muted" style={{ marginBottom: 8 }}>{list.length} אנשים</div>
         {list.slice(0, limit).map((n) => (
           <button key={n.id} className="list-item" onClick={() => open({ kind: 'npc', id: n.id })}>
@@ -240,5 +241,43 @@ export function NpcSheet({ id }: { id: string }) {
         );
       })}
     </Sheet>
+  );
+}
+
+/** תמונת הממשלה: נשיא/ה, ראש/ת ממשלה, שרים ושביעות רצון השותפות */
+function GovernmentRoster() {
+  const g = useGame();
+  const open = useStore((s) => s.open);
+  const pm = g.coalition.pmId === 'player' ? null : g.npcs[g.coalition.pmId];
+  const ministers = Object.entries(g.ministers).filter(([mid]) => mid !== 'pm' && mid !== 'speaker');
+  const person = (id: string) => (id === 'player' ? { name: `${g.player.name} (את/ה)`, partyId: g.player.partyId, gender: g.player.gender } : g.npcs[id]);
+  return (
+    <div className="card" style={{ marginBottom: 10 }} data-testid="gov-roster">
+      <h3>🏛️ הממשלה</h3>
+      {g.president && (
+        <div className="small muted" style={{ marginTop: 4 }}>
+          נשיא/ת המדינה: <b>{g.president.id === 'player' ? g.player.name : g.npcs[g.president.id]?.name ?? g.president.name}</b>
+        </div>
+      )}
+      <div className="small" style={{ margin: '6px 0' }}>
+        ראש/ת הממשלה: <b>{pm ? pm.name : g.player.name}</b> {pm?.partyId && <span className="muted">· {g.parties[pm.partyId]?.short}</span>}
+      </div>
+      {ministers.map(([mid, id]) => {
+        const p = person(id);
+        if (!p) return null;
+        return (
+          <button key={mid} className="row small" style={{ gap: 6, padding: '4px 0', width: '100%', textAlign: 'start', background: 'none', border: 0, color: 'inherit' }} onClick={() => id !== 'player' && open({ kind: 'npc', id })}>
+            <span className="party-dot" style={{ background: p.partyId ? g.parties[p.partyId]?.color : '#64748b' }} />
+            <span className="muted" style={{ minWidth: 120 }}>{ministryTitle(mid, p.gender)}</span>
+            <b className="grow">{p.name}</b>
+            {id !== 'player' && g.npcs[id] && <span className="tiny" style={{ color: attitudeColor(g.npcs[id].attitude) }}>{g.npcs[id].attitude}</span>}
+          </button>
+        );
+      })}
+      <div className="section-label">שביעות רצון השותפות</div>
+      {g.coalition.parties.filter((p) => g.parties[p]).map((p) => (
+        <Meter key={p} label={g.parties[p].short} value={Math.round(g.coalition.satisfaction[p] ?? 60)} color={g.parties[p].color} />
+      ))}
+    </div>
   );
 }

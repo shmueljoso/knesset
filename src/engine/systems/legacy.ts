@@ -8,6 +8,7 @@ export const ENDINGS: Record<string, { title: string; text: string; canContinue:
   convicted: { title: 'הרשעה', text: 'בית המשפט הרשיע אותך. הדלת לפוליטיקה נסגרה.', canContinue: false },
   outside: { title: 'מחוץ למשחק', text: 'פעמיים ברצף לא נבחרת לכנסת. הקהל עבר הלאה.', canContinue: true },
   pm_term: { title: 'קדנציה מלאה כראש ממשלה', text: 'השלמת קדנציה שלמה בראשות הממשלה. מעטים הגיעו לכאן.', canContinue: true },
+  president: { title: 'נשיא/ת המדינה', text: 'הכנסת בחרה בך לנשיאות. שבע שנים בבית הנשיא – מעל הפוליטיקה, ולתמיד בספרי ההיסטוריה.', canContinue: false },
 };
 
 export interface Legacy {
@@ -46,6 +47,7 @@ export function computeLegacy(s: GameState): Legacy {
     (a.includes('minister') ? 20 : 0) +
     (a.includes('leader') ? 15 : 0) +
     (a.includes('pm') ? 40 : 0) +
+    (s.president?.id === 'player' ? 60 : 0) +
     s.career.mkTerms * 8 +
     s.career.peakSeats * 0.5 +
     allies +

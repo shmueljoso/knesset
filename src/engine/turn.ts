@@ -12,7 +12,11 @@ import { tickNpcs } from './systems/npcs';
 import { checkMissions } from './systems/missions';
 import { tickScandal } from './systems/scandals';
 import { tickCareer } from './systems/legacy';
-import { finishVote, queueOtherVote, tickLegislation } from './systems/legislation';
+import { tickPresident } from './systems/president';
+import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
+import { radicalClimate } from './systems/climate';
+import { BILL_TEMPLATES } from './data/bills';
+import { inSession } from './calendar';
 import { addNews, npcLabel } from './systems/news';
 import { WORLD_NAMES, normalizePolls, pollSeats, tickWorld, updatePolls } from './systems/opinion';
 import { refreshPresence } from './systems/presence';
@@ -61,6 +65,33 @@ function worldNews(s: GameState) {
   if (s.coalition.stability < 35 && chance(s, 0.35)) addNews(s, 'גורם בכיר בקואליציה: "הממשלה לא תשרוד עד סוף המושב"', 'bad');
 }
 
+/**
+ * ממשלה שהרעיון "באוויר" בשבילה (תמימת דעים, רחבה או בחלון הזדמנויות) עשויה להעלות מהפכה בעצמה.
+ * ח"כ מצביע/ה בהצבעה חיה; אחרת ההצבעה מתקיימת ברקע.
+ */
+function governmentRevolution(s: GameState) {
+  if (s.negotiation || s.liveVote || s.coalition.pmId === 'player' || !s.npcs[s.coalition.pmId] || !inSession(s)) return;
+  if (s.week - Number(s.flags.radInitAny ?? -999) < 26) return;
+  const eligible = BILL_TEMPLATES.filter((t) => {
+    if (!t.radical || (s.transforms ?? []).some((x) => x.id === t.radical)) return false;
+    if (s.week - Number(s.flags[`radInit_${t.id}`] ?? -999) < 104) return false;
+    const c = radicalClimate(s, t.id);
+    return c.bonus >= 0.55 && c.coalAlign >= 0.45;
+  });
+  if (!eligible.length) return;
+  const t = pick(s, eligible);
+  const c = radicalClimate(s, t.id);
+  if (!chance(s, 0.06 * c.bonus)) return;
+  s.flags[`radInit_${t.id}`] = s.week;
+  s.flags.radInitAny = s.week;
+  addNews(s, `הממשלה מעלה להצבעה: "${t.title}". ${c.reasons.join(' · ')}`, 'neutral', false, undefined, 'ערוץ המשכן');
+  if (s.player.isMK) queueOtherVote(s, s.coalition.pmId, t.id, 2);
+  else {
+    startVote(s, queueBill(s, s.coalition.pmId, t.id, 2), 'other');
+    finishVote(s);
+  }
+}
+
 /** סוף שבוע: כל מערכות העולם מתקדמות. */
 export function endWeek(s: GameState) {
   if (s.liveVote) finishVote(s);
@@ -98,6 +129,7 @@ export function endWeek(s: GameState) {
   tickNpcs(s);
   tickScandal(s);
   tickCareer(s);
+  tickPresident(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);
@@ -134,6 +166,7 @@ export function endWeek(s: GameState) {
   releaseScheduled(s);
   rollEvents(s);
   rollShocks(s);
+  governmentRevolution(s);
   worldNews(s);
 
   s.week += 1;
