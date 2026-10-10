@@ -102,7 +102,16 @@ export function endWeek(s: GameState) {
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);
   if (!s.negotiation) tickCoalition(s);
+  if (s.flags.npcNoConfidence) {
+    queueOtherVote(s, String(s.flags.npcNoConfidence), 'no_confidence', 2);
+    delete s.flags.npcNoConfidence;
+  }
   tickMinistry(s);
+  // שלושה שבועות לפני התקציב: משא ומתן עם השותפות
+  if (isBudgetDeadline(s, s.week + 3) && !s.negotiation && p.isMK) {
+    if (s.coalition.pmId === 'player' || p.ministry === 'finance') s.eventQueue.push({ eventId: 'budget_talks', ctx: {} });
+    else if (p.partyId && s.parties[p.partyId]?.leaderId === 'player' && isCoalition(s, p.partyId)) s.eventQueue.push({ eventId: 'budget_demand', ctx: {} });
+  }
   if (isBudgetDeadline(s) && !s.negotiation) {
     // ח"כ: הצבעת תקציב חיה ומותחת. אחרת – לפי יציבות הקואליציה
     if (p.isMK) queueOtherVote(s, s.ministers.finance ?? s.coalition.pmId, 'budget_law', 2);

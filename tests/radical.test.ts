@@ -4,7 +4,7 @@ import { BILL_TEMPLATES, templateById } from '../src/engine/data/bills';
 import { COMMITTEE_DEFS } from '../src/engine/data/committees';
 import { eventById } from '../src/engine/data/events';
 import { TRANSFORM_INFO } from '../src/engine/data/transforms';
-import { callEarlyElections } from '../src/engine/systems/elections';
+import { callEarlyElections, runElection } from '../src/engine/systems/elections';
 import { tryNoConfidence } from '../src/engine/systems/coalition';
 import { resolveEvent } from '../src/engine/systems/events';
 import { onLawPassed, strikeChance } from '../src/engine/systems/issues';
@@ -124,8 +124,44 @@ describe('transformations', () => {
     const e = s.electionWeek;
     callEarlyElections(s, 'משבר');
     expect(s.electionWeek).toBe(e);
-    applyTransform(s, 'sovereignty', 2, 'npc', 'r_sovereign');
+    const before = strikeChance(s, 'deathpenalty');
+    applyTransform(s, 'sovereignty', 3, 'npc', 'r_sovereign');
+    expect(before).toBeGreaterThan(0);
     expect(strikeChance(s, 'deathpenalty')).toBe(0);
+  });
+
+  it('the level matters: direct election vs presidential vs districts', () => {
+    const direct = createGame(base);
+    applyTransform(direct, 'presidential', 1, 'npc', 'r_presidential');
+    expect(direct.rules.directPM).toBe(true);
+    expect(direct.rules.presidential).toBeFalsy();
+    const e = direct.electionWeek;
+    callEarlyElections(direct, 'משבר');
+    expect(direct.electionWeek).toBeLessThan(e); // בבחירה ישירה עדיין יש בחירות מוקדמות
+
+    const districts = createGame(base);
+    applyTransform(districts, 'presidential', 3, 'npc', 'r_presidential');
+    expect(districts.rules.presidential && districts.rules.districts).toBe(true);
+    for (let w = 0; w < 40; w++) endWeek(districts);
+    districts.eventQueue = [];
+    const big = Object.values(districts.parties).sort((a, b) => b.poll - a.poll)[0];
+    const before = big.seats;
+    runElection(districts);
+    expect(districts.parties[big.id].seats).toBeGreaterThan(before);
+
+    const mild = createGame(base);
+    applyTransform(mild, 'sovereignty', 1, 'npc', 'r_sovereign');
+    expect(strikeChance(mild, 'deathpenalty')).toBeGreaterThan(0);
+    const mid = createGame(base);
+    applyTransform(mid, 'sovereignty', 2, 'npc', 'r_sovereign');
+    expect(strikeChance(mid, 'deathpenalty')).toBeLessThan(strikeChance(mild, 'deathpenalty'));
+
+    const ann = createGame(base);
+    applyTransform(ann, 'annexation', 1, 'npc', 'r_annex');
+    expect(ann.scheduled.some((x) => x.eventId === 'annex_citizenship')).toBe(false);
+    const ann3 = createGame(base);
+    applyTransform(ann3, 'annexation', 3, 'npc', 'r_annex');
+    expect(ann3.scheduled.some((x) => x.eventId === 'annex_citizenship')).toBe(true);
   });
 
   it('a halakhic state strikes civil marriage and Shabbat transport', () => {

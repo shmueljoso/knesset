@@ -85,7 +85,8 @@ test('election night: exit poll, then the count', async ({ page }) => {
   g.flags.showElection = true;
   g.negotiation = null;
   await load(page, g);
-  await expect(page.getByTestId('count-phase')).toContainText('מדגם');
+  await expect(page.getByTestId('exit-countdown')).toBeVisible();
+  await expect(page.getByTestId('count-phase')).toContainText('מדגם', { timeout: 10000 });
   await shot(page, '74-exit-poll');
   await page.getByRole('button', { name: /לתוצאות הסופיות/ }).click();
   await expect(page.getByTestId('count-phase')).toContainText('תוצאות סופיות');

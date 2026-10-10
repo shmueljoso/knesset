@@ -5,8 +5,9 @@ import { pick } from '../rng';
 import { isCoalition } from '../systems/government';
 import { debtsWith } from '../systems/relationships';
 import { isHot } from '../systems/issues';
-import type { GameState, Npc } from '../types';
+import type { GameState, IssueId, Npc } from '../types';
 import { BILL_TEMPLATES } from './bills';
+import { issueLean } from '../systems/influence';
 import { SHOCK_EVENTS } from './shocks';
 import { TRANSFORM_EVENTS } from './transforms';
 
@@ -680,6 +681,11 @@ EVENTS.push({
       requires: (s) => (s.player.ministry ? null : 'רק לבעלי תפקיד ביצועי'),
       ops: [{ op: 'special', id: 'scandal_step', label: 'התפטרות מהמשרד' }],
     },
+    {
+      label: 'לבקש חנינה מהנשיא', hint: 'סיכוי קטן, מחיר ציבורי גבוה',
+      requires: (s) => ((s.scandal?.stage ?? 0) >= 4 ? null : 'רק בשלב השימוע או כתב האישום'),
+      ops: [{ op: 'special', id: 'scandal_pardon', label: 'בקשת חנינה' }],
+    },
   ],
 });
 
@@ -705,6 +711,12 @@ EVENTS.push(
     choices: voteChoices(true),
   },
   {
+    id: 'noconf_vote', queued: true, icon: '🗳️',
+    title: 'הערב: הצבעת אי-אמון',
+    body: '{npc} הגיש/ה הצעת אי-אמון קונסטרוקטיבית. אם 61 ח"כים יתמכו – הממשלה נופלת וממשלה חלופית מושבעת עוד הלילה. עמדת הסיעה שלך: {line}. הספירה במסדרונות: {forecast}.',
+    choices: voteChoices(),
+  },
+  {
     id: 'ultimatum_refused', queued: true, icon: '😤',
     title: 'ראש הממשלה קורא את הבלוף',
     body: '"{threat}"? {npc} חייך/ה: "הדלת פתוחה." עכשיו כל העיתונאים שואלים רק דבר אחד – תממש/י או תתקפל/י?',
@@ -725,6 +737,178 @@ EVENTS.push(
         ops: [{ op: 'partyStanding', d: -8 }, { op: 'fame', d: 3 }, { op: 'consistency', d: 4 }, { op: 'att', who: '@pm', d: -10 }, { op: 'stability', d: -5 }],
       },
       { label: 'לסגת מהאיום', hint: 'איום סרק זוכרים', ops: [{ op: 'reputation', d: -4 }, { op: 'capital', d: -2 }, { op: 'att', who: '@pm', d: 4 }] },
+    ],
+  },
+);
+
+// ---------- ראיון באולפן: מיני-משחק של שלוש שאלות ----------
+const ivNext: Op = { op: 'special', id: 'iv_next' };
+const ivGood: Op = { op: 'special', id: 'iv_good' };
+const ivBad: Op = { op: 'special', id: 'iv_bad' };
+EVENTS.push(
+  {
+    id: 'iv_issue', queued: true, icon: '📺',
+    title: 'שאלה {n}/3: {issueName}',
+    body: 'המגיש/ה רוכן/ת קדימה, והמצלמה מתקרבת: "בוא/י נדבר על {issueName}. אנשים בבית רוצים לדעת – מה בדיוק את/ה תעשה/י?"',
+    choices: [
+      {
+        label: 'תשובה חדה ונחרצת', hint: 'סיכוי לפי מיומנות תקשורת · עמדה חזקה שמזיזה מגזרים',
+        chance: { p: (s) => 0.45 + s.player.skills.media / 150, fail: [{ op: 'approval', sector: 'all', d: -1.5 }, ivBad, ivNext], failText: 'גמגמת באמצע המשפט. הקליפ כבר ברשתות.' },
+        dyn: (_s, c) => [{ op: 'stance', lean: issueLean(c.issue as IssueId), d: 2.2 }, ivGood, ivNext], result: 'משפט שיצוטט מחר בכל מקום.',
+      },
+      {
+        label: 'תשובה מאוזנת עם נתונים', hint: 'סיכוי לפי משפט וחקיקה · פחות רעש, יותר אמינות',
+        chance: { p: (s) => 0.55 + s.player.skills.law / 200, fail: [ivNext], failText: 'נכון – אבל משעמם. הצופים העבירו ערוץ.' },
+        ops: [{ op: 'reputation', d: 1.5 }, ivGood, ivNext], result: 'המגיש/ה הנהן/ה. "סוף סוף מישהו שהכין שיעורי בית."',
+      },
+      {
+        label: 'להתחמק בחן', hint: 'בטוח יחסית – אם את/ה נואם/ת טוב',
+        chance: { p: (s) => 0.6 + s.player.skills.speech / 200, fail: [{ op: 'consistency', d: -2 }, ivBad, ivNext], failText: '"לא ענית על השאלה." "לא ענית על השאלה." "לא ענית על השאלה."' },
+        ops: [ivNext], result: 'יצאת מזה בשלום.',
+      },
+    ],
+  },
+  {
+    id: 'iv_loyalty', queued: true, icon: '📺',
+    title: 'שאלה {n}/3: היו"ר',
+    body: '"שאלה ישירה: האם {leaderName} צריך/ה להמשיך להוביל את המפלגה?" השעון של הפאנל ממשיך לתקתק.',
+    choices: [
+      { label: 'נאמנות מלאה', ops: [{ op: 'att', who: '@leader', d: 8 }, { op: 'partyStanding', d: 2 }, ivNext], result: 'בסיעה שמחו. הצופים פחות התרשמו.' },
+      {
+        label: '"נדבר על זה אחרי הבחירות"', hint: 'כותרת גדולה – והיו"ר יזכור',
+        chance: { p: (s) => 0.45 + s.player.skills.media / 150, fail: [{ op: 'att', who: '@leader', d: -15 }, { op: 'partyStanding', d: -4 }, ivBad, ivNext], failText: 'זה נשמע כמו הכרזת מלחמה. בסיעה רותחים.' },
+        ops: [{ op: 'fame', d: 2 }, { op: 'att', who: '@leader', d: -10 }, ivGood, ivNext], result: '"מתחיל/ה להתחמם על הקווים" – כתבו הפרשנים.',
+      },
+      { label: 'להחמיא ולהתחמק', ops: [{ op: 'att', who: '@leader', d: 2 }, ivNext] },
+    ],
+  },
+  {
+    id: 'iv_coalition', queued: true, icon: '📺',
+    title: 'שאלה {n}/3: הקואליציה הבאה',
+    body: '"עם מי לא תשב/י בממשלה? תני/תן שם."',
+    choices: [
+      { label: 'לפסול בפומבי', hint: 'עקביות ומוכרות – פחות גמישות אחר כך', ops: [{ op: 'consistency', d: 3 }, { op: 'fame', d: 2 }, { op: 'capital', d: -1 }, ivGood, ivNext] },
+      { label: '"אני לא פוסל/ת אף אחד"', ops: [{ op: 'capital', d: 2 }, { op: 'reputation', d: -1.5 }, ivNext] },
+      {
+        label: 'להפוך את השאלה על המגיש', hint: 'מסוכן',
+        chance: { p: (s) => 0.4 + s.player.skills.speech / 160, fail: [{ op: 'reputation', d: -2 }, ivBad, ivNext], failText: 'יצא מתנשא. הקליפ מסתובב – לא לטובתך.' },
+        ops: [{ op: 'fame', d: 2.5 }, ivGood, ivNext],
+      },
+    ],
+  },
+  {
+    id: 'iv_gotcha', queued: true, icon: '🎞️',
+    title: 'שאלה {n}/3: הקלטה מהעבר',
+    body: 'על המסך עולה קטע ישן שלך: "לפני כמה חודשים אמרת בדיוק את ההפך. אז מה נכון?" באולפן משתרר שקט.',
+    choices: [
+      { label: '"שיניתי את דעתי – וזה בסדר"', ops: [{ op: 'reputation', d: 2 }, { op: 'consistency', d: -3 }, ivNext], result: 'כנות נדירה. חלק מהצופים התרשמו.' },
+      {
+        label: '"הוצא מהקשרו"', hint: 'סיכוי לפי תקשורת',
+        chance: { p: (s) => 0.35 + s.player.skills.media / 150, fail: [{ op: 'reputation', d: -3 }, ivBad, ivNext], failText: 'המגיש/ה הקרין/ה את הקטע המלא. אאוץ׳.' },
+        ops: [ivGood, ivNext],
+      },
+      {
+        label: 'לתקוף את התקשורת', hint: 'הבסיס אוהב, השאר פחות',
+        chance: { p: () => 0.5, fail: [{ op: 'fame', d: 1 }, { op: 'approval', sector: 'all', d: -1 }, ivBad, ivNext], failText: 'נראה כמו בריחה מתשובה.' },
+        ops: [{ op: 'fame', d: 2.5 }, { op: 'reputation', d: -1 }, ivGood, ivNext],
+      },
+    ],
+  },
+);
+
+// ---------- ריאליזם: תקציב, ועדת חקירה, מינויים ----------
+const isPmOrFinance = (s: GameState) => s.coalition.pmId === 'player' || s.player.ministry === 'finance';
+EVENTS.push(
+  {
+    id: 'budget_talks', queued: true, icon: '💰',
+    title: 'שלושה שבועות לתקציב',
+    body: 'השותפות מגיעות ללשכה אחת אחרי השנייה, כל אחת עם רשימת דרישות. בלי הקולות שלהן התקציב נופל – ואיתו הממשלה.',
+    choices: [
+      { label: 'לתת לכל השותפות', hint: 'שקט קואליציוני, גירעון', ops: [{ op: 'special', id: 'budget_give_all', label: 'שביעות רצון +12 לכולן' }, { op: 'world', key: 'economy', d: -2, weeks: 20 }] },
+      { label: 'רק לשותפה הכי ממורמרת', ops: [{ op: 'special', id: 'budget_give_one', label: 'השותפה הממורמרת +18' }] },
+      { label: 'תקציב קשוח – בלי מתנות', hint: 'אחראי, מסוכן', ops: [{ op: 'special', id: 'budget_none', label: 'כל השותפות −8' }, { op: 'world', key: 'economy', d: 2, weeks: 20 }, { op: 'reputation', d: 2 }] },
+    ],
+  },
+  {
+    id: 'budget_demand', queued: true, icon: '💰',
+    title: 'הרגע של המפלגות הקטנות',
+    body: 'שלושה שבועות לתקציב. ראש הממשלה צריך את הקולות שלכם – ואת/ה יודע/ת את זה.',
+    choices: [
+      {
+        label: 'לדרוש תוספת גדולה לבוחרים שלנו', hint: 'סיכוי לפי כמה הממשלה צריכה אתכם',
+        chance: { p: (s) => (s.coalition.parties.reduce((a, p) => a + (s.parties[p]?.seats ?? 0), 0) - (s.parties[s.player.partyId!]?.seats ?? 0) < 61 ? 0.75 : 0.3), fail: [{ op: 'att', who: '@pm', d: -12 }], failText: 'ראש הממשלה: "אין כסף." ועכשיו גם אין לך אותו.' },
+        ops: [{ op: 'special', id: 'budget_win', label: 'תוספת לבוחרים שלך' }, { op: 'capital', d: 2 }, { op: 'att', who: '@pm', d: -5 }],
+      },
+      { label: 'תוספת צנועה', ops: [{ op: 'special', id: 'budget_small', label: 'תוספת קטנה' }] },
+      { label: 'לוותר – בשביל היציבות', ops: [{ op: 'att', who: '@pm', d: 6 }, { op: 'stability', d: 3 }] },
+    ],
+  },
+  {
+    id: 'commission_report', queued: true, icon: '📕',
+    title: 'מסקנות ועדת החקירה הממלכתית',
+    body: 'אחרי חודשים של עדויות, הוועדה פרסמה דו"ח חריף: "כשל מערכתי בדרג המדיני והצבאי". השאלה היחידה ששואלים עכשיו: מי ייקח אחריות?',
+    choices: [
+      { label: 'לקבל אחריות ולהתפטר', requires: (s) => (s.player.ministry ? null : 'רק לשרים'), ops: [{ op: 'special', id: 'resign', label: 'התפטרות' }, { op: 'reputation', d: 6 }, { op: 'consistency', d: 5 }] },
+      { label: 'לדחות את המסקנות', requires: (s) => (s.player.ministry || s.coalition.pmId === 'player' ? null : 'רק לחברי הממשלה'), ops: [{ op: 'reputation', d: -5 }, { op: 'fame', d: 2 }, { op: 'world', key: 'trust', d: -4, weeks: 6 }] },
+      { label: 'לדרוש מהממשלה ליישם עד הסוף', ops: [{ op: 'reputation', d: 2 }, { op: 'momentum', party: '@coalition', d: -2 }, { op: 'att', who: '@pm', d: -6 }] },
+      { label: 'להגן על הדרג המדיני', ops: [{ op: 'att', who: '@pm', d: 8 }, { op: 'reputation', d: -2 }] },
+    ],
+  },
+  {
+    id: 'appoint_ag', icon: '⚖️', weight: 2, cooldown: 300, once: false,
+    title: 'מינוי יועמ"ש חדש/ה',
+    body: 'הקדנציה של היועמ"ש מסתיימת, והמינוי עובר דרכך. מי שתבחר/י יחליט/תחליט על תיקים, חקירות – ואולי גם עליך.',
+    when: (s) => isPmOrFinance(s) || s.player.ministry === 'justice',
+    choices: [
+      { label: 'נאמן/ה פוליטי/ת', hint: 'חקירות נגדך יתקדמו לאט יותר – והרחוב יבער', ops: [{ op: 'flag', key: 'agLoyal', v: true }, { op: 'world', key: 'trust', d: -6, weeks: 8 }, { op: 'stance', lean: { judiciary: 80 }, d: 1.5 }, { op: 'reputation', d: -3 }] },
+      { label: 'משפטן/ית מקצועי/ת ועצמאי/ת', ops: [{ op: 'flag', key: 'agLoyal', v: false }, { op: 'world', key: 'trust', d: 3, weeks: 8 }, { op: 'reputation', d: 2 }] },
+      { label: 'מועמד/ת פשרה מתוך המערכת', ops: [{ op: 'flag', key: 'agLoyal', v: false }, { op: 'capital', d: 1 }] },
+    ],
+  },
+  {
+    id: 'appoint_police', icon: '🚔', weight: 2, cooldown: 260,
+    title: 'מינוי מפכ"ל',
+    body: 'הממשלה צריכה למנות מפכ"ל. השר לביטחון לאומי רוצה מישהו "שמבין את הממשלה"; ראשי המשטרה לשעבר מזהירים.',
+    when: (s) => s.coalition.pmId === 'player' || !!s.player.ministry,
+    choices: [
+      { label: 'מינוי מהיר של "איש שלנו"', ops: [{ op: 'world', key: 'trust', d: -4, weeks: 8 }, { op: 'capital', d: 2 }, { op: 'att', who: '@pm', d: 6 }] },
+      { label: 'לדרוש ועדת איתור מקצועית', ops: [{ op: 'world', key: 'trust', d: 2, weeks: 8 }, { op: 'world', key: 'security', d: 1, weeks: 12 }, { op: 'reputation', d: 2 }, { op: 'att', who: '@pm', d: -4 }] },
+    ],
+  },
+);
+
+// ---------- לכל ח"כ יש מה שהוא רוצה ----------
+const WISHES = [
+  'תמליץ/י עליי ליו"ר כשמחלקים ועדות. אני לא אשכח.',
+  'בשבוע הבא אני מעלה הצעת חוק. אני צריך/ה את הקול שלך – ואת השם שלך בתקשורת.',
+  'העיר שלי צריכה תקציב לכביש. תדבר/י עם השר/ה?',
+  'אני רוצה מקום ריאלי ברשימה הבאה. מילה טובה ממך תעזור.',
+  'יש לי ריב עם העיתונאי ההוא. תעזור/תעזרי לי להשתיק את הסיפור?',
+];
+EVENTS.push(
+  {
+    id: 'npc_wish', icon: '🙏', weight: 3, cooldown: 8,
+    title: '{npc} מבקש/ת טובה',
+    body: 'במסדרון, בקול שקט: "{wish}"',
+    when: (s) => s.player.isMK || !!s.player.employerId,
+    ctx: (s) => {
+      const c = mks(s, (n) => n.notable && n.attitude > -20 && n.ambition > 35);
+      if (!c.length) return null;
+      return { npc: pick(s, c).id, wish: pick(s, WISHES) };
+    },
+    choices: [
+      { label: 'לעזור', hint: 'עולה הון פוליטי – והוא/היא חייב/ת לך', ops: [{ op: 'capital', d: -2 }, { op: 'att', who: '@ctx', d: 12 }, { op: 'debt', who: '@ctx', dir: 'owes_player', reason: 'עזרה אישית' }, { op: 'memory', who: '@ctx', text: 'עזר/ה לי כשהייתי צריך/ה', d: 10 }] },
+      { label: 'להבטיח – ולא לקיים', hint: 'בפוליטיקה זוכרים', ops: [{ op: 'att', who: '@ctx', d: 6 }, { op: 'special', id: 'wish_broken', label: 'הוא/היא יגלה' }] },
+      { label: 'לסרב בנימוס', ops: [{ op: 'att', who: '@ctx', d: -6 }] },
+    ],
+  },
+  {
+    id: 'npc_wish_broken', queued: true, icon: '😠',
+    title: '{npc} גילה/תה שלא עזרת',
+    body: '"הבטחת. ואז נעלמת." עכשיו כולם בסיעה שומעים את הסיפור.',
+    choices: [
+      { label: 'להתנצל ולפצות', ops: [{ op: 'capital', d: -2 }, { op: 'att', who: '@ctx', d: -8 }] },
+      { label: 'להכחיש', ops: [{ op: 'att', who: '@ctx', d: -25 }, { op: 'reputation', d: -2 }, { op: 'memory', who: '@ctx', text: 'הבטיח/ה ולא קיים/ה', d: -20 }] },
     ],
   },
 );

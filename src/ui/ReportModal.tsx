@@ -103,11 +103,11 @@ export function ReportModal() {
 }
 
 const COUNT_PHASES = [
-  { label: '22:00 · המדגם של ערוץ המשכן', noise: 0.14 },
-  { label: 'נספרו 30% מהקולות', noise: 0.08 },
-  { label: 'נספרו 65% מהקולות', noise: 0.04 },
-  { label: 'נספרו 92% מהקולות', noise: 0.015 },
-  { label: 'תוצאות סופיות, כולל המעטפות הכפולות', noise: 0 },
+  { time: '22:00', label: 'המדגם של ערוץ המשכן', noise: 0.14 },
+  { time: '23:40', label: 'נספרו 30% מהקולות', noise: 0.08 },
+  { time: '01:30', label: 'נספרו 65% מהקולות', noise: 0.04 },
+  { time: '04:15', label: 'נספרו 92% מהקולות', noise: 0.015 },
+  { time: '09:00', label: 'תוצאות סופיות, כולל המעטפות הכפולות', noise: 0 },
 ];
 
 /** רעש קבוע לכל מפלגה ושלב, כדי שהספירה תיראה אמינה ולא תקפוץ בכל רינדור */
@@ -129,14 +129,38 @@ function seatsAt(g: GameState, phase: number): Record<string, number> {
 export function ElectionModal() {
   const g = useGame();
   const act = useStore((s) => s.act);
-  const [phase, setPhase] = useState(0);
+  const open = useStore((s) => s.open);
+  const [phase, setPhase] = useState(-1);
+  const [countdown, setCountdown] = useState(5);
   useEffect(() => {
     if (phase >= COUNT_PHASES.length - 1) return;
-    const id = setTimeout(() => setPhase((x) => x + 1), phase === 0 ? 2600 : 1800);
+    if (phase === -1) {
+      const id = setTimeout(() => (countdown > 1 ? setCountdown((c) => c - 1) : setPhase(0)), 900);
+      return () => clearTimeout(id);
+    }
+    const id = setTimeout(() => setPhase((x) => x + 1), phase === 0 ? 5000 : 4200);
     return () => clearTimeout(id);
-  }, [phase]);
+  }, [phase, countdown]);
   const e = g.lastElection;
   if (!e) return null;
+  if (phase === -1) {
+    return (
+      <div className="event-overlay">
+        <div className="event-card" style={{ textAlign: 'center' }}>
+          <div className="tiny gold" style={{ fontWeight: 700 }}>🗳️ ליל הבחירות לכנסת ה-{e.knesset}</div>
+          <p className="muted" style={{ margin: '16px 0 4px' }}>21:59 · הקלפיות נסגרות. כל המפלגות מחזיקות את הנשימה.</p>
+          <div className="beat" style={{ fontSize: 72, fontWeight: 900, color: 'var(--gold)' }} data-testid="exit-countdown">
+            {countdown}
+          </div>
+          <p className="suspense">המדגם בעוד רגע…</p>
+          <button className="btn sm" style={{ marginTop: 10 }} onClick={() => setPhase(COUNT_PHASES.length - 1)}>
+            ⏩ לתוצאות הסופיות
+          </button>
+        </div>
+      </div>
+    );
+  }
+  const thr = g.rules?.threshold ?? 3.25;
   const total = Object.values(e.votes).reduce((a, b) => a + b, 0);
   const last = COUNT_PHASES.length - 1;
   const final = phase >= last;
@@ -146,7 +170,6 @@ export function ElectionModal() {
     .map((p) => ({ p, seats: curSeats[p.id] ?? 0, pct: ((e.votes[p.id] ?? 0) / total) * 100 * (1 + noise(p.id + phase) * COUNT_PHASES[phase].noise), prev: prevSeats?.[p.id] }))
     .sort((a, b) => b.seats - a.seats || b.pct - a.pct);
   const pm = g.coalition.pmId === 'player' ? g.player.name : g.npcs[g.coalition.pmId]?.name;
-  const open = useStore((s) => s.open);
   const close = () => {
     act((s) => delete s.flags.showElection);
     if (g.negotiation) open({ kind: 'negotiation' });
@@ -156,7 +179,14 @@ export function ElectionModal() {
       <div className="event-card">
         <div className="tiny gold" style={{ fontWeight: 700 }}>🗳️ ליל הבחירות</div>
         <h2>{final ? `תוצאות הבחירות לכנסת ה-${e.knesset}` : `ליל הבחירות לכנסת ה-${e.knesset}`}</h2>
-        <div className={`chip ${final ? 'good' : 'gold'}`} data-testid="count-phase">{COUNT_PHASES[phase].label}</div>
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <div className={`chip ${final ? 'good' : 'gold'}`} data-testid="count-phase">{COUNT_PHASES[phase].label}</div>
+          <span className={`vote-clock ${!final ? '' : ''}`}>🕙 {COUNT_PHASES[phase].time}</span>
+        </div>
+        <div className="count-bar">
+          <i style={{ width: `${[8, 30, 65, 92, 100][phase]}%` }} />
+        </div>
+        {!final && <p className="suspense" style={{ margin: '4px 0' }}>{phase === 0 ? 'זה רק מדגם – הכל עוד יכול להשתנות' : 'הספירה נמשכת…'}</p>}
         {final && (
           <div style={{ margin: '12px 0' }}>
             <Hemicycle />
@@ -170,7 +200,7 @@ export function ElectionModal() {
         <table className="results">
           <tbody>
             {rows.map(({ p, seats, pct, prev }) => (
-              <tr key={p.id} style={{ opacity: seats ? 1 : 0.55, fontWeight: p.id === g.player.partyId ? 800 : 400 }}>
+              <tr key={p.id} className={!final && Math.abs(pct - thr) < 0.7 ? 'flash-row' : ''} style={{ opacity: seats ? 1 : 0.55, fontWeight: p.id === g.player.partyId ? 800 : 400 }}>
                 <td>
                   <span className="party-dot" style={{ background: p.color, marginInlineEnd: 6 }} />
                   {p.name}

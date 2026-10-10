@@ -24,7 +24,9 @@ describe('built-in scenarios', () => {
       expect(s.knesset).toBe(sc.mod.knesset);
       expect(s.electionWeek).toBe(sc.mod.electionInWeeks);
       expect([...s.coalition.parties].sort()).toEqual([...(sc.mod.coalition ?? [])].sort());
-      expect(coalitionSeats(s, s.coalition.parties)).toBeGreaterThanOrEqual(61);
+      const fileCoalition = sc.mod.parties.filter((p) => sc.mod.coalition?.includes(p.id)).reduce((a, p) => a + p.seats, 0);
+      expect(coalitionSeats(s, s.coalition.parties)).toBe(fileCoalition); // 2019: ממשלת מעבר של 60
+      for (const [k, v] of Object.entries(sc.mod.rules ?? {})) expect(s.rules[k as keyof typeof s.rules]).toBe(v);
       const leader = s.npcs[s.parties[first.id].leaderId];
       expect(leader?.name ?? s.player.name).toBe(first.members?.[0] ?? leader?.name);
       for (const [mid, name] of Object.entries(sc.mod.ministers ?? {})) {
@@ -38,6 +40,13 @@ describe('built-in scenarios', () => {
       expect(Object.values(s.parties).reduce((a, p) => a + p.seats, 0)).toBe(120);
     });
   }
+
+  it('1996 starts with the direct election rule', () => {
+    const sc = SCENARIOS.find((x) => x.id === 'knesset-14-1996')!;
+    const s = createGame(base('likud', sc.mod));
+    expect(s.rules.directPM).toBe(true);
+    expect(s.transforms.some((x) => x.id === 'presidential' && x.scope === 1)).toBe(true);
+  });
 
   it('the 2026 scenario starts three weeks before the election and new parties can win seats', () => {
     const sc = SCENARIOS.find((x) => x.id === 'elections-2026')!;

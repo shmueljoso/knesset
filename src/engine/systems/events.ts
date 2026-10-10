@@ -2,7 +2,7 @@ import { addStat } from '../stats';
 import { EVENTS, debtCollectCandidate, eventById, type EventChoice, type GameEvent } from '../data/events';
 import { applyOps, fill, registerSpecial, type Ctx, type Op } from '../ops';
 import { chance, pickWeighted, rand, shuffle } from '../rng';
-import type { GameState } from '../types';
+import type { CustomEvent, GameState } from '../types';
 import { clamp } from '../util';
 import { changeAttitude, changeTrust } from './relationships';
 import { log } from './report';
@@ -11,15 +11,41 @@ import { changeSatisfaction, playerPartyQuits, recomputeStability } from './coal
 import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
-import { scandalAttack, scandalCooperate, scandalStepDown } from './scandals';
+import { scandalAttack, scandalCooperate, scandalPardon, scandalStepDown } from './scandals';
+import { changeApproval } from './opinion';
 import { reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
 import { templateById } from '../data/bills';
 import { leanAlignment } from '../util';
 
+/** אירוע שהשחקן כתב בעורך → אירוע משחק רגיל */
+export function customToEvent(c: CustomEvent): GameEvent {
+  return {
+    id: c.id,
+    title: c.title,
+    body: c.body,
+    icon: c.icon || '📜',
+    weight: c.weight ?? 2,
+    cooldown: 20,
+    choices: c.choices.map((ch) => ({
+      label: ch.label,
+      ops: [
+        ...(ch.fame ? [{ op: 'fame' as const, d: ch.fame }] : []),
+        ...(ch.reputation ? [{ op: 'reputation' as const, d: ch.reputation }] : []),
+        ...(ch.partyStanding ? [{ op: 'partyStanding' as const, d: ch.partyStanding }] : []),
+        ...(ch.money ? [{ op: 'money' as const, d: ch.money }] : []),
+        ...(ch.capital ? [{ op: 'capital' as const, d: ch.capital }] : []),
+        ...(ch.approval ? [{ op: 'approval' as const, sector: 'all' as const, d: ch.approval }] : []),
+        { op: 'log' as const, text: `${c.title} – ${ch.label}` },
+      ],
+    })),
+  };
+}
+
 export function currentEvent(s: GameState): { ev: GameEvent; ctx: Ctx } | null {
   while (s.eventQueue.length) {
     const p = s.eventQueue[0];
-    const ev = eventById(p.eventId);
+    const custom = (s.customEvents ?? []).find((c) => c.id === p.eventId);
+    const ev = custom ? customToEvent(custom) : eventById(p.eventId);
     if (ev) return { ev, ctx: p.ctx };
     s.eventQueue.shift();
   }
@@ -61,7 +87,7 @@ export function rollEvents(s: GameState) {
 
   const count = (chance(s, 0.8) ? 1 : 0) + (chance(s, 0.25) ? 1 : 0);
   for (let i = 0; i < count; i++) {
-    const pool = EVENTS.filter((e) => {
+    const pool = [...EVENTS, ...(s.customEvents ?? []).map(customToEvent)].filter((e) => {
       if (e.queued) return false;
       if (s.eventQueue.some((q) => q.eventId === e.id)) return false;
       const last = s.eventsFired[e.id];
@@ -217,3 +243,43 @@ registerSpecial('plot_go', (s, ctx) => {
 registerSpecial('scandal_coop', (s) => scandalCooperate(s));
 registerSpecial('scandal_attack', (s) => scandalAttack(s));
 registerSpecial('scandal_step', (s) => scandalStepDown(s));
+registerSpecial('scandal_pardon', (s) => scandalPardon(s));
+registerSpecial('wish_broken', (s, ctx) => {
+  scheduleEvent(s, 'npc_wish_broken', 4 + Math.floor(rand(s) * 6), { npc: ctx.npc });
+});
+
+// ---- תקציב: משא ומתן עם השותפות ----
+registerSpecial('budget_give_all', (s) => {
+  for (const p of partnersOfPM(s)) changeSatisfaction(s, p, 12);
+  recomputeStability(s);
+});
+registerSpecial('budget_give_one', (s) => {
+  const p = partnersOfPM(s).sort((a, b) => (s.coalition.satisfaction[a] ?? 60) - (s.coalition.satisfaction[b] ?? 60))[0];
+  if (!p) return;
+  changeSatisfaction(s, p, 18);
+  recomputeStability(s);
+  return `${s.parties[p].name} קיבלה את רוב התוספות.`;
+});
+registerSpecial('budget_none', (s) => {
+  for (const p of partnersOfPM(s)) changeSatisfaction(s, p, -8);
+  recomputeStability(s);
+});
+registerSpecial('budget_win', (s) => {
+  const sec = mainSectorOf(s);
+  if (sec) changeApproval(s, sec, 3);
+  return 'התוספת אושרה – הבוחרים שלך יודעים מי הביא אותה.';
+});
+registerSpecial('budget_small', (s) => {
+  const sec = mainSectorOf(s);
+  if (sec) changeApproval(s, sec, 1.5);
+});
+
+function partnersOfPM(s: GameState): string[] {
+  const pm = s.coalition.pmId === 'player' ? s.player.partyId : s.npcs[s.coalition.pmId]?.partyId;
+  return s.coalition.parties.filter((p) => p !== pm && s.parties[p]);
+}
+function mainSectorOf(s: GameState) {
+  const party = s.player.partyId ? s.parties[s.player.partyId] : null;
+  if (!party) return null;
+  return (Object.entries(party.sectors) as [keyof typeof party.sectors, number][]).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}

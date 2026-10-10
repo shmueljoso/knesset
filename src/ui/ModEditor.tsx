@@ -25,6 +25,15 @@ function saveDraft(m: ModFile) {
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
+const EFFECTS = [
+  ['fame', 'מוכרות'],
+  ['reputation', 'מוניטין'],
+  ['partyStanding', 'מעמד'],
+  ['money', 'כסף'],
+  ['capital', 'הון'],
+  ['approval', 'תדמית'],
+] as const;
+
 export function ModEditor() {
   const setScreen = useStore((s) => s.setScreen);
   const pendingMod = useStore((s) => s.pendingMod);
@@ -58,6 +67,10 @@ export function ModEditor() {
     setMod({ ...mod, parties: mod.parties.filter((_, j) => j !== i), coalition: (mod.coalition ?? []).filter((c) => c !== id) });
     setOpen(null);
   };
+  type Ev = NonNullable<ModFile['events']>[number];
+  const updateEvent = (i: number, patch: Partial<Ev>) => update({ events: (mod.events ?? []).map((e, k) => (k === i ? { ...e, ...patch } : e)) });
+  const updateChoice = (i: number, j: number, patch: Partial<Ev['choices'][number]>) =>
+    updateEvent(i, { choices: (mod.events ?? [])[i].choices.map((c, k) => (k === j ? { ...c, ...patch } : c)) });
   const toggleCoalition = (id: string) => {
     const c = mod.coalition ?? [];
     update({ coalition: c.includes(id) ? c.filter((x) => x !== id) : [...c, id] });
@@ -220,6 +233,47 @@ export function ModEditor() {
         ))}
         <button className="btn block" style={{ marginTop: 10 }} onClick={addParty}>
           ➕ הוספת מפלגה
+        </button>
+
+        <div className="section-label">⚙️ כללים</div>
+        <div className="card small">
+          <label className="row" style={{ gap: 8 }}>
+            אחוז חסימה
+            <input className="text-input" style={{ width: 90 }} type="number" min={0} max={20} step={0.25} aria-label="אחוז חסימה" value={mod.rules?.threshold ?? 3.25} onChange={(e) => update({ rules: { ...(mod.rules ?? {}), threshold: Number(e.target.value) } })} />
+          </label>
+          <label className="row" style={{ gap: 8, marginTop: 6 }}>
+            <input type="checkbox" checked={!!mod.rules?.directPM} onChange={(e) => update({ rules: { ...(mod.rules ?? {}), directPM: e.target.checked || undefined } })} />
+            בחירה ישירה לראשות הממשלה (כמו 1996)
+          </label>
+        </div>
+
+        <div className="section-label">📜 אירועים משלך ({(mod.events ?? []).length})</div>
+        <p className="tiny muted" style={{ marginTop: 0 }}>האירועים יופיעו במשחק מדי פעם, כמו כל אירוע אחר. לכל בחירה – השפעה על מוכרות, מוניטין, מעמד במפלגה, כסף, הון פוליטי ותדמית.</p>
+        {(mod.events ?? []).map((ev, i) => (
+          <div key={i} className="card small" style={{ padding: 10 }} data-testid="custom-event">
+            <input className="text-input" placeholder="כותרת האירוע" aria-label="כותרת אירוע" value={ev.title} onChange={(e) => updateEvent(i, { title: e.target.value })} />
+            <textarea className="text-input" rows={2} placeholder="מה קורה?" aria-label="תיאור אירוע" value={ev.body} onChange={(e) => updateEvent(i, { body: e.target.value })} style={{ marginTop: 6 }} />
+            {ev.choices.map((c, j) => (
+              <div key={j} style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line)' }}>
+                <input className="text-input" placeholder={`בחירה ${j + 1}`} aria-label={`בחירה ${j + 1}`} value={c.label} onChange={(e) => updateChoice(i, j, { label: e.target.value })} />
+                <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                  {EFFECTS.map(([k, label]) => (
+                    <label key={k} className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      {label}
+                      <input className="text-input" style={{ width: 52, padding: 4 }} type="number" min={-50} max={50} value={c[k] ?? 0} onChange={(e) => updateChoice(i, j, { [k]: Number(e.target.value) || undefined })} />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="row" style={{ gap: 6, marginTop: 6 }}>
+              {ev.choices.length < 4 && <button className="btn sm grow" onClick={() => updateEvent(i, { choices: [...ev.choices, { label: '' }] })}>➕ בחירה</button>}
+              <button className="btn sm danger grow" onClick={() => update({ events: (mod.events ?? []).filter((_, k) => k !== i) })}>מחיקה</button>
+            </div>
+          </div>
+        ))}
+        <button className="btn block" onClick={() => update({ events: [...(mod.events ?? []), { title: 'אירוע חדש', body: '', icon: '📜', choices: [{ label: 'כן', fame: 2 }, { label: 'לא', reputation: 1 }] }] })}>
+          ➕ אירוע חדש
         </button>
 
         <div className="section-label">קבצים ותרחישים</div>

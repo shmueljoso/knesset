@@ -1,0 +1,335 @@
+{
+  "name": "המהפך (1977)",
+  "description": "17 במאי 1977: לראשונה מאז קום המדינה, הליכוד של מנחם בגין מנצח. ד\"ש של יגאל ידין מזנקת ל-15 מנדטים. ממשלת בגין בהקמתה – 61 ח\"כים בלבד.",
+  "source": "תוצאות הבחירות הרשמיות והרכב הממשלה בהקמתה (ויקיפדיה, ועדת הבחירות המרכזית). סדר השמות ברשימות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "1977-06-20",
+  "realPeople": true,
+  "knesset": 9,
+  "startDate": "1977-06-20",
+  "electionInWeeks": 210,
+  "world": {
+    "economy": 40,
+    "affordability": 35,
+    "housing": 45,
+    "security": 50,
+    "trust": 35,
+    "cohesion": 38
+  },
+  "issues": {
+    "cost": 70,
+    "security": 65,
+    "religion": 45,
+    "wages": 60,
+    "housing": 45,
+    "judiciary": 20,
+    "draft": 30,
+    "crime": 25,
+    "education": 40
+  },
+  "coalition": [
+    "likud",
+    "nrp",
+    "agudat",
+    "shlomtzion"
+  ],
+  "ministers": {
+    "defense": "עזר ויצמן",
+    "finance": "שמחה ארליך",
+    "interior": "יוסף בורג",
+    "education": "זבולון המר",
+    "religion": "אהרן אבוחצירא",
+    "housing": "גדעון פת",
+    "health": "אליעזר שוסטק",
+    "economy": "יגאל הורביץ"
+  },
+  "parties": [
+    {
+      "id": "likud",
+      "name": "הליכוד",
+      "short": "ליכוד",
+      "color": "#2563eb",
+      "ideology": {
+        "econ": 50,
+        "security": 70,
+        "religion": 20,
+        "judiciary": 20
+      },
+      "seats": 43,
+      "primaries": true,
+      "sectors": {
+        "traditional": 1,
+        "secular": 0.4
+      },
+      "members": [
+        "מנחם בגין",
+        "שמחה ארליך",
+        "יגאל הורביץ",
+        "עזר ויצמן",
+        "יצחק שמיר",
+        "דוד לוי",
+        "גדעון פת",
+        "אליעזר שוסטק",
+        "משה ארנס",
+        "גאולה כהן",
+        "משה קצב"
+      ]
+    },
+    {
+      "id": "alignment",
+      "name": "המערך",
+      "short": "מערך",
+      "color": "#dc2626",
+      "ideology": {
+        "econ": -40,
+        "security": 15,
+        "religion": -30,
+        "judiciary": -20
+      },
+      "seats": 32,
+      "primaries": true,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "שמעון פרס",
+        "יצחק רבין",
+        "יגאל אלון",
+        "אבא אבן",
+        "משה דיין",
+        "חיים בר-לב",
+        "יוסי שריד",
+        "שושנה ארבלי-אלמוזלינו"
+      ]
+    },
+    {
+      "id": "dash",
+      "name": "התנועה הדמוקרטית לשינוי",
+      "short": "ד\"ש",
+      "color": "#0891b2",
+      "ideology": {
+        "econ": 20,
+        "security": 20,
+        "religion": -40,
+        "judiciary": -50
+      },
+      "seats": 15,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "יגאל ידין",
+        "אמנון רובינשטיין",
+        "שמואל תמיר",
+        "מאיר עמית"
+      ]
+    },
+    {
+      "id": "nrp",
+      "name": "המפד\"ל",
+      "short": "מפד\"ל",
+      "color": "#ea580c",
+      "ideology": {
+        "econ": 10,
+        "security": 60,
+        "religion": 75,
+        "judiciary": 30
+      },
+      "seats": 12,
+      "primaries": false,
+      "sectors": {
+        "religious": 1
+      },
+      "members": [
+        "יוסף בורג",
+        "זבולון המר",
+        "אהרן אבוחצירא",
+        "יהודה בן-מאיר"
+      ]
+    },
+    {
+      "id": "hadash",
+      "name": "חד\"ש",
+      "short": "חד\"ש",
+      "color": "#db2777",
+      "ideology": {
+        "econ": -80,
+        "security": -70,
+        "religion": -20,
+        "judiciary": -40
+      },
+      "seats": 5,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "מאיר וילנר",
+        "תאופיק טובי",
+        "תאופיק זיאד",
+        "צ'רלי ביטון"
+      ]
+    },
+    {
+      "id": "agudat",
+      "name": "אגודת ישראל",
+      "short": "אגודה",
+      "color": "#0d9488",
+      "ideology": {
+        "econ": -20,
+        "security": 20,
+        "religion": 95,
+        "judiciary": 50
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": [
+        "אברהם יוסף שפירא",
+        "מנחם פרוש"
+      ]
+    },
+    {
+      "id": "shlomtzion",
+      "name": "שלומציון",
+      "short": "שלומציון",
+      "color": "#7c3aed",
+      "ideology": {
+        "econ": 40,
+        "security": 85,
+        "religion": 10,
+        "judiciary": 20
+      },
+      "seats": 2,
+      "primaries": false,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": [
+        "אריאל שרון",
+        "יצחק יצחקי"
+      ]
+    },
+    {
+      "id": "sheli",
+      "name": "של\"י",
+      "short": "של\"י",
+      "color": "#be123c",
+      "ideology": {
+        "econ": -50,
+        "security": -60,
+        "religion": -40,
+        "judiciary": -40
+      },
+      "seats": 2,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "אריה אליאב",
+        "מאיר פעיל"
+      ]
+    },
+    {
+      "id": "flatto",
+      "name": "פלאטו-שרון",
+      "short": "פלאטו",
+      "color": "#64748b",
+      "ideology": {
+        "econ": 40,
+        "security": 30,
+        "religion": 0,
+        "judiciary": 30
+      },
+      "seats": 1,
+      "primaries": false,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": [
+        "שמואל פלאטו-שרון"
+      ]
+    },
+    {
+      "id": "pai",
+      "name": "פועלי אגודת ישראל",
+      "short": "פא\"י",
+      "color": "#b8860b",
+      "ideology": {
+        "econ": -30,
+        "security": 20,
+        "religion": 90,
+        "judiciary": 40
+      },
+      "seats": 1,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": [
+        "קלמן כהנא"
+      ]
+    },
+    {
+      "id": "ratz",
+      "name": "רצ",
+      "short": "רצ",
+      "color": "#16a34a",
+      "ideology": {
+        "econ": -30,
+        "security": -40,
+        "religion": -80,
+        "judiciary": -60
+      },
+      "seats": 1,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "שולמית אלוני"
+      ]
+    },
+    {
+      "id": "ual",
+      "name": "הרשימה הערבית המאוחדת",
+      "short": "רע\"ם",
+      "color": "#65a30d",
+      "ideology": {
+        "econ": -40,
+        "security": -50,
+        "religion": 10,
+        "judiciary": -30
+      },
+      "seats": 1,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": []
+    },
+    {
+      "id": "libind",
+      "name": "הליברלים העצמאיים",
+      "short": "ל\"ע",
+      "color": "#6366f1",
+      "ideology": {
+        "econ": 20,
+        "security": 0,
+        "religion": -40,
+        "judiciary": -40
+      },
+      "seats": 1,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "גדעון האוזנר"
+      ]
+    }
+  ]
+}

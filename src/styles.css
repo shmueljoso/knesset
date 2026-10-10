@@ -864,3 +864,55 @@ table.results td {
   background: rgba(251, 191, 36, 0.12);
   color: var(--warn);
 }
+
+/* ---------- מתח: שעון הצבעה ודופק ---------- */
+.vote-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(232, 195, 122, 0.12);
+  border: 1px solid rgba(232, 195, 122, 0.4);
+  color: var(--gold);
+}
+.vote-clock.urgent {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.12);
+  animation: heartbeat 0.9s ease-in-out infinite;
+}
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.12); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.08); }
+}
+.beat {
+  display: inline-block;
+  animation: heartbeat 0.9s ease-in-out infinite;
+}
+.count-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--line);
+  overflow: hidden;
+  margin: 6px 0;
+}
+.count-bar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), #f59e0b);
+  transition: width 0.9s ease;
+}
+.suspense {
+  text-align: center;
+  font-weight: 700;
+  color: var(--gold);
+  animation: fade 1.2s ease-in-out infinite alternate;
+}
+.flash-row {
+  animation: fade 0.8s ease-in-out infinite alternate;
+}

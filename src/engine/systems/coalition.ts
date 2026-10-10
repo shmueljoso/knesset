@@ -413,6 +413,10 @@ export function tryNoConfidence(s: GameState): { passed: boolean; text: string }
   const alt = proposeCoalition(s, [pm]);
   const altSeats = coalitionSeats(s, alt);
   const coalSeats = coalitionSeats(s, s.coalition.parties);
+  if (s.rules.directPM && coalSeats < 61 && chance(s, 0.6)) {
+    callEarlyElections(s, 'אי-אמון בראש הממשלה הנבחר/ת');
+    return { passed: true, text: 'האי-אמון עבר! בבחירה ישירה זה אומר בחירות חדשות.' };
+  }
   if (coalSeats < 61 && altSeats >= 61 && chance(s, 0.6)) {
     const altPm = s.parties[[...alt].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0]];
     addNews(s, `אי-אמון קונסטרוקטיבי עבר! ממשלה חלופית בראשות ${altPm.leaderId === 'player' ? s.player.name : s.npcs[altPm.leaderId]?.name} הושבעה`, 'neutral', false, undefined, 'ערוץ המשכן');
@@ -447,6 +451,15 @@ export function tickCoalition(s: GameState) {
     if (coalitionSeats(s, c.parties) >= 61) c.minoritySince = null;
     else if (s.week - c.minoritySince >= 3) {
       c.minoritySince = null;
+      // ח"כ מצביע/ה בעצמו/ה – בהצבעה חיה
+      if (s.player.isMK && !s.rules.presidential && !s.liveVote) {
+        const opp = Object.values(s.parties).filter((p) => p.seats > 0 && !c.parties.includes(p.id)).sort((a, b) => b.seats - a.seats)[0];
+        const sponsor = opp ? (opp.leaderId === 'player' ? 'player' : opp.leaderId) : '';
+        if (sponsor && sponsor !== 'player') {
+          s.flags.npcNoConfidence = sponsor; // turn.ts פותח את ההצבעה (נמנע ממעגל ייבוא)
+          return;
+        }
+      }
       const r = tryNoConfidence(s);
       if (!r.passed) callEarlyElections(s, 'ממשלת המיעוט איבדה את יכולת המשילות');
     }

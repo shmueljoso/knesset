@@ -35,6 +35,14 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
     const sat = s.coalition.satisfaction[partyId] ?? 60;
     return sat < 20 ? 'against' : sat < 30 ? 'free' : 'for';
   }
+  // אי-אמון: מי שבממשלה החלופית בעד, הקואליציה נגד (אלא אם שותפה ממורמרת)
+  if (b.templateId === 'no_confidence') {
+    if (isCoalition(s, partyId)) {
+      const sat = s.coalition.satisfaction[partyId] ?? 60;
+      return sat < 15 ? 'for' : sat < 28 ? 'free' : 'against';
+    }
+    return (b.altCoalition ?? []).includes(partyId) ? 'for' : 'free';
+  }
   const align = leanAlignment(p.ideology, billLean(b));
   const sp = sponsorParty(s, b);
   if (sp === partyId) return align < -0.3 ? 'free' : 'for';
@@ -87,7 +95,7 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
   if (line === 'against' && score > 0) absent += 0.25;
   if (Math.abs(score) < 0.5) absent += 0.1;
   absent = Math.min(0.8, absent);
-  if (b.templateId === 'budget_law') absent = line === 'free' ? 0.25 : 0.03; // הצבעת תקציב: כולם מתייצבים
+  if (b.templateId === 'budget_law' || b.templateId === 'no_confidence') absent = line === 'free' ? 0.25 : 0.03; // הצבעות גורליות: כולם מתייצבים
   const pAbstain = 0.04;
   const pv = 1 - absent - pAbstain;
   const pf = sigmoid(2.2 * score);

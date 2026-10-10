@@ -40,7 +40,7 @@ import { Empty, Sheet } from './common';
 import { LawBook } from './Issues';
 import { ISSUES } from '../engine/data/issues';
 import { requiredMajority, strikeChance } from '../engine/systems/issues';
-import { TRANSFORM_INFO } from '../engine/data/transforms';
+import { TRANSFORM_INFO, TRANSFORM_LEVELS } from '../engine/data/transforms';
 import { hasTransform, publicSupport } from '../engine/systems/transforms';
 
 function Pipeline({ b }: { b: Bill }) {
@@ -481,6 +481,10 @@ export function BillBuilder() {
             <div style={{ marginTop: 6 }}>
               <b>אם תעבור{t.referendum ? ' ותאושר במשאל עם' : ''}:</b> {TRANSFORM_INFO[t.radical].now}
             </div>
+            <div className="gold" style={{ marginTop: 6 }} data-testid="radical-level">
+              <b>ברמה שבחרת ({['מתון', 'בינוני', 'מרחיק לכת'][scope - 1]}):</b> {TRANSFORM_LEVELS[t.radical][scope - 1]}
+            </div>
+            <div className="tiny muted">רמה גבוהה = קיצונית יותר = פחות ח"כים יתמכו.</div>
             {hasTransform(g, t.radical) && <div className="gold">השינוי הזה כבר בתוקף.</div>}
           </div>
         )}

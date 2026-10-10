@@ -1,0 +1,219 @@
+{
+  "name": "ישראל 2040 (מה-אם)",
+  "description": "תרחיש עתידי בדיוני: אחרי עשור של משברים, המפה הפוליטית התפרקה והתארגנה מחדש. מפלגת טכנולוגיה מובילה, החרדים העובדים הם כוח עולה, והאקלים הפך לסוגיה ביטחונית. בחירות בעוד שנה.",
+  "source": "תרחיש בדיוני לחלוטין. כל המפלגות והדמויות מומצאות.",
+  "asOf": "2040-01-01",
+  "knesset": 31,
+  "startDate": "2040-01-15",
+  "electionInWeeks": 52,
+  "world": {
+    "economy": 62,
+    "affordability": 30,
+    "housing": 22,
+    "security": 44,
+    "trust": 28,
+    "cohesion": 35
+  },
+  "issues": {
+    "housing": 85,
+    "cost": 75,
+    "draft": 40,
+    "religion": 45,
+    "judiciary": 50,
+    "security": 55,
+    "crime": 55,
+    "education": 60,
+    "wages": 55
+  },
+  "coalition": [
+    "tech",
+    "national",
+    "workers_haredi",
+    "center40"
+  ],
+  "parties": [
+    {
+      "id": "tech",
+      "name": "ישראל הבאה",
+      "short": "הבאה",
+      "color": "#0891b2",
+      "ideology": {
+        "econ": 40,
+        "security": 30,
+        "religion": -50,
+        "judiciary": -30
+      },
+      "seats": 26,
+      "primaries": false,
+      "sectors": {
+        "secular": 1,
+        "olim": 0.5
+      },
+      "members": []
+    },
+    {
+      "id": "national",
+      "name": "הליכוד הלאומי",
+      "short": "לאומי",
+      "color": "#2563eb",
+      "ideology": {
+        "econ": 45,
+        "security": 75,
+        "religion": 30,
+        "judiciary": 60
+      },
+      "seats": 22,
+      "primaries": true,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": []
+    },
+    {
+      "id": "workers_haredi",
+      "name": "החרדים העובדים",
+      "short": "חרדים עובדים",
+      "color": "#0d9488",
+      "ideology": {
+        "econ": 0,
+        "security": 30,
+        "religion": 85,
+        "judiciary": 30
+      },
+      "seats": 14,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": []
+    },
+    {
+      "id": "social40",
+      "name": "דור הדיור",
+      "short": "דור הדיור",
+      "color": "#dc2626",
+      "ideology": {
+        "econ": -60,
+        "security": 0,
+        "religion": -40,
+        "judiciary": -30
+      },
+      "seats": 12,
+      "primaries": false,
+      "sectors": {
+        "secular": 1,
+        "traditional": 0.4
+      },
+      "members": []
+    },
+    {
+      "id": "religious40",
+      "name": "הציונות הדתית החדשה",
+      "short": "צ\"ד",
+      "color": "#ea580c",
+      "ideology": {
+        "econ": 30,
+        "security": 85,
+        "religion": 70,
+        "judiciary": 70
+      },
+      "seats": 10,
+      "primaries": false,
+      "sectors": {
+        "religious": 1
+      },
+      "members": []
+    },
+    {
+      "id": "arab40",
+      "name": "שותפות",
+      "short": "שותפות",
+      "color": "#db2777",
+      "ideology": {
+        "econ": -40,
+        "security": -50,
+        "religion": 10,
+        "judiciary": -40
+      },
+      "seats": 10,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": []
+    },
+    {
+      "id": "center40",
+      "name": "המרכז הממלכתי",
+      "short": "ממלכתי",
+      "color": "#6366f1",
+      "ideology": {
+        "econ": 15,
+        "security": 40,
+        "religion": -10,
+        "judiciary": -20
+      },
+      "seats": 8,
+      "primaries": false,
+      "sectors": {
+        "secular": 0.6,
+        "traditional": 0.6
+      },
+      "members": []
+    },
+    {
+      "id": "haredi40",
+      "name": "דגל התורה המאוחד",
+      "short": "דגל",
+      "color": "#b8860b",
+      "ideology": {
+        "econ": -40,
+        "security": 20,
+        "religion": 95,
+        "judiciary": 70
+      },
+      "seats": 8,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": []
+    },
+    {
+      "id": "green40",
+      "name": "ירוק עכשיו",
+      "short": "ירוק",
+      "color": "#16a34a",
+      "ideology": {
+        "econ": -30,
+        "security": -20,
+        "religion": -50,
+        "judiciary": -40
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": []
+    },
+    {
+      "id": "olim40",
+      "name": "בית העולים",
+      "short": "עולים",
+      "color": "#7c3aed",
+      "ideology": {
+        "econ": 30,
+        "security": 60,
+        "religion": -40,
+        "judiciary": 10
+      },
+      "seats": 6,
+      "primaries": false,
+      "sectors": {
+        "olim": 1
+      },
+      "members": []
+    }
+  ]
+}

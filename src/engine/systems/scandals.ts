@@ -42,6 +42,7 @@ function closeCase(s: GameState, text: string) {
 /** קידום השלב או סגירת התיק אחרי החלטה של השחקן */
 function advance(s: GameState, closeChance: number): string {
   const sc = s.scandal!;
+  if (s.flags.agLoyal) closeChance += 0.1; // יועמ"ש נאמן
   if (rand(s) < closeChance) {
     closeCase(s, 'התיק נסגר.');
     return 'התיק נסגר מחוסר ראיות!';
@@ -93,4 +94,22 @@ export function scandalStepDown(s: GameState): string {
   s.player.consistency = clamp(s.player.consistency + 3, 0, 100);
   if (s.player.ministry) resignMinistry(s);
   return advance(s, (100 - sc.heat) / 140);
+}
+
+/** בקשת חנינה מהנשיא (בשלב השימוע/כתב האישום) */
+export function scandalPardon(s: GameState): string {
+  const sc = s.scandal;
+  if (!sc) return '';
+  s.player.reputation = clamp(s.player.reputation - 4, 0, 100);
+  if (rand(s) < 0.15 + s.player.reputation / 400) {
+    s.scandal = null;
+    s.player.consistency = clamp(s.player.consistency - 3, 0, 100);
+    addNews(s, `הנשיא העניק חנינה ל${s.player.name}. סערה ציבורית`, 'neutral', true);
+    log(s, 'קיבלת חנינה מהנשיא.', 'career');
+    return 'הנשיא העניק חנינה. התיק נסגר – אבל הכתם נשאר.';
+  }
+  sc.heat = clamp(sc.heat + 5, 0, 100);
+  sc.nextWeek = s.week + 4;
+  addNews(s, `הנשיא דחה את בקשת החנינה של ${s.player.name}`, 'bad', true);
+  return 'הנשיא דחה את הבקשה. והציבור יודע שביקשת.';
 }

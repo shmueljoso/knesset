@@ -1,0 +1,302 @@
+{
+  "name": "הבחירה הישירה (1996)",
+  "description": "29 במאי 1996: לראשונה בוחרים ראש ממשלה בפתק נפרד. בנימין נתניהו מנצח את שמעון פרס בהפרש של פחות מאחוז, אבל העבודה היא הסיעה הגדולה. הבוחרים מפצלים: המפלגות הקטנות והמגזריות מזנקות.",
+  "source": "תוצאות הבחירות הרשמיות והרכב הממשלה בהקמתה (ויקיפדיה, ועדת הבחירות המרכזית). סדר השמות ברשימות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "1996-06-18",
+  "realPeople": true,
+  "knesset": 14,
+  "startDate": "1996-06-18",
+  "electionInWeeks": 152,
+  "rules": {
+    "directPM": true
+  },
+  "transforms": [
+    "presidential"
+  ],
+  "world": {
+    "economy": 55,
+    "affordability": 45,
+    "housing": 45,
+    "security": 38,
+    "trust": 40,
+    "cohesion": 32
+  },
+  "issues": {
+    "security": 80,
+    "religion": 55,
+    "cost": 45,
+    "housing": 45,
+    "judiciary": 35,
+    "draft": 35,
+    "crime": 30,
+    "education": 40,
+    "wages": 45
+  },
+  "coalition": [
+    "likud",
+    "shas",
+    "nrp",
+    "yb",
+    "utj",
+    "thirdway"
+  ],
+  "ministers": {
+    "foreign": "דוד לוי",
+    "defense": "יצחק מרדכי",
+    "finance": "דן מרידור",
+    "education": "זבולון המר",
+    "economy": "נתן שרנסקי",
+    "health": "צחי הנגבי",
+    "transport": "יצחק לוי",
+    "welfare": "אלי ישי"
+  },
+  "parties": [
+    {
+      "id": "labor",
+      "name": "העבודה",
+      "short": "עבודה",
+      "color": "#dc2626",
+      "ideology": {
+        "econ": -20,
+        "security": 0,
+        "religion": -30,
+        "judiciary": -40
+      },
+      "seats": 34,
+      "primaries": true,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "שמעון פרס",
+        "אהוד ברק",
+        "חיים רמון",
+        "יוסי ביילין",
+        "אברהם שוחט",
+        "בנימין בן-אליעזר",
+        "דליה איציק"
+      ]
+    },
+    {
+      "id": "likud",
+      "name": "הליכוד-גשר-צומת",
+      "short": "ליכוד",
+      "color": "#2563eb",
+      "ideology": {
+        "econ": 50,
+        "security": 75,
+        "religion": 25,
+        "judiciary": 35
+      },
+      "seats": 32,
+      "primaries": true,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": [
+        "בנימין נתניהו",
+        "דוד לוי",
+        "אריאל שרון",
+        "יצחק מרדכי",
+        "דן מרידור",
+        "רפאל איתן",
+        "צחי הנגבי",
+        "לימור לבנת"
+      ]
+    },
+    {
+      "id": "shas",
+      "name": "ש\"ס",
+      "short": "ש\"ס",
+      "color": "#b8860b",
+      "ideology": {
+        "econ": -40,
+        "security": 35,
+        "religion": 90,
+        "judiciary": 60
+      },
+      "seats": 10,
+      "primaries": false,
+      "sectors": {
+        "haredi": 0.6,
+        "traditional": 0.8
+      },
+      "members": [
+        "אריה דרעי",
+        "אלי ישי"
+      ]
+    },
+    {
+      "id": "nrp",
+      "name": "המפד\"ל",
+      "short": "מפד\"ל",
+      "color": "#ea580c",
+      "ideology": {
+        "econ": 20,
+        "security": 85,
+        "religion": 75,
+        "judiciary": 45
+      },
+      "seats": 9,
+      "primaries": false,
+      "sectors": {
+        "religious": 1
+      },
+      "members": [
+        "זבולון המר",
+        "יצחק לוי",
+        "חנן פורת"
+      ]
+    },
+    {
+      "id": "meretz",
+      "name": "מרצ",
+      "short": "מרצ",
+      "color": "#16a34a",
+      "ideology": {
+        "econ": -40,
+        "security": -60,
+        "religion": -80,
+        "judiciary": -60
+      },
+      "seats": 9,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "יוסי שריד",
+        "שולמית אלוני",
+        "אמנון רובינשטיין",
+        "חיים אורון"
+      ]
+    },
+    {
+      "id": "yb",
+      "name": "ישראל בעלייה",
+      "short": "יב\"ע",
+      "color": "#7c3aed",
+      "ideology": {
+        "econ": 30,
+        "security": 50,
+        "religion": -50,
+        "judiciary": 10
+      },
+      "seats": 7,
+      "primaries": false,
+      "sectors": {
+        "olim": 1
+      },
+      "members": [
+        "נתן שרנסקי",
+        "יולי אדלשטיין",
+        "רומן ברונפמן"
+      ]
+    },
+    {
+      "id": "hadash",
+      "name": "חד\"ש-בל\"ד",
+      "short": "חד\"ש",
+      "color": "#db2777",
+      "ideology": {
+        "econ": -80,
+        "security": -75,
+        "religion": -20,
+        "judiciary": -40
+      },
+      "seats": 5,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "האשם מחאמיד",
+        "עזמי בשארה"
+      ]
+    },
+    {
+      "id": "utj",
+      "name": "יהדות התורה",
+      "short": "יהדות התורה",
+      "color": "#0d9488",
+      "ideology": {
+        "econ": -30,
+        "security": 30,
+        "religion": 95,
+        "judiciary": 65
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": [
+        "מאיר פרוש",
+        "אברהם ורדיגר"
+      ]
+    },
+    {
+      "id": "thirdway",
+      "name": "הדרך השלישית",
+      "short": "הדרך השלישית",
+      "color": "#0891b2",
+      "ideology": {
+        "econ": 10,
+        "security": 60,
+        "religion": -10,
+        "judiciary": 0
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "secular": 0.6,
+        "traditional": 0.6
+      },
+      "members": [
+        "אביגדור קהלני",
+        "עמנואל זיסמן"
+      ]
+    },
+    {
+      "id": "ual",
+      "name": "הרשימה הערבית המאוחדת",
+      "short": "רע\"ם",
+      "color": "#65a30d",
+      "ideology": {
+        "econ": -40,
+        "security": -60,
+        "religion": 30,
+        "judiciary": -30
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "עבד אל-מאלכ דהאמשה"
+      ]
+    },
+    {
+      "id": "moledet",
+      "name": "מולדת",
+      "short": "מולדת",
+      "color": "#b45309",
+      "ideology": {
+        "econ": 30,
+        "security": 95,
+        "religion": 30,
+        "judiciary": 40
+      },
+      "seats": 2,
+      "primaries": false,
+      "sectors": {
+        "traditional": 0.6,
+        "religious": 0.4
+      },
+      "members": [
+        "רחבעם זאבי"
+      ]
+    }
+  ]
+}

@@ -7,10 +7,10 @@ import { chance, rand, shuffle } from '../rng';
 import type { Bill, BillStage, GameState, Ideology, LiveVote, SeatVote, VoteResult } from '../types';
 import { SECTORS, clamp, leanAlignment, newId } from '../util';
 import { onBillPassed, onBudgetPassed } from './coalition';
-import { callEarlyElections } from './elections';
+import { callEarlyElections, completeCoalition } from './elections';
 import { resetMinistryBudget } from './ministry';
 import { onLawPassed, requiredMajority } from './issues';
-import { isCoalition } from './government';
+import { isCoalition, proposeCoalition } from './government';
 import { addNews } from './news';
 import { addWorldEffect, changeApproval, takeStance } from './opinion';
 import { addDebt, changeAttitude, reactToLaw } from './relationships';
@@ -232,7 +232,7 @@ export function startVote(s: GameState, b: Bill, kind: LiveVote['kind'] = 'own',
     order: shuffle(s, Array.from({ length: s.seating.length }, (_, i) => i)),
     playerVote: s.seating.includes('player') ? result.seats[s.seating.indexOf('player')] : null,
     lines: f.lines,
-    majority: b.stage === 'final' ? requiredMajority(s, b.templateId) : null,
+    majority: b.templateId === 'no_confidence' ? 61 : b.stage === 'final' ? requiredMajority(s, b.templateId) : null,
     rescued: false,
     flipped: [],
   };
@@ -250,7 +250,7 @@ export function finishVote(s: GameState): { text: string; result: VoteResult } |
   const res = lv.result;
   b.lastVote = res;
   if (lv.kind === 'own') return { text: applyOwnVote(s, b, res), result: res };
-  let text = lv.kind === 'budget' ? applyBudgetVote(s, res) : applyOtherVote(s, b, res);
+  let text = lv.kind === 'budget' ? applyBudgetVote(s, res) : lv.kind === 'noconf' ? applyNoConfidence(s, b, res) : applyOtherVote(s, b, res);
   text += playerVoteConsequences(s, b, lv);
   s.bills = s.bills.filter((x) => x !== b);
   return { text, result: res };
@@ -316,6 +316,36 @@ function applyBudgetVote(s: GameState, res: VoteResult): string {
   }
   callEarlyElections(s, `חוק התקציב נפל במליאה (${tally})`);
   return `התקציב נפל (${tally})! הכנסת מתפזרת – בחירות.`;
+}
+
+function applyNoConfidence(s: GameState, b: Bill, res: VoteResult): string {
+  const tally = `${res.for} בעד, ${res.against} נגד`;
+  if (!res.passed) {
+    addNews(s, `הממשלה שרדה את הצבעת האי-אמון (${tally})`, 'neutral', false, undefined, 'ערוץ המשכן');
+    const coal = s.coalition.parties.reduce((a, p) => a + (s.parties[p]?.seats ?? 0), 0);
+    if (coal < 61) {
+      callEarlyElections(s, 'ממשלת המיעוט איבדה את יכולת המשילות');
+      return `הממשלה שרדה את האי-אמון (${tally}) – אבל ממשלת מיעוט לא מחזיקה: בחירות.`;
+    }
+    return `הממשלה שרדה (${tally}).`;
+  }
+  if (s.rules.directPM) {
+    callEarlyElections(s, `אי-אמון בראש הממשלה הנבחר/ת (${tally})`);
+    return `האי-אמון עבר (${tally})! בבחירה ישירה – הולכים לבחירות.`;
+  }
+  const alt = (b.altCoalition ?? []).filter((p) => s.parties[p]);
+  completeCoalition(s, alt);
+  const pm = s.coalition.pmId === 'player' ? s.player.name : s.npcs[s.coalition.pmId]?.name;
+  addNews(s, `דרמה במליאה: הממשלה נפלה באי-אמון (${tally}). ${pm} מושבע/ת לראשות הממשלה`, 'neutral', true, undefined, 'ערוץ המשכן');
+  return `הממשלה נפלה (${tally})! ממשלה חלופית בראשות ${pm} הושבעה.`;
+}
+
+/** פתיחת הצבעת אי-אמון חיה (יזמה של השחקן, או של האופוזיציה כשהשחקן מצביע) */
+export function noConfidenceBill(s: GameState, sponsor: string): Bill {
+  const pmParty = s.coalition.pmId === 'player' ? s.player.partyId : s.npcs[s.coalition.pmId]?.partyId;
+  const b = queueBill(s, sponsor, 'no_confidence', 2);
+  b.altCoalition = proposeCoalition(s, pmParty ? [pmParty] : []);
+  return b;
 }
 
 function negate(lean: Partial<Ideology>): Partial<Ideology> {
@@ -529,8 +559,7 @@ export function appealToGovernment(s: GameState, b: Bill): { ok: boolean; text: 
   return { ok: false, text: 'מליאת הממשלה דחתה את הערר.' };
 }
 
-/** הצעה של אחרים (או חוק התקציב) עולה להצבעה בקריאה שלישית – והשחקן מצביע */
-export function queueOtherVote(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
+function queueBill(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
   const t = templateById(templateId);
   const b: Bill = {
     id: newId(s, 'bill'),
@@ -554,14 +583,22 @@ export function queueOtherVote(s: GameState, sponsor: string, templateId: string
     government: templateId === 'budget_law' || !!s.npcs[sponsor]?.ministry || undefined,
     history: [],
   };
-  b.govPosition = templateId === 'budget_law' ? 'support' : ministerialDecision(s, b);
+  b.govPosition = templateId === 'budget_law' ? 'support' : templateId === 'no_confidence' ? 'oppose' : ministerialDecision(s, b);
   s.bills.push(b);
+  return b;
+}
+
+const VOTE_EVENT: Record<string, [string, LiveVote['kind']]> = { budget_law: ['budget_vote', 'budget'], no_confidence: ['noconf_vote', 'noconf'] };
+
+/** הצעה של אחרים (תקציב, אי-אמון) עולה להצבעה בקריאה שלישית – והשחקן מצביע */
+export function queueOtherVote(s: GameState, sponsor: string, templateId: string, scope: 1 | 2 | 3): Bill {
+  const b = templateId === 'no_confidence' ? noConfidenceBill(s, sponsor) : queueBill(s, sponsor, templateId, scope);
   const f = forecast(s, b);
   const line = s.player.partyId ? f.lines[s.player.partyId] ?? 'free' : 'free';
-  const budget = templateId === 'budget_law';
+  const [eventId, kind] = VOTE_EVENT[templateId] ?? ['plenum_vote', 'other'];
   s.eventQueue.push({
-    eventId: budget ? 'budget_vote' : 'plenum_vote',
-    ctx: { bill: b.id, kind: budget ? 'budget' : 'other', line: LINE_NAMES[line], forecast: `${Math.round(f.eFor)} בעד מול ${Math.round(f.eAgainst)} נגד`, npc: s.npcs[sponsor] ? sponsor : '' },
+    eventId,
+    ctx: { bill: b.id, kind, line: LINE_NAMES[line], forecast: `${Math.round(f.eFor)} בעד מול ${Math.round(f.eAgainst)} נגד`, npc: s.npcs[sponsor] ? sponsor : '' },
   });
   return b;
 }

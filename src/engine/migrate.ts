@@ -37,6 +37,8 @@ export function ensurePhase3(g: GameState) {
   g.settings ??= { drama: 'normal' };
   g.transforms ??= [];
   g.liveVote ??= null;
+  g.customEvents ??= [];
+  g.lastPrimaries ??= null;
   // הצעות ממשלתיות שנגנזו בוועדת השרים לפני שהיה דגל לכך
   for (const b of g.bills) if (b.stage === 'failed' && b.government && b.cabinetRejected === undefined && b.history.some((h) => h.text.includes('ועדת השרים לא אישרה'))) b.cabinetRejected = true;
   if (!g.missions.length && !g.missionsDone.length) checkMissions(g);

@@ -64,7 +64,8 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
       bumpIssue(s, 'security', -40);
       swingBy(s, 'security', -3);
       scheduleEvent(s, 'peace_spoilers', 3, ctx);
-      scheduleEvent(s, 'peace_evacuation', 10, ctx);
+      if (scope >= 2) scheduleEvent(s, 'peace_evacuation', 10, ctx); // הסכם מסגרת: עוד אין פינויים
+      if (scope === 3) fx(s, 'cohesion', -5, 8, id); // ירושלים
       scheduleEvent(s, 'peace_dividend', 40, ctx);
       break;
     case 'annexation':
@@ -76,19 +77,20 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
       swingBy(s, 'security', 2);
       scheduleEvent(s, 'annex_intifada', 2, ctx);
       scheduleEvent(s, 'annex_sanctions', 8, ctx);
-      scheduleEvent(s, 'annex_citizenship', 26, ctx);
+      if (scope === 3) scheduleEvent(s, 'annex_citizenship', 26, ctx); // רק בסיפוח מלא עולה שאלת האזרחות
       break;
     case 'halacha':
       fx(s, 'economy', -16 * k, 52, id);
       fx(s, 'cohesion', -22 * k, 12, id);
       fx(s, 'trust', -12 * k, 12, id);
       bumpIssue(s, 'religion', 45);
-      strikeLaws(s, ['shabbat', 'civil', 'cannabis', 'conversion', 'r_secular', 'basic_dignity']);
-      s.rules.equality = false;
-      swingBy(s, 'religion', 3);
-      scheduleEvent(s, 'halacha_shabbat', 2, ctx);
-      scheduleEvent(s, 'halacha_resistance', 6, ctx);
-      scheduleEvent(s, 'halacha_exodus', 12, ctx);
+      // מתון: משפט עברי כמקור מחייב. בינוני: בתי הדין מכריעים גם בענייני אזרחות. גבוה: מדינת הלכה מלאה
+      strikeLaws(s, scope === 1 ? ['civil', 'conversion'] : ['shabbat', 'civil', 'cannabis', 'conversion', 'r_secular', 'basic_dignity']);
+      if (scope >= 2) s.rules.equality = false;
+      swingBy(s, 'religion', 1 + scope);
+      if (scope >= 2) scheduleEvent(s, 'halacha_shabbat', 2, ctx);
+      if (scope >= 2) scheduleEvent(s, 'halacha_resistance', 6, ctx);
+      if (scope === 3) scheduleEvent(s, 'halacha_exodus', 12, ctx);
       if (!s.rules.noReview) scheduleEvent(s, 'radical_court', 5, { ...ctx, transform: id });
       break;
     case 'secular':
@@ -96,14 +98,14 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
       fx(s, 'economy', 5 * k, 52, id, 8);
       fx(s, 'affordability', 3 * k, 26, id, 4);
       bumpIssue(s, 'religion', 35);
-      strikeLaws(s, ['yeshiva']);
+      if (scope === 3) strikeLaws(s, ['yeshiva']); // רק בהפרדה מלאה נגמר תקצוב הישיבות
       swingBy(s, 'religion', -2);
-      for (const p of Object.values(s.parties)) if (p.ideology.religion > 70) addMomentum(s, p.id, 1.5); // התגייסות חרדית
-      scheduleEvent(s, 'secular_revolt', 2, ctx);
+      for (const p of Object.values(s.parties)) if (p.ideology.religion > 70) addMomentum(s, p.id, 0.5 * scope); // התגייסות חרדית
+      if (scope >= 2) scheduleEvent(s, 'secular_revolt', 2, ctx); // פירוק הרבנות
       scheduleEvent(s, 'secular_wedding', 5, ctx);
       break;
     case 'constitution':
-      s.rules.entrench = true;
+      s.rules.entrench = scope >= 2; // מגילת זכויות בלבד – בלי שריון
       s.rules.equality = true;
       s.rules.noReview = false;
       fx(s, 'trust', 10 * k, 20, id);
@@ -112,8 +114,10 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
       scheduleEvent(s, 'constitution_day', 3, ctx);
       break;
     case 'sovereignty':
+      // מתון: התגברות + ביטול הסבירות. בינוני: שליטה במינוי השופטים. גבוה: אין ביקורת שיפוטית
       s.rules.override = true;
-      s.rules.noReview = true;
+      s.rules.packedCourt = scope >= 2;
+      s.rules.noReview = scope === 3;
       fx(s, 'trust', -16 * k, 8, id);
       fx(s, 'economy', -7 * k, 20, id, 4);
       fx(s, 'cohesion', -10 * k, 8, id);
@@ -122,10 +126,24 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
       scheduleEvent(s, 'sovereign_downgrade', 6, ctx);
       break;
     case 'presidential':
+      if (scope === 1) {
+        // בחירה ישירה (כמו 1996-2001): עדיין צריך קואליציה, אבל אי-אמון מוביל לבחירות. הבוחרים מפצלים את הפתק
+        s.rules.directPM = true;
+        for (const p of Object.values(s.parties)) addMomentum(s, p.id, p.seats >= 20 ? -3 : p.seats > 0 && p.seats <= 12 ? 1.5 : 0);
+        fx(s, 'trust', 1, 10, id);
+        scheduleEvent(s, 'direct_pm_first', 4, ctx);
+        break;
+      }
       s.rules.presidential = true;
       s.coalition.stability = Math.max(s.coalition.stability, 85);
       s.coalition.minoritySince = null;
       fx(s, 'trust', 2, 10, id);
+      if (scope === 3) {
+        // מחוזות בחירה: המפלגות הגדולות מתחזקות, הקטנות נמחקות
+        s.rules.districts = true;
+        for (const p of Object.values(s.parties)) addMomentum(s, p.id, p.seats >= 20 ? 3 : p.seats > 0 && p.seats <= 8 ? -2.5 : 0);
+        scheduleEvent(s, 'districts_first', 6, ctx);
+      }
       scheduleEvent(s, 'presidential_first', 4, ctx);
       break;
     case 'ubi':
@@ -149,9 +167,10 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
     case 'volunteer':
       fx(s, 'security', -5 * k, 20, id);
       fx(s, 'economy', 7 * k, 52, id, 6);
-      s.issues.draft = 0;
-      strikeLaws(s, ['draft', 'yeshiva']);
-      scheduleEvent(s, 'volunteer_first', 12, ctx);
+      // מתון: שירות של שנה – הוויכוח נרגע אבל לא נגמר. גבוה: צבא מקצועי מלא
+      s.issues.draft = scope === 1 ? Math.max(0, s.issues.draft - 30) : 0;
+      if (scope >= 2) strikeLaws(s, ['draft', 'yeshiva']);
+      if (scope >= 2) scheduleEvent(s, 'volunteer_first', 12, ctx);
       break;
     case 'citizens':
       fx(s, 'cohesion', -14 * k, 12, id);
@@ -187,7 +206,12 @@ export function undoTransform(s: GameState, id: TransformId, templateId: string)
     delete s.flags.emergencyFrom;
   }
   if (id === 'sovereignty') s.rules.noReview = false;
-  if (id === 'presidential') s.rules.presidential = false;
+  if (id === 'presidential') {
+    s.rules.presidential = false;
+    s.rules.directPM = false;
+    s.rules.districts = false;
+  }
+  if (id === 'sovereignty') s.rules.packedCourt = false;
 }
 
 function runReferendum(s: GameState, ctx: Ctx, bias: number): string {

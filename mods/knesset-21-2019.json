@@ -1,0 +1,324 @@
+{
+  "name": "תיקו: 35 מול 35 (2019)",
+  "description": "אפריל 2019: הליכוד וכחול לבן תיקו עם 35 מנדטים כל אחת. ליברמן מסרב להצטרף, לגוש הימין יש 60 – והכנסת מתפזרת. בחירות חוזרות בעוד 15 שבועות, והרשימות עוד פתוחות: איחודים, פילוגים והרבה דרמה.",
+  "source": "תוצאות הבחירות הרשמיות והרכב הממשלה בהקמתה (ויקיפדיה, ועדת הבחירות המרכזית). סדר השמות ברשימות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "2019-05-31",
+  "realPeople": true,
+  "knesset": 21,
+  "startDate": "2019-05-31",
+  "electionInWeeks": 16,
+  "world": {
+    "economy": 60,
+    "affordability": 35,
+    "housing": 30,
+    "security": 50,
+    "trust": 32,
+    "cohesion": 30
+  },
+  "issues": {
+    "judiciary": 65,
+    "draft": 70,
+    "religion": 60,
+    "cost": 60,
+    "housing": 60,
+    "security": 50,
+    "crime": 60,
+    "education": 35,
+    "wages": 40
+  },
+  "coalition": [
+    "likud",
+    "shas",
+    "utj",
+    "urwp",
+    "kulanu"
+  ],
+  "ministers": {
+    "finance": "משה כחלון",
+    "interior": "אריה דרעי",
+    "justice": "אמיר אוחנה",
+    "foreign": "ישראל כץ",
+    "education": "רפי פרץ",
+    "transport": "בצלאל סמוטריץ'",
+    "economy": "אלי כהן"
+  },
+  "parties": [
+    {
+      "id": "likud",
+      "name": "הליכוד",
+      "short": "ליכוד",
+      "color": "#2563eb",
+      "ideology": {
+        "econ": 45,
+        "security": 70,
+        "religion": 20,
+        "judiciary": 70
+      },
+      "seats": 35,
+      "primaries": true,
+      "sectors": {
+        "traditional": 1,
+        "secular": 0.4
+      },
+      "members": [
+        "בנימין נתניהו",
+        "יולי אדלשטיין",
+        "ישראל כץ",
+        "גלעד ארדן",
+        "גדעון סער",
+        "מירי רגב",
+        "יריב לוין",
+        "יואב גלנט",
+        "ניר ברקת",
+        "גילה גמליאל",
+        "אבי דיכטר",
+        "זאב אלקין",
+        "אמיר אוחנה"
+      ]
+    },
+    {
+      "id": "bluewhite",
+      "name": "כחול לבן",
+      "short": "כחול לבן",
+      "color": "#0891b2",
+      "ideology": {
+        "econ": 15,
+        "security": 30,
+        "religion": -40,
+        "judiciary": -50
+      },
+      "seats": 35,
+      "primaries": false,
+      "sectors": {
+        "secular": 1,
+        "olim": 0.3
+      },
+      "members": [
+        "בני גנץ",
+        "יאיר לפיד",
+        "משה יעלון",
+        "גבי אשכנזי",
+        "אבי ניסנקורן",
+        "מאיר כהן",
+        "מיקי חיימוביץ'",
+        "עפר שלח",
+        "חילי טרופר",
+        "יועז הנדל",
+        "צבי האוזר",
+        "אורנה ברביבאי"
+      ]
+    },
+    {
+      "id": "shas",
+      "name": "ש\"ס",
+      "short": "ש\"ס",
+      "color": "#b8860b",
+      "ideology": {
+        "econ": -40,
+        "security": 30,
+        "religion": 90,
+        "judiciary": 60
+      },
+      "seats": 8,
+      "primaries": false,
+      "sectors": {
+        "haredi": 0.6,
+        "traditional": 0.8
+      },
+      "members": [
+        "אריה דרעי",
+        "יצחק כהן",
+        "משולם נהרי",
+        "יעקב מרגי"
+      ]
+    },
+    {
+      "id": "utj",
+      "name": "יהדות התורה",
+      "short": "יהדות התורה",
+      "color": "#0d9488",
+      "ideology": {
+        "econ": -30,
+        "security": 30,
+        "religion": 95,
+        "judiciary": 65
+      },
+      "seats": 8,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": [
+        "יעקב ליצמן",
+        "משה גפני",
+        "מאיר פרוש",
+        "אורי מקלב"
+      ]
+    },
+    {
+      "id": "hadashtaal",
+      "name": "חד\"ש-תע\"ל",
+      "short": "חד\"ש-תע\"ל",
+      "color": "#db2777",
+      "ideology": {
+        "econ": -70,
+        "security": -75,
+        "religion": -10,
+        "judiciary": -50
+      },
+      "seats": 6,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "איימן עודה",
+        "אחמד טיבי",
+        "עאידה תומא-סלימאן",
+        "עופר כסיף"
+      ]
+    },
+    {
+      "id": "labor",
+      "name": "העבודה",
+      "short": "עבודה",
+      "color": "#dc2626",
+      "ideology": {
+        "econ": -45,
+        "security": -10,
+        "religion": -40,
+        "judiciary": -50
+      },
+      "seats": 6,
+      "primaries": true,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "אבי גבאי",
+        "איציק שמולי",
+        "שלי יחימוביץ'",
+        "עמיר פרץ",
+        "מרב מיכאלי",
+        "עומר בר-לב"
+      ]
+    },
+    {
+      "id": "yb",
+      "name": "ישראל ביתנו",
+      "short": "ישראל ביתנו",
+      "color": "#7c3aed",
+      "ideology": {
+        "econ": 35,
+        "security": 75,
+        "religion": -60,
+        "judiciary": 20
+      },
+      "seats": 5,
+      "primaries": false,
+      "sectors": {
+        "olim": 1,
+        "secular": 0.4
+      },
+      "members": [
+        "אביגדור ליברמן",
+        "עודד פורר",
+        "יבגני סובה",
+        "אלי אבידר",
+        "יוליה מלינובסקי"
+      ]
+    },
+    {
+      "id": "urwp",
+      "name": "איחוד מפלגות הימין",
+      "short": "איחוד הימין",
+      "color": "#ea580c",
+      "ideology": {
+        "econ": 40,
+        "security": 90,
+        "religion": 70,
+        "judiciary": 85
+      },
+      "seats": 5,
+      "primaries": false,
+      "sectors": {
+        "religious": 1
+      },
+      "members": [
+        "רפי פרץ",
+        "בצלאל סמוטריץ'",
+        "מוטי יוגב",
+        "אופיר סופר"
+      ]
+    },
+    {
+      "id": "meretz",
+      "name": "מרצ",
+      "short": "מרצ",
+      "color": "#16a34a",
+      "ideology": {
+        "econ": -50,
+        "security": -60,
+        "religion": -80,
+        "judiciary": -70
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "תמר זנדברג",
+        "אילן גילאון",
+        "מיכל רוזין",
+        "עיסאווי פריג'"
+      ]
+    },
+    {
+      "id": "kulanu",
+      "name": "כולנו",
+      "short": "כולנו",
+      "color": "#6366f1",
+      "ideology": {
+        "econ": -10,
+        "security": 30,
+        "religion": 0,
+        "judiciary": 0
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": [
+        "משה כחלון",
+        "אלי כהן",
+        "יפעת שאשא-ביטון",
+        "רועי פולקמן"
+      ]
+    },
+    {
+      "id": "raambalad",
+      "name": "רע\"ם-בל\"ד",
+      "short": "רע\"ם-בל\"ד",
+      "color": "#65a30d",
+      "ideology": {
+        "econ": -40,
+        "security": -70,
+        "religion": 40,
+        "judiciary": -40
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "מנסור עבאס",
+        "מטאנס שחאדה",
+        "עבד אל-חכים חאג' יחיא",
+        "איברהים חיג'אזי"
+      ]
+    }
+  ]
+}

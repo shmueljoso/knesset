@@ -4,7 +4,7 @@ import { RESCUE_COST, STAGE_NAMES, finishVote, rescueInfo, rescueVote } from '..
 import { useGame, useStore } from '../store';
 import { Hemicycle, VOTE_NAMES } from './Charts';
 
-const KIND_LABEL = { own: 'ההצעה שלך', other: 'הצבעה במליאה', budget: 'חוק התקציב – אם ייפול: בחירות' } as const;
+const KIND_LABEL = { own: 'ההצעה שלך', other: 'הצבעה במליאה', budget: 'חוק התקציב – אם ייפול: בחירות', noconf: 'אי-אמון – 61 קולות מפילים את הממשלה' } as const;
 const ICON = { for: '✅', against: '❌', abstain: '✋', absent: '🚪' } as const;
 
 /** הצבעה חיה: הקולות נכנסים אחד אחד, ובסוף – אולי עוד אפשר להציל. */
@@ -19,13 +19,22 @@ export function LiveVoteModal() {
   const res = lv.result;
   const close = lv.majority ? Math.abs(res.for - lv.majority) <= 4 : Math.abs(res.for - res.against) <= 6;
 
+  const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (n >= total) return;
     const left = total - n;
-    const delay = close && left <= 12 ? 320 : left <= 30 ? 90 : 35;
+    // רגע של מתח לפני הקולות האחרונים
+    if (close && left === 12 && !paused) {
+      setPaused(true);
+      const id = setTimeout(() => setN((x) => x + 1), 2200);
+      return () => clearTimeout(id);
+    }
+    const delay = close && left <= 12 ? 700 : left <= 12 ? 320 : left <= 40 ? 220 : 130;
     const id = setTimeout(() => setN((x) => x + 1), delay);
     return () => clearTimeout(id);
-  }, [n, total, close]);
+  }, [n, total, close, paused]);
+  const secondsLeft = Math.ceil(60 * (1 - n / total));
+  const urgent = n < total && secondsLeft <= 12;
 
   const shown = useMemo(() => new Set(lv.order.slice(0, n)), [lv.order, n]);
   const votes = res.seats.map((v, i) => (shown.has(i) ? v : null));
@@ -56,16 +65,24 @@ export function LiveVoteModal() {
         <h2 style={{ margin: '4px 0' }}>
           {b ? `${templateById(b.templateId).icon} ${b.title}` : 'הצבעה'}
         </h2>
-        <div className="tiny muted">{need}{lv.playerVote ? ` · הצבעת: ${VOTE_NAMES[lv.playerVote]}` : ''}</div>
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <div className="tiny muted">{need}{lv.playerVote ? ` · הצבעת: ${VOTE_NAMES[lv.playerVote]}` : ''}</div>
+          <span className={`vote-clock ${urgent ? 'urgent' : ''}`} data-testid="vote-clock">
+            ⏱️ 0:{String(Math.max(0, secondsLeft)).padStart(2, '0')}
+          </span>
+        </div>
+        <div className="count-bar">
+          <i style={{ width: `${(n / total) * 100}%` }} />
+        </div>
         <div style={{ margin: '10px 0 4px' }}>
           <Hemicycle votes={votes} highlight={lv.flipped} />
         </div>
         <div className="spread" style={{ fontSize: 28, fontWeight: 900 }}>
-          <span className="good" data-testid="live-for">{count('for')}</span>
+          <span className={`good ${urgent && close ? 'beat' : ''}`} data-testid="live-for">{count('for')}</span>
           <span className="tiny muted" style={{ alignSelf: 'center' }}>
             {done ? 'הספירה הסתיימה' : `נספרו ${n}/${total}`}
           </span>
-          <span className="bad">{count('against')}</span>
+          <span className={`bad ${urgent && close ? 'beat' : ''}`}>{count('against')}</span>
         </div>
         <div className="spread tiny muted">
           <span>בעד</span>
@@ -79,6 +96,7 @@ export function LiveVoteModal() {
           </div>
         )}
         <div className="small" style={{ minHeight: 76, marginTop: 8 }}>
+          {!done && close && total - n <= 12 && <div className="suspense">הדלתות נסגרות… עוד {total - n} קולות</div>}
           {!done && ticker.map((x, k) => (
             <div key={x.i} style={{ opacity: 1 - k * 0.22 }}>
               {x.text}
@@ -86,7 +104,7 @@ export function LiveVoteModal() {
           ))}
           {done && (
             <h2 style={{ textAlign: 'center', margin: '8px 0' }} className={res.passed ? 'good' : 'bad'}>
-              {res.passed ? (lv.kind === 'budget' ? 'התקציב עבר!' : 'ההצעה התקבלה!') : lv.kind === 'budget' ? 'התקציב נפל!' : 'ההצעה נדחתה'}
+              {lv.kind === 'noconf' ? (res.passed ? 'הממשלה נפלה!' : 'הממשלה שרדה') : res.passed ? (lv.kind === 'budget' ? 'התקציב עבר!' : 'ההצעה התקבלה!') : lv.kind === 'budget' ? 'התקציב נפל!' : 'ההצעה נדחתה'}
             </h2>
           )}
           {done && lv.flipped.length > 0 && <p className="tiny gold" style={{ textAlign: 'center', margin: 0 }}>הבאת {lv.flipped.length} מהמזנון ברגע האחרון.</p>}

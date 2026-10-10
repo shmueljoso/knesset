@@ -92,6 +92,16 @@ export interface Party {
 
 export type Drama = 'calm' | 'normal' | 'wild';
 
+/** אירוע שהשחקן כתב בעורך (נשמר במצב כ-JSON) */
+export interface CustomEvent {
+  id: string;
+  title: string;
+  body: string;
+  icon?: string;
+  weight?: number; // 1–5
+  choices: { label: string; fame?: number; reputation?: number; partyStanding?: number; money?: number; capital?: number; approval?: number }[];
+}
+
 export type TransformId =
   | 'peace' | 'annexation' | 'halacha' | 'secular' | 'constitution' | 'sovereignty'
   | 'presidential' | 'ubi' | 'libertarian' | 'volunteer' | 'citizens' | 'emergency';
@@ -144,7 +154,7 @@ export type SeatVote = VoteResult['seats'][number];
 /** הצבעה שמתנהלת "בשידור חי": התוצאה כבר הוגרלה, ה-UI חושף אותה מושב אחרי מושב */
 export interface LiveVote {
   billId: string;
-  kind: 'own' | 'other' | 'budget';
+  kind: 'own' | 'other' | 'budget' | 'noconf';
   result: VoteResult;
   order: number[]; // סדר חשיפת המושבים
   playerVote: SeatVote | null;
@@ -177,6 +187,7 @@ export interface Bill {
   agreementParty?: string; // סעיף בהסכם הקואליציוני
   cabinetRejected?: boolean; // הצעה ממשלתית שוועדת השרים דחתה
   external?: boolean; // הצעה של אחרים שעולה להצבעה שבה השחקן משתתף
+  altCoalition?: string[]; // באי-אמון: הממשלה החלופית
   history: { week: number; text: string }[];
 }
 
@@ -344,6 +355,8 @@ export interface GameState {
   settings: Settings;
   transforms: Transform[];
   liveVote: LiveVote | null;
+  customEvents: CustomEvent[];
+  lastPrimaries: { partyId: string; primaries: boolean; list: string[]; playerPos: number; realistic: number; week: number } | null;
 }
 
 export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';
@@ -367,6 +380,9 @@ export interface Rules {
   equality: boolean;
   noReview?: boolean; // ביטול הביקורת השיפוטית
   presidential?: boolean; // שיטה נשיאותית: אין אי-אמון ואין בחירות מוקדמות
+  directPM?: boolean; // בחירה ישירה לראשות הממשלה: אי-אמון = בחירות
+  districts?: boolean; // מחוזות בחירה: המפלגות הגדולות מקבלות בונוס
+  packedCourt?: boolean; // הקואליציה שולטת במינוי השופטים
 }
 
 export interface Caucus {

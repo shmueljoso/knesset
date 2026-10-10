@@ -1,0 +1,279 @@
+{
+  "name": "רבין והדרך לאוסלו (1992)",
+  "description": "23 ביוני 1992: העבודה של יצחק רבין חוזרת לשלטון עם 44 מנדטים. קואליציה צרה של העבודה, מרצ וש\"ס (62), ו\"גוש חוסם\" של המפלגות הערביות. בקרוב – תהליך אוסלו.",
+  "source": "תוצאות הבחירות הרשמיות והרכב הממשלה בהקמתה (ויקיפדיה, ועדת הבחירות המרכזית). סדר השמות ברשימות אחרי המקומות הראשונים משוער. העמדות על 4 הצירים – הערכה משחקית.",
+  "asOf": "1992-07-13",
+  "realPeople": true,
+  "knesset": 13,
+  "startDate": "1992-07-13",
+  "electionInWeeks": 202,
+  "world": {
+    "economy": 52,
+    "affordability": 45,
+    "housing": 40,
+    "security": 45,
+    "trust": 45,
+    "cohesion": 42
+  },
+  "issues": {
+    "security": 70,
+    "housing": 60,
+    "cost": 50,
+    "religion": 45,
+    "judiciary": 25,
+    "draft": 30,
+    "crime": 30,
+    "education": 45,
+    "wages": 50
+  },
+  "coalition": [
+    "labor",
+    "meretz",
+    "shas"
+  ],
+  "ministers": {
+    "foreign": "שמעון פרס",
+    "finance": "אברהם שוחט",
+    "education": "שולמית אלוני",
+    "interior": "אריה דרעי",
+    "housing": "בנימין בן-אליעזר",
+    "health": "חיים רמון",
+    "transport": "ישראל קיסר",
+    "economy": "מיכה חריש",
+    "welfare": "אורה נמיר",
+    "justice": "דוד ליבאי"
+  },
+  "parties": [
+    {
+      "id": "labor",
+      "name": "העבודה",
+      "short": "עבודה",
+      "color": "#dc2626",
+      "ideology": {
+        "econ": -25,
+        "security": 10,
+        "religion": -30,
+        "judiciary": -30
+      },
+      "seats": 44,
+      "primaries": true,
+      "sectors": {
+        "secular": 1,
+        "olim": 0.5
+      },
+      "members": [
+        "יצחק רבין",
+        "שמעון פרס",
+        "אברהם שוחט",
+        "בנימין בן-אליעזר",
+        "חיים רמון",
+        "מיכה חריש",
+        "אורה נמיר",
+        "ישראל קיסר",
+        "דוד ליבאי",
+        "עוזי ברעם",
+        "משה שחל",
+        "יוסי ביילין"
+      ]
+    },
+    {
+      "id": "likud",
+      "name": "הליכוד",
+      "short": "ליכוד",
+      "color": "#2563eb",
+      "ideology": {
+        "econ": 50,
+        "security": 75,
+        "religion": 20,
+        "judiciary": 30
+      },
+      "seats": 32,
+      "primaries": true,
+      "sectors": {
+        "traditional": 1
+      },
+      "members": [
+        "יצחק שמיר",
+        "דוד לוי",
+        "בנימין נתניהו",
+        "אריאל שרון",
+        "דן מרידור",
+        "משה קצב",
+        "רוני מילוא",
+        "זאב בנימין בגין",
+        "לימור לבנת"
+      ]
+    },
+    {
+      "id": "meretz",
+      "name": "מרצ",
+      "short": "מרצ",
+      "color": "#16a34a",
+      "ideology": {
+        "econ": -40,
+        "security": -50,
+        "religion": -80,
+        "judiciary": -60
+      },
+      "seats": 12,
+      "primaries": false,
+      "sectors": {
+        "secular": 1
+      },
+      "members": [
+        "שולמית אלוני",
+        "יוסי שריד",
+        "אמנון רובינשטיין",
+        "יאיר צבן",
+        "דדי צוקר"
+      ]
+    },
+    {
+      "id": "tzomet",
+      "name": "צומת",
+      "short": "צומת",
+      "color": "#7c3aed",
+      "ideology": {
+        "econ": 40,
+        "security": 80,
+        "religion": -40,
+        "judiciary": 10
+      },
+      "seats": 8,
+      "primaries": false,
+      "sectors": {
+        "secular": 0.6,
+        "traditional": 0.6
+      },
+      "members": [
+        "רפאל איתן"
+      ]
+    },
+    {
+      "id": "nrp",
+      "name": "המפד\"ל",
+      "short": "מפד\"ל",
+      "color": "#ea580c",
+      "ideology": {
+        "econ": 20,
+        "security": 80,
+        "religion": 75,
+        "judiciary": 40
+      },
+      "seats": 6,
+      "primaries": false,
+      "sectors": {
+        "religious": 1
+      },
+      "members": [
+        "זבולון המר",
+        "חנן פורת"
+      ]
+    },
+    {
+      "id": "shas",
+      "name": "ש\"ס",
+      "short": "ש\"ס",
+      "color": "#b8860b",
+      "ideology": {
+        "econ": -40,
+        "security": 30,
+        "religion": 90,
+        "judiciary": 50
+      },
+      "seats": 6,
+      "primaries": false,
+      "sectors": {
+        "haredi": 0.6,
+        "traditional": 0.8
+      },
+      "members": [
+        "אריה דרעי",
+        "רפאל פנחסי"
+      ]
+    },
+    {
+      "id": "utj",
+      "name": "יהדות התורה",
+      "short": "יהדות התורה",
+      "color": "#0d9488",
+      "ideology": {
+        "econ": -30,
+        "security": 25,
+        "religion": 95,
+        "judiciary": 60
+      },
+      "seats": 4,
+      "primaries": false,
+      "sectors": {
+        "haredi": 1
+      },
+      "members": [
+        "אברהם ורדיגר",
+        "מנחם פרוש"
+      ]
+    },
+    {
+      "id": "hadash",
+      "name": "חד\"ש",
+      "short": "חד\"ש",
+      "color": "#db2777",
+      "ideology": {
+        "econ": -80,
+        "security": -70,
+        "religion": -20,
+        "judiciary": -40
+      },
+      "seats": 3,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "תאופיק זיאד",
+        "האשם מחאמיד"
+      ]
+    },
+    {
+      "id": "moledet",
+      "name": "מולדת",
+      "short": "מולדת",
+      "color": "#b45309",
+      "ideology": {
+        "econ": 30,
+        "security": 95,
+        "religion": 30,
+        "judiciary": 40
+      },
+      "seats": 3,
+      "primaries": false,
+      "sectors": {
+        "traditional": 0.6,
+        "religious": 0.4
+      },
+      "members": [
+        "רחבעם זאבי"
+      ]
+    },
+    {
+      "id": "adp",
+      "name": "המפלגה הדמוקרטית הערבית",
+      "short": "מד\"ע",
+      "color": "#65a30d",
+      "ideology": {
+        "econ": -40,
+        "security": -60,
+        "religion": 20,
+        "judiciary": -30
+      },
+      "seats": 2,
+      "primaries": false,
+      "sectors": {
+        "arab": 1
+      },
+      "members": [
+        "עבד אל-והאב דראושה"
+      ]
+    }
+  ]
+}

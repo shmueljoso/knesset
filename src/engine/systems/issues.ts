@@ -112,6 +112,7 @@ export function strikeChance(s: GameState, templateId: string): number {
   let p = t.petitionRisk ?? 0;
   if (s.rules.equality) p *= 1.3;
   if (s.rules.entrench) p *= 1.2;
+  if (s.rules.packedCourt) p *= 0.4;
   return clamp(p, 0, 0.9);
 }
 

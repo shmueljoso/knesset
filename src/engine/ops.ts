@@ -50,10 +50,14 @@ export const SKILL_NAMES: Record<Skill, string> = {
 };
 
 type Special = (s: GameState, ctx: Ctx) => string | void;
-export const SPECIALS: Record<string, Special> = {};
-export const registerSpecial = (id: string, fn: Special) => {
-  SPECIALS[id] = fn;
-};
+// הצהרות פונקציה (hoisted) – כך אפשר לרשום פעולות מיוחדות גם לפני שהמודול הזה סיים להיטען (מעגלי ייבוא)
+export function specials(): Record<string, Special> {
+  const f = specials as unknown as { map?: Record<string, Special> };
+  return (f.map ??= {});
+}
+export function registerSpecial(id: string, fn: Special) {
+  specials()[id] = fn;
+}
 
 /** מפלגות יעד: @player, @ctx, @coalition, @opposition או מזהה */
 export function partyTargets(s: GameState, who: string, ctx: Ctx): string[] {
@@ -207,7 +211,7 @@ export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {
         }
         break;
       case 'special': {
-        const r = SPECIALS[o.id]?.(s, ctx);
+        const r = specials()[o.id]?.(s, ctx);
         if (r) out.push(r);
         break;
       }

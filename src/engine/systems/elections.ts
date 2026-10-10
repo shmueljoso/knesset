@@ -120,6 +120,16 @@ export function buildLists(s: GameState) {
       else {
         s.player.rank = s.player.isMK ? s.player.rank : 'candidate';
         log(s, `שובצת במקום ה-${pos + 1} ברשימת ${party.name}.`, 'career');
+        // ליל הפריימריז: ה-UI מציג ספירה הדרגתית של המקומות
+        s.lastPrimaries = {
+          partyId: party.id,
+          primaries: party.primaries,
+          list: party.list.slice(0, Math.max(20, pos + 3)),
+          playerPos: pos + 1,
+          realistic: Math.max(1, Math.round((party.poll / 100) * 120)),
+          week: s.week,
+        };
+        s.flags.showPrimaries = true;
         addNews(s, `${s.player.name} שובץ/ה במקום ה-${pos + 1} ברשימת ${party.short}`, pos + 1 <= party.seats ? 'good' : 'neutral', true);
       }
     }
@@ -140,6 +150,8 @@ export function runElection(s: GameState) {
     const noisy = Math.max(0.05, p.poll * (1 + (rand(s) - 0.5) * 0.18));
     votes[p.id] = noisy;
   }
+  // מחוזות בחירה: יתרון מובנה למפלגות הגדולות
+  if (s.rules.districts) for (const id of Object.keys(votes)) votes[id] = Math.pow(votes[id], 1.4);
   const totalShare = Object.values(votes).reduce((a, b) => a + b, 0);
   for (const id of Object.keys(votes)) votes[id] = Math.round((votes[id] / totalShare) * turnout);
   const surplus = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.surplusPartner]));

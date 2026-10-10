@@ -13,24 +13,27 @@ import type { Drama } from '../engine/types';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Empty, Sheet } from './common';
+import { PapersView, PollsView } from './Media';
 
 export function NewsView() {
   const g = useGame();
-  const [mine, setMine] = useState(false);
+  const [view, setView] = useState<'all' | 'mine' | 'papers' | 'polls'>('all');
+  const mine = view === 'mine';
   const items = g.news.filter((n) => !mine || n.aboutPlayer);
   return (
     <div className="scroll">
       <div className="page">
         <div className="seg" style={{ marginBottom: 6 }}>
-          <button className={!mine ? 'on' : ''} onClick={() => setMine(false)}>
-            כל החדשות
-          </button>
-          <button className={mine ? 'on' : ''} onClick={() => setMine(true)}>
-            עליי
-          </button>
+          {([['all', 'חדשות'], ['mine', 'עליי'], ['papers', '🗞️ עיתונים'], ['polls', '📊 סקרים']] as const).map(([id, label]) => (
+            <button key={id} className={view === id ? 'on' : ''} onClick={() => setView(id)}>
+              {label}
+            </button>
+          ))}
         </div>
-        {items.length === 0 && <Empty>עוד לא כתבו עליך. זה ישתנה.</Empty>}
-        {items.map((n) => (
+        {view === 'papers' && <PapersView />}
+        {view === 'polls' && <PollsView />}
+        {(view === 'all' || view === 'mine') && items.length === 0 && <Empty>עוד לא כתבו עליך. זה ישתנה.</Empty>}
+        {(view === 'all' || view === 'mine') && items.map((n) => (
           <article key={n.id} className={`news-item ${n.aboutPlayer ? 'about' : ''}`}>
             <div className="spread">
               <span className="outlet">{n.outlet}</span>
@@ -303,6 +306,12 @@ export function HelpSheet() {
         </div>
         <div className="card">
           <b>🗳️ הצבעות חיות ואולטימטום</b> – כל הצבעה במליאה נספרת מושב אחרי מושב. בהצבעה צמודה אפשר "לרוץ למזנון" ולהביא נעדרים (2 הון לניסיון). כח"כ תצביע/י גם על חוקים של אחרים ועל התקציב – הצבעה נגד קו הסיעה עולה במעמד, וקול מכריע מביא כותרות. ועדת השרים חוסמת? בדף ההצעה: אולטימטום ("בלי החוק – אני פורש/ת") או ערר למליאת הממשלה (לשרים). אם קוראים לך את הבלוף – מחליטים: לממש או לסגת.
+        </div>
+        <div className="card">
+          <b>🎬 רגעי מתח</b> – ספירת קולות עם שעון הצבעה, הצבעות אי-אמון חיות (61 מפילים), ליל פריימריז שבו המקום שלך ברשימה מתברר לאט, ליל בחירות עם מדגם וספירה, וראיון באולפן של שלוש שאלות. בחדשות: לשונית עיתונים (כל עיתון עם ההטיה שלו + טור רכילות) ולשונית סקרים (מגמות ו"מי מתאים לראשות הממשלה").
+        </div>
+        <div className="card">
+          <b>🏛️ ריאליזם</b> – שלושה שבועות לפני התקציב השותפות דורשות (כראש ממשלה/שר אוצר מחליטים מה לתת; כיו"ר שותפה – כמה לסחוט). אחרי מחדל – ועדת חקירה ממלכתית ומסקנות. מינוי יועמ"ש ומפכ"ל, בקשת חנינה מהנשיא בשלב כתב האישום, וח"כים שמבקשים טובות – ומי שהבטחת לו ולא קיימת, יזכור.
         </div>
         <div className="card">
           <b>🌋 הצעות מרחיקות לכת</b> – בניסוח חוק יש קטגוריה "🌋 מהפכות": שלום כולל, סיפוח, מדינת הלכה, הפרדת דת ומדינה, חוקה, ריבונות הכנסת, שיטה נשיאותית, הכנסה בסיסית, מדינה מינימלית, צבא מקצועי, מדינת כל אזרחיה ודחיית הבחירות. אין בהן משמעת קואליציונית, חלקן צריכות 80 ח"כים ומשאל עם – כמעט אין סיכוי. אבל אם עוברות, המדינה משתנה מהיסוד, עם שרשרת אירועי המשך.

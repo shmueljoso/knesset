@@ -56,6 +56,9 @@ interface Store {
   screen: 'title' | 'create' | 'game' | 'editor';
   pendingMod: ModFile | null;
   setPendingMod: (m: ModFile | null) => void;
+  /** תוצאת האירוע האחרון – נשארת על המסך גם כשהתור התרוקן */
+  eventResult: { lines: string[]; success: boolean; title: string } | null;
+  setEventResult: (r: { lines: string[]; success: boolean; title: string } | null) => void;
   game: GameState | null;
   tab: Tab;
   panels: Panel[];
@@ -82,6 +85,8 @@ export const useStore = create<Store>((set, get) => ({
   screen: 'title',
   pendingMod: null,
   setPendingMod: (pendingMod) => set({ pendingMod }),
+  eventResult: null,
+  setEventResult: (eventResult) => set({ eventResult }),
   game: null,
   tab: 'map',
   panels: [],

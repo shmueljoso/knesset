@@ -1,7 +1,7 @@
 import { addStat } from './stats';
 import { inSession } from './calendar';
 import { COMMITTEE_DEFS } from './data/committees';
-import { applyOps, type Op } from './ops';
+import { applyOps, registerSpecial, type Op } from './ops';
 import { chance, pick, rand } from './rng';
 import { isCoalition, partyMKs } from './systems/government';
 import { addNews } from './systems/news';
@@ -10,10 +10,12 @@ import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { askBudget } from './systems/ministry';
 import { pressFactor } from './systems/influence';
+import { noConfidenceBill, startVote } from './systems/legislation';
 import { directRival, playerLeads } from './systems/mergers';
 import { checkMissions } from './systems/missions';
 import { scheduleEvent, strikeChance } from './systems/issues';
 import { CABINET_EVENTS } from './data/events';
+import { ISSUES } from './data/issues';
 import { addMemory, changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
 import { staffBonus } from './systems/staff';
@@ -255,17 +257,13 @@ export const ACTIONS: ActionDef[] = [
   // ---------- אולפנים ----------
   {
     id: 'interview', loc: 'studio', icon: '📺', label: 'ראיון באולפן', ap: 2,
-    desc: 'במה גדולה. הצלחה מקפיצה מוכרות ותדמית; כישלון – פדיחה.',
+    desc: 'שלוש שאלות קשות בשידור חי. כל תשובה יכולה להקפיץ אותך – או להפיל.',
     run: (s) => {
-      const p = clamp(0.4 + s.player.skills.media / 120 + staffBonus(s, 'spokesperson') * 0.05, 0.1, 0.92);
       s.player.skills.media = clamp(s.player.skills.media + 1.5, 0, 100);
-      if (rand(s) < p) {
-        takeStance(s, signatureLean(s), 2.5);
-        addNews(s, `${s.player.name} בראיון: "הגיע הזמן לשינוי אמיתי"`, 'good', true);
-        return run(s, [{ op: 'fame', d: 4 * mediaPower(s) }], 'ראיון מצוין! הקליפ מסתובב ברשתות.');
-      }
-      addNews(s, `פדיחה באולפן: ${s.player.name} הסתבך/ה בשאלה פשוטה`, 'bad', true);
-      return run(s, [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: -2 }], 'המגיש תפס אותך לא מוכן. אאוץ׳.', false);
+      s.flags.ivScore = 0;
+      s.flags.ivStep = 1;
+      s.eventQueue.push({ eventId: 'iv_issue', ctx: interviewCtx(s, 1) });
+      return { text: 'האור האדום נדלק. אתם בשידור.' };
     },
   },
   {
@@ -377,9 +375,12 @@ export const ACTIONS: ActionDef[] = [
     run: (s) => {
       s.flags.nocWeek = s.week;
       addStat(s, 'fame', 2);
-      const r = tryNoConfidence(s);
-      if (!r.passed) addNews(s, `הצעת האי-אמון של ${s.player.name} נדחתה`, 'neutral', true);
-      return { text: r.text, good: r.passed };
+      if (s.rules.presidential) {
+        const r = tryNoConfidence(s);
+        return { text: r.text, good: r.passed };
+      }
+      startVote(s, noConfidenceBill(s, 'player'), 'noconf', 'for');
+      return { text: 'הגשת הצעת אי-אמון. ההצבעה מתחילה!' };
     },
   },
   {
@@ -600,3 +601,49 @@ export function performAction(s: GameState, id: string): ActionResult {
   if (res.text && !res.open) log(s, `${a.label}: ${res.text}`, 'action');
   return res;
 }
+
+// ---- הראיון: מעבר בין השאלות וסיכום ----
+function interviewCtx(s: GameState, n: number): Record<string, string> {
+  const hot = [...ISSUES].sort((a, b) => s.issues[b.id] - s.issues[a.id]).slice(0, 3);
+  const issue = hot[Math.floor(rand(s) * hot.length)];
+  const party = s.player.partyId ? s.parties[s.player.partyId] : null;
+  const leader = party && party.leaderId !== 'player' ? s.npcs[party.leaderId] : null;
+  return { n: String(n), issue: issue.id, issueName: issue.name, leaderName: leader?.name ?? '', npc: leader?.id ?? '' };
+}
+
+registerSpecial('iv_good', (s) => {
+  s.flags.ivScore = Number(s.flags.ivScore ?? 0) + 1;
+});
+registerSpecial('iv_bad', (s) => {
+  s.flags.ivScore = Number(s.flags.ivScore ?? 0) - 1;
+});
+registerSpecial('iv_next', (s) => {
+  const n = Number(s.flags.ivStep ?? 1) + 1;
+  s.flags.ivStep = n;
+  if (n === 2) {
+    const party = s.player.partyId ? s.parties[s.player.partyId] : null;
+    const loyalty = party && party.leaderId !== 'player';
+    s.eventQueue.unshift({ eventId: loyalty ? 'iv_loyalty' : 'iv_coalition', ctx: interviewCtx(s, 2) });
+    return;
+  }
+  if (n === 3) {
+    s.eventQueue.unshift({ eventId: 'iv_gotcha', ctx: interviewCtx(s, 3) });
+    return;
+  }
+  // סיכום הראיון
+  const score = Number(s.flags.ivScore ?? 0);
+  delete s.flags.ivScore;
+  delete s.flags.ivStep;
+  if (score >= 2) {
+    addStat(s, 'fame', 4 * mediaPower(s));
+    addNews(s, `${s.player.name} בראיון: "הגיע הזמן לשינוי אמיתי"`, 'good', true);
+    return `ראיון מצוין (${score >= 3 ? '3/3' : '2/3'})! הקליפ מסתובב ברשתות. מוכרות עולה.`;
+  }
+  if (score <= -2) {
+    addStat(s, 'fame', 1.5);
+    addNews(s, `פדיחה באולפן: ${s.player.name} הסתבך/ה בשידור חי`, 'bad', true);
+    return 'ראיון קשה. מחר בבוקר כולם ידברו על זה – וזה לא טוב.';
+  }
+  addStat(s, 'fame', 2);
+  return 'ראיון סביר. עשית את העבודה.';
+});

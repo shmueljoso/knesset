@@ -13,4 +13,6 @@
 - סקרים: שינוי מתמשך (הייפ/קריסה) דרך `momentum`/`swing` (Op) או `addMomentum`; אופ `poll` הוא רגעי. טלטלות ב-`data/shocks.ts` (setup + אירוע תגובה), איחודים ב-`systems/mergers.ts` (`mergeParties`/`removeParty` מנקים הפניות).
 - הצעות מרחיקות לכת: תבנית עם `radical` (+`referendum`) ב-`data/moreBills.ts`; ההשפעה כולה ב-`applyTransform` (`systems/transforms.ts`), לא ב-`world` של התבנית. אין להן משמעת קואליציונית, ו-NPC לא בוחרים בהן כאג'נדה.
 - הצבעות במליאה: `startVote` מגריל ושומר `s.liveVote`, ה-UI (`LiveVote.tsx`) חושף בהדרגה, `finishVote` מחיל. `bringToVote` = שניהם יחד. הצבעות של אחרים ותקציב: `queueOtherVote`.
+- אירועים בשרשרת (ראיון): כל בחירה מפעילה special שמכניס את האירוע הבא לראש התור (`unshift`). תוצאת אירוע נשמרת ב-store (`eventResult`) כדי שתוצג גם כשהתור מתרוקן.
+- `registerSpecial` היא הצהרת פונקציה (hoisted) – אפשר לקרוא לה מכל מודול גם במעגלי ייבוא.
 - בדיקת איזון: סימולציה ארוכה ב-`tests/engine.test.ts`; לפני שינוי מספרים כדאי להריץ סימולציה של 10 שנים בכמה זרעים.

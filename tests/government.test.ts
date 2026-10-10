@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { finishVote, queueOtherVote } from '../src/engine/systems/legislation';
 import { createGame, endWeek, type GameState, type NewGameOptions } from '../src/engine';
 import {
   formationSeats,
@@ -112,6 +113,13 @@ describe('coalition maintenance', () => {
       s.week += 1;
       tickCoalition(s);
     }
+    // ח"כ: האופוזיציה מגישה אי-אמון וההצבעה חיה
+    expect(s.flags.npcNoConfidence).toBeTruthy();
+    queueOtherVote(s, String(s.flags.npcNoConfidence), 'no_confidence', 2);
+    s.eventQueue = s.eventQueue.filter((e) => e.eventId === 'noconf_vote');
+    resolveEvent(s, 0);
+    expect(s.liveVote?.kind).toBe('noconf');
+    finishVote(s);
     expect(s.electionWeek !== electionBefore || s.coalition.pmId !== pmBefore).toBe(true);
   });
 });

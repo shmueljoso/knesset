@@ -246,6 +246,12 @@ export const BILL_TEMPLATES: BillTemplate[] = [
     lean: {}, sectors: {}, world: {}, weeks: 2, delay: 0, cost: 0,
     scopes: ['תקציב', 'תקציב', 'תקציב'],
   },
+  {
+    id: 'no_confidence', hidden: true, title: 'הצעת אי-אמון בממשלה', icon: '🗳️', committee: 'constitution', category: 'governance',
+    summary: 'אי-אמון קונסטרוקטיבי: אם 61 ח"כים תומכים – הממשלה נופלת וממשלה חלופית מושבעת.',
+    lean: {}, sectors: {}, world: {}, weeks: 2, delay: 0, cost: 0,
+    scopes: ['אי-אמון', 'אי-אמון', 'אי-אמון'],
+  },
   ...EXTRA_BILLS,
   ...RADICAL_BILLS,
 ];

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { describeOps, fill } from '../engine/ops';
 import { choiceBlocked, choiceOps, currentEvent, resolveEvent } from '../engine/systems/events';
 import { useGame, useStore } from '../store';
@@ -8,7 +7,8 @@ import { Chips } from './common';
 export function EventModal() {
   const g = useGame();
   const act = useStore((s) => s.act);
-  const [result, setResult] = useState<{ lines: string[]; success: boolean; title: string } | null>(null);
+  const result = useStore((s) => s.eventResult);
+  const setResult = useStore((s) => s.setEventResult);
   const cur = currentEvent(g);
 
   if (result) {
@@ -42,7 +42,8 @@ export function EventModal() {
   const choose = (i: number) => {
     const title = fill(g, ev.title, ctx);
     const r = act((s) => resolveEvent(s, i));
-    setResult({ ...r, title });
+    // הצבעה חיה נפתחה – התוצאה תוצג שם
+    if (!useStore.getState().game?.liveVote) setResult({ ...r, title });
   };
 
   return (

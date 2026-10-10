@@ -4,6 +4,7 @@ import { AllianceSheet, GuideSheet } from './Alliances';
 import { Dashboard } from './Dashboard';
 import { LegacyModal } from './Legacy';
 import { LiveVoteModal } from './LiveVote';
+import { PrimariesNight } from './PrimariesNight';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -74,6 +75,7 @@ function Toasts() {
 export function GameScreen() {
   const g = useGame();
   const tab = useStore((s) => s.tab);
+  const eventResult = useStore((s) => s.eventResult);
   const panels = useStore((s) => s.panels);
   const showReport = useStore((s) => s.showReport);
   const top = panels[panels.length - 1];
@@ -88,7 +90,7 @@ export function GameScreen() {
       <TabBar />
       {tab === 'map' && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
-      {g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 ? <EventModal /> : null}
+      {g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
       <Toasts />
     </>
   );

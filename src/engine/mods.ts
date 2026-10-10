@@ -1,6 +1,6 @@
 // מצב "כנסת אמיתית": טעינת הרכב מפלגות וח"כים מקובץ JSON שהשחקן מספק.
 import type { PartyDef } from './data/parties';
-import type { GameState, Ideology, IssueId, Sector, WorldKey } from './types';
+import type { CustomEvent, GameState, Ideology, IssueId, Rules, Sector, TransformId, WorldKey } from './types';
 import { recomputeStability } from './systems/coalition';
 import { ministryTitle } from './systems/government';
 import { ISSUES } from './data/issues';
@@ -38,7 +38,16 @@ export interface ModFile {
   world?: Partial<Record<WorldKey, number>>;
   issues?: Partial<Record<IssueId, number>>;
   ministers?: Record<string, string>; // משרד → שם הח"כ
+  /** כללי משחק מיוחדים (למשל בחירה ישירה ב-1996, אחוז חסימה אחר) */
+  rules?: Partial<Pick<Rules, 'threshold' | 'directPM' | 'presidential' | 'districts' | 'override' | 'norwegian' | 'termLimit' | 'entrench' | 'equality'>>;
+  /** שינויי משטר שכבר בתוקף בתחילת התרחיש (בלי אירועי ההמשך) */
+  transforms?: TransformId[];
+  /** אירועים שכתבת בעצמך */
+  events?: Omit<CustomEvent, 'id'>[];
 }
+
+const RULE_KEYS = ['threshold', 'directPM', 'presidential', 'districts', 'override', 'norwegian', 'termLimit', 'entrench', 'equality'];
+const TRANSFORM_IDS: TransformId[] = ['peace', 'annexation', 'halacha', 'secular', 'constitution', 'sovereignty', 'presidential', 'ubi', 'libertarian', 'volunteer', 'citizens', 'emergency'];
 
 export function validateMod(raw: unknown): { mod: ModFile | null; errors: string[] } {
   const errors: string[] = [];
@@ -76,7 +85,27 @@ export function validateMod(raw: unknown): { mod: ModFile | null; errors: string
   for (const [k, v] of Object.entries(m.world ?? {})) if (!WORLD_KEYS.includes(k as WorldKey) || typeof v !== 'number' || v < 0 || v > 100) errors.push(`world.${k} – מפתח לא מוכר או ערך מחוץ ל-0–100`);
   for (const [k, v] of Object.entries(m.issues ?? {})) if (!ISSUES.some((i) => i.id === k) || typeof v !== 'number' || v < 0 || v > 100) errors.push(`issues.${k} – סוגיה לא מוכרת או ערך מחוץ ל-0–100`);
   for (const k of Object.keys(m.ministers ?? {})) if (!MINISTRIES.some((x) => x.id === k)) errors.push(`ministers.${k} – משרד לא מוכר`);
+  for (const [k, v] of Object.entries(m.rules ?? {})) {
+    if (!RULE_KEYS.includes(k)) errors.push(`rules.${k} – כלל לא מוכר`);
+    else if (k === 'threshold' ? typeof v !== 'number' || v < 0 || v > 20 : typeof v !== 'boolean') errors.push(`rules.${k} – ערך לא תקין`);
+  }
+  for (const id of m.transforms ?? []) if (!TRANSFORM_IDS.includes(id)) errors.push(`transforms: ${id} – שינוי משטר לא מוכר`);
+  (m.events ?? []).forEach((e, i) => {
+    if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.body !== 'string') errors.push(`אירוע ${i + 1}: חסרים כותרת או תיאור`);
+    else if (!Array.isArray(e.choices) || e.choices.length < 1 || e.choices.length > 4 || e.choices.some((c) => typeof c.label !== 'string' || !c.label.trim())) errors.push(`אירוע ${i + 1}: צריך 1–4 בחירות עם טקסט`);
+    else if (e.choices.some((c) => (['fame', 'reputation', 'partyStanding', 'money', 'capital', 'approval'] as const).some((k) => c[k] !== undefined && (typeof c[k] !== 'number' || Math.abs(c[k]!) > 50)))) errors.push(`אירוע ${i + 1}: השפעות בין -50 ל-50`);
+  });
   return { mod: errors.length ? null : m, errors };
+}
+
+/** שמות למועמדים שנוצרים במשחק – לפי המגזר העיקרי של המפלגה */
+function namePoolFor(sectors?: Partial<Record<Sector, number>>): PartyDef['namePool'] {
+  const top = Object.entries(sectors ?? {}).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]?.[0];
+  if (top === 'arab') return { arab: 1 };
+  if (top === 'haredi') return { haredi: 1 };
+  if (top === 'religious') return { religious: 1 };
+  if (top === 'olim') return { russian: 0.6, jewish: 0.4 };
+  return { jewish: 1 };
 }
 
 export function modToPartyDefs(mod: ModFile): PartyDef[] {
@@ -89,7 +118,7 @@ export function modToPartyDefs(mod: ModFile): PartyDef[] {
     seats: p.seats,
     primaries: !!p.primaries,
     sectors: p.sectors ?? {},
-    namePool: { jewish: 1 },
+    namePool: namePoolFor(p.sectors),
     blurb: p.blurb ?? 'נטען מקובץ הכנסת.',
   }));
 }
@@ -155,6 +184,11 @@ export function applyModSettings(s: GameState, mod: ModFile) {
     npc.title = ministryTitle(mid, npc.gender);
     s.ministers[mid] = npc.id;
   }
+  s.customEvents = (mod.events ?? []).map((e, i) => ({ ...e, id: `custom_${i}` }));
+  // כללים ושינויי משטר מהתרחיש
+  Object.assign(s.rules, mod.rules ?? {});
+  for (const id of mod.transforms ?? []) if (!s.transforms.some((x) => x.id === id)) s.transforms.push({ id, week: 0, scope: id === 'presidential' && mod.rules?.directPM ? 1 : 2, sponsor: 'history' });
+  if (s.rules.directPM || s.rules.presidential) s.coalition.minoritySince = null;
   // שביעות רצון פותחת
   for (const p of mod.parties) if (p.satisfaction !== undefined && s.coalition.satisfaction[p.id] !== undefined) s.coalition.satisfaction[p.id] = p.satisfaction;
   recomputeStability(s);
@@ -170,6 +204,8 @@ export function modFromGame(s: GameState): ModFile {
     startDate: new Date(new Date(s.startDate + 'T12:00:00Z').getTime() + s.week * 7 * 86400000).toISOString().slice(0, 10),
     electionInWeeks: Math.max(1, Math.min(260, s.electionWeek - s.week)),
     coalition: s.coalition.parties.filter((p) => parties.some((x) => x.id === p)),
+    rules: { threshold: s.rules.threshold, ...(s.rules.directPM ? { directPM: true } : {}) },
+    events: (s.customEvents ?? []).map(({ id: _id, ...e }) => e),
     world: Object.fromEntries(Object.entries(s.world).map(([k, v]) => [k, Math.round(v)])),
     issues: Object.fromEntries(Object.entries(s.issues).map(([k, v]) => [k, Math.round(v)])),
     parties: parties.map((p) => ({

@@ -89,6 +89,7 @@ export const SHOCKS: ShockDef[] = [
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, (p.ideology.security / 100) * 3);
       for (const id of s.coalition.parties) addMomentum(s, id, 1.5); // התלכדות סביב הדגל
       scheduleEvent(s, 'shock_war_after', 10);
+      if (rand(s) < 0.5) scheduleEvent(s, 'commission_report', 40);
       addNews(s, 'מבצע צבאי רחב: אזעקות בכל הארץ, מילואים בהיקף נרחב', 'bad', false, undefined, 'ערוץ המשכן');
       return {};
     },
@@ -102,6 +103,7 @@ export const SHOCKS: ShockDef[] = [
       for (const id of s.coalition.parties) addMomentum(s, id, -6);
       for (const p of seated(s)) if (!s.coalition.parties.includes(p.id)) addMomentum(s, p.id, 2);
       addNews(s, 'מחדל ביטחוני חמור: הציבור דורש ועדת חקירה ממלכתית', 'bad', false, undefined, 'ערוץ המשכן');
+      scheduleEvent(s, 'commission_report', 30);
       return {};
     },
   },
