@@ -10,6 +10,7 @@ import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { activeRuleNotes, noConfidenceFrozen } from './systems/regime';
 import { latestSurvey, pmFitOf } from './systems/surveys';
+import { MAX_PROJECTS, PROJECT_INFO, projectBlocked, startProject } from './systems/projects';
 import { askBudget } from './systems/ministry';
 import { pressFactor } from './systems/influence';
 import { noConfidenceBill, startVote } from './systems/legislation';
@@ -285,6 +286,18 @@ export const ACTIONS: ActionDef[] = [
       return run(s, [{ op: 'fame', d: 1.3 * mediaPower(s) }], 'הפוסט זכה לאלפי שיתופים.');
     },
   },
+  // ---------- מיזמים ארוכי טווח ----------
+  ...(['tour', 'branches', 'ads', 'supporters'] as const).map((kind): ActionDef => ({
+    id: `project_${kind}`,
+    loc: kind === 'tour' ? 'field' : kind === 'branches' ? 'partyhq' : kind === 'ads' ? 'studio' : 'plaza',
+    icon: PROJECT_INFO[kind].icon,
+    label: `מיזם: ${PROJECT_INFO[kind].name}`,
+    ap: 1,
+    money: PROJECT_INFO[kind].cost,
+    desc: `${PROJECT_INFO[kind].blurb} נמשך ${PROJECT_INFO[kind].weeks} שבועות. ניתן להפעיל עד ${MAX_PROJECTS} מיזמים במקביל.`,
+    avail: (s) => projectBlocked(s, kind),
+    run: (s) => ({ text: startProject(s, kind), good: true }),
+  })),
   // ---------- מטה מפלגה ----------
   {
     id: 'fundraise', loc: 'partyhq', icon: '💰', label: 'גיוס כספים', ap: 1,

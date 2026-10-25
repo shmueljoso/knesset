@@ -272,7 +272,7 @@ export function createGame(opts: NewGameOptions): GameState {
     gameOver: null,
   } as Partial<GameState> as GameState;
   ensurePhase3(s);
-  s.settings = { drama: opts.drama ?? 'normal' };
+  s.settings = { drama: opts.drama ?? 'normal', dynamics: 'normal' };
 
   if (opts.partyId) {
     const party = parties[opts.partyId];

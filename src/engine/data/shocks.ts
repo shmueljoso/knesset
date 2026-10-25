@@ -8,6 +8,7 @@ import { bumpIssue, scheduleEvent } from '../systems/issues';
 import { openWindow } from '../systems/climate';
 import { listsOpen, mergeBlocked, mergeChance, npcSplit, playerLeads, spawnParty, type Archetype } from '../systems/mergers';
 import { addNews } from '../systems/news';
+import { shiftOpinion } from '../systems/society';
 import { addMomentum, addWorldEffect } from '../systems/opinion';
 import type { GameState, Party } from '../types';
 import { ideologyDistance, leanAlignment } from '../util';
@@ -83,6 +84,7 @@ export const SHOCKS: ShockDef[] = [
       const p = spawnParty(s, ARCH.social);
       bumpIssue(s, 'cost', 25);
       bumpIssue(s, 'housing', 15);
+      shiftOpinion(s, { econ: -22 }, 'מחאת האוהלים');
       openWindow(s, 'ubi', 26, 'מחאת האוהלים');
       for (const id of s.coalition.parties) addMomentum(s, id, -1);
       addNews(s, `מאות אלפים בכיכר: מחאת יוקר המחיה הופכת למפלגה – "${p.name}"`, 'bad', false, undefined, 'ערוץ המשכן');
@@ -97,6 +99,7 @@ export const SHOCKS: ShockDef[] = [
       bumpIssue(s, 'security', 30);
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, (p.ideology.security / 100) * 3);
       for (const id of s.coalition.parties) addMomentum(s, id, 1.5); // התלכדות סביב הדגל
+      shiftOpinion(s, { security: 28 }, 'המלחמה');
       scheduleEvent(s, 'shock_war_after', 10);
       openWindow(s, 'annexation', 26, 'אחרי המלחמה');
       openWindow(s, 'emergency', 12, 'בצל המלחמה');
@@ -114,6 +117,7 @@ export const SHOCKS: ShockDef[] = [
       for (const id of s.coalition.parties) addMomentum(s, id, -6);
       for (const p of seated(s)) if (!s.coalition.parties.includes(p.id)) addMomentum(s, p.id, 2);
       addNews(s, 'מחדל ביטחוני חמור: הציבור דורש ועדת חקירה ממלכתית', 'bad', false, undefined, 'ערוץ המשכן');
+      shiftOpinion(s, { judiciary: 14, security: 12 }, 'המחדל');
       openWindow(s, 'constitution', 30, 'אחרי המחדל');
       openWindow(s, 'presidential', 30, 'אחרי המחדל: "השיטה קרסה"');
       scheduleEvent(s, 'commission_report', 30);
@@ -128,6 +132,7 @@ export const SHOCKS: ShockDef[] = [
       bumpIssue(s, 'cost', 20);
       for (const id of s.coalition.parties) addMomentum(s, id, -3);
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, (-p.ideology.econ / 100) * 2);
+      shiftOpinion(s, { econ: -18 }, 'המשבר הכלכלי');
       addNews(s, 'קריסה בבורסה, השקל צולל: "המשבר הכלכלי החמור בעשור"', 'bad', false, undefined, 'ערוץ המשכן');
       openWindow(s, 'ubi', 30, 'המשבר הכלכלי');
       openWindow(s, 'libertarian', 30, 'המשבר הכלכלי');
@@ -212,6 +217,7 @@ export const SHOCKS: ShockDef[] = [
       if (!pmParty) return null;
       addMomentum(s, pmParty, 5);
       addWorldEffect(s, 'security', 6, 8, 'הסכם מדיני');
+      shiftOpinion(s, { security: -18 }, 'הסכם הנורמליזציה');
       openWindow(s, 'peace', 40, 'אחרי פריצת הדרך');
       addWorldEffect(s, 'economy', 4, 8, 'הסכם מדיני');
       addNews(s, 'פריצת דרך: ישראל ומדינה ערבית גדולה חותמות על הסכם נורמליזציה', 'good', false, undefined, 'ערוץ המשכן');

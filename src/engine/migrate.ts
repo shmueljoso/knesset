@@ -41,6 +41,11 @@ export function ensurePhase3(g: GameState) {
   g.windows ??= {};
   g.norwegianSwaps ??= {};
   g.surveys ??= [];
+  g.demo ??= { secular: 1, traditional: 1, religious: 1, haredi: 1, arab: 1, olim: 1 };
+  g.demoRef ??= { ...g.demo };
+  g.drift ??= {};
+  g.projects ??= [];
+  if (g.settings) g.settings.dynamics ??= 'normal';
   g.mood ??= { econ: 0, security: 0, religion: 0, judiciary: 0 };
   g.pmTerms ??= {};
   if (g.rules.norwegian && g.rules.norwegianLimit === undefined) g.rules.norwegianLimit = 5;

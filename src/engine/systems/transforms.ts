@@ -4,7 +4,8 @@ import { TRANSFORM_INFO } from '../data/transforms';
 import { registerSpecial, type Ctx } from '../ops';
 import { rand } from '../rng';
 import type { GameState, TransformId, WorldKey } from '../types';
-import { SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
+import { SECTORS, SECTOR_IDEOLOGY, clamp, leanAlignment } from '../util';
+import { shiftOpinion, sectorWeights } from './society';
 import { bumpIssue, scheduleEvent } from './issues';
 import { listsOpen, spawnParty } from './mergers';
 import { addNews } from './news';
@@ -20,7 +21,8 @@ export const hasTransform = (s: GameState, id: TransformId) => (s.transforms ?? 
 export function publicSupport(s: GameState, templateId: string): number {
   const t = templateById(templateId);
   let sum = 0;
-  for (const sec of SECTORS) sum += SECTOR_WEIGHTS[sec] * clamp(0.5 + 0.5 * leanAlignment(SECTOR_IDEOLOGY[sec], t.lean), 0.05, 0.95);
+  const sw = sectorWeights(s);
+  for (const sec of SECTORS) sum += sw[sec] * clamp(0.5 + 0.5 * leanAlignment(SECTOR_IDEOLOGY[sec], t.lean), 0.05, 0.95);
   // +10: "הכנסת כבר אישרה" נותן לגיטימציה; חלון הזדמנויות מזיז את דעת הקהל
   const window = t.radical && windowOpen(s, t.radical) ? 12 : 0;
   return Math.round(sum * 100 + 10 + window);
@@ -67,6 +69,13 @@ export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, 
   addNews(s, `${info.icon} ${info.headline}`, 'neutral', sponsor === 'player', info.now, 'ערוץ המשכן');
   log(s, `המדינה השתנתה: ${info.name}.`, 'system');
   const ctx = { law: templateId, title: templateById(templateId).title };
+  // מהפכה מזיזה גם את הציבור, לאורך שנים
+  const OPINION: Partial<Record<TransformId, Partial<Record<'econ' | 'security' | 'religion' | 'judiciary', number>>>> = {
+    peace: { security: -30 }, annexation: { security: 25 }, halacha: { religion: 22 }, secular: { religion: -26 },
+    libertarian: { econ: 26 }, ubi: { econ: -22 }, sovereignty: { judiciary: 14 }, constitution: { judiciary: -14 },
+    volunteer: { religion: -10 }, citizens: { security: -12 },
+  };
+  if (OPINION[id]) shiftOpinion(s, OPINION[id]!, `${info.name}`);
   switch (id) {
     case 'peace':
       fx(s, 'security', -8 * k, 4, id);

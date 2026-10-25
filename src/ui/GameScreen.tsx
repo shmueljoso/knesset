@@ -2,6 +2,7 @@ import { useGame, useStore, type Panel } from '../store';
 import type { LocationId } from '../engine/types';
 import { AllianceSheet, GuideSheet } from './Alliances';
 import { PollsSheet } from './Media';
+import { ToolsSheet } from './Tools';
 import { Dashboard } from './Dashboard';
 import { LegacyModal } from './Legacy';
 import { LiveVoteModal } from './LiveVote';
@@ -54,6 +55,8 @@ function PanelView({ p }: { p: Panel }) {
       return <GuideSheet />;
     case 'polls':
       return <PollsSheet />;
+    case 'tools':
+      return <ToolsSheet />;
   }
 }
 

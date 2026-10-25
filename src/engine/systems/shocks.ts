@@ -6,6 +6,7 @@ import { addStat } from '../stats';
 import type { GameState } from '../types';
 import { clamp } from '../util';
 import { executeMerger, mergeBlocked, playerLeads } from './mergers';
+import { triggerChains } from './chains';
 import { addNews } from './news';
 import { joinParty } from './parties';
 import { changeAttitude } from './relationships';
@@ -46,6 +47,7 @@ export function rollShocks(s: GameState) {
   s.eventsFired[def.id] = s.week;
   s.flags.lastShock = s.week;
   s.eventQueue.push({ eventId: def.id, ctx });
+  triggerChains(s, 'shock', def.id);
 }
 
 // ---- פעולות מיוחדות ----

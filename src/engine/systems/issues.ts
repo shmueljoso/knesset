@@ -7,6 +7,7 @@ import type { GameState, IssueId, LawRecord, Sector, WorldKey } from '../types';
 import { clamp, leanAlignment } from '../util';
 import { addNews } from './news';
 import { addWorldEffect } from './opinion';
+import { triggerChains } from './chains';
 import { applyNorwegian, termLimited } from './regime';
 import { log } from './report';
 
@@ -87,6 +88,7 @@ export function onLawPassed(s: GameState, rec: Omit<LawRecord, 'week'>) {
   if (t.petitionRisk) scheduleEvent(s, 'petition', 5, { law: t.id, title: t.title });
   if (t.rule) applyRule(s, t.rule, rec.scope);
   if (t.radical) onRadicalPassed(s, t.id, rec.scope, rec.sponsor);
+  else if (!t.hidden) triggerChains(s, 'law', t.id);
 }
 
 /** השפעות החוק על העולם: הבסיס, ו"הצד השני" לפי היקף ותזמון. factor כולל את ההיקף */
@@ -215,7 +217,7 @@ export function strikeChance(s: GameState, templateId: string): number {
 }
 
 /** פסילת חוק: ההשפעות שנותרו מתבטלות */
-export function strikeLaw(s: GameState, templateId: string) {
+export function strikeLaw(s: GameState, templateId: string, quiet = false) {
   const rec = [...s.lawsPassed].reverse().find((l) => l.templateId === templateId && !l.struck);
   if (!rec) return;
   rec.struck = true;
@@ -225,6 +227,7 @@ export function strikeLaw(s: GameState, templateId: string) {
   addWorldEffect(s, 'trust', 1, 2, 'בג"ץ');
   addWorldEffect(s, 'cohesion', -1.5, 2, 'בג"ץ');
   if (t.issue) bumpIssue(s, t.issue, 15);
+  if (!quiet) triggerChains(s, 'struck', templateId);
 }
 
 /** חקיקה מחדש בפסקת ההתגברות */

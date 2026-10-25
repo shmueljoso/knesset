@@ -114,8 +114,23 @@ export interface Transform {
   sponsor: string;
 }
 
+export type Dynamics = 'off' | 'normal' | 'strong';
+
 export interface Settings {
   drama: Drama;
+  /** קצב השינוי בחברה: הרכב האוכלוסייה והדעות של המפלגות והציבור */
+  dynamics?: Dynamics;
+}
+
+export type ProjectKind = 'tour' | 'branches' | 'ads' | 'supporters';
+/** מיזם ארוך טווח של השחקן: סיור שטח, בניית סניפים, קמפיין פרסום, מועדון תומכים */
+export interface Project {
+  id: string;
+  kind: ProjectKind;
+  start: number;
+  weeks: number;
+  sector?: Sector;
+  level: number;
 }
 
 export interface Committee {
@@ -394,6 +409,13 @@ export interface GameState {
   customEvents: CustomEvent[];
   /** החוק הנורבגי: שר/ה → מי שנכנס/ה לכנסת במקומו/ה */
   norwegianSwaps: Record<string, string>;
+  /** הרכב האוכלוסייה: מכפיל לכל מגזר (1 = כמו בתחילת המשחק) */
+  demo: Record<Sector, number>;
+  /** הרכב האוכלוסייה בבחירות האחרונות – הסקרים זזים לפי ההפרש */
+  demoRef: Record<Sector, number>;
+  /** כמה כל מפלגה זזה מהעמדות המקוריות שלה (נצבר לאורך השנים) */
+  drift: Record<string, Ideology>;
+  projects: Project[];
   /** סקרים שפורסמו (האחרון בסוף) */
   surveys: Survey[];
   /** רוח הציבור: לאן נוטה הציבור עכשיו בכל ציר (-50..50), לפי מצב המדינה */

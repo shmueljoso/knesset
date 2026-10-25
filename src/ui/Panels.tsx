@@ -9,7 +9,7 @@ import { STAFF_ROLES, fireStaff, hireStaff, maxStaff, staffCandidates, staffCost
 import { ideologyDistance } from '../engine/util';
 import { retire } from '../engine/systems/legacy';
 import { modFromGame } from '../engine/mods';
-import type { Drama } from '../engine/types';
+import type { Drama, Dynamics } from '../engine/types';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Empty, Sheet } from './common';
@@ -53,6 +53,11 @@ export function NewsView() {
 }
 
 const COLORS = NEW_PARTY_COLORS;
+const DYN_OPTS: [Dynamics, string][] = [
+  ['off', '⏸️ כבוי'],
+  ['normal', '🌱 רגיל'],
+  ['strong', '🌊 חזק'],
+];
 const DRAMA_OPTS: [Drama, string][] = [
   ['calm', '🌤️ רגוע'],
   ['normal', '⛅ רגיל'],
@@ -233,6 +238,7 @@ export function SettingsSheet() {
   const [retireConfirm, setRetireConfirm] = useState(false);
   const act = useStore((s) => s.act);
   const setPendingMod = useStore((s) => s.setPendingMod);
+  const open = useStore((s) => s.open);
   const bg = BACKGROUNDS.find((b) => b.id === g.player.background)!;
   const exportSave = () => {
     const blob = new Blob([JSON.stringify(g)], { type: 'application/json' });
@@ -259,7 +265,21 @@ export function SettingsSheet() {
           ))}
         </div>
       </div>
+      <div className="card small" style={{ marginTop: 10 }}>
+        <b>🌍 קצב השינוי בחברה</b>
+        <div className="tiny muted">הרכב האוכלוסייה (חרדים, ערבים, עלייה והגירה) והדעות של המפלגות והציבור משתנים לאורך השנים ואחרי אירועים גדולים. זה יכול לעבוד לטובתך – או נגדך.</div>
+        <div className="filter-row" style={{ marginTop: 6 }}>
+          {DYN_OPTS.map(([id, label]) => (
+            <button key={id} data-testid={`dyn-${id}`} className={(g.settings?.dynamics ?? 'normal') === id ? 'on' : ''} onClick={() => act((s) => void (s.settings = { ...s.settings, dynamics: id }))}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="col" style={{ marginTop: 12 }}>
+        <button className="btn" onClick={() => open({ kind: 'tools' })} data-testid="open-tools">
+          🛠️ כלים מתקדמים (דילוג ועריכה) ⚠️
+        </button>
         <button className="btn" onClick={exportSave}>
           💾 ייצוא שמירה לקובץ
         </button>
@@ -360,6 +380,9 @@ export function HelpSheet() {
         </div>
         <div className="card">
           <b>⚖️ חוקי יסוד ובג"ץ</b> – חוק יסוד צריך 61 (או 80 אם שוריין) בקריאה השלישית. חוקים שנויים במחלוקת עלולים להיפסל בבג"ץ; עם פסקת התגברות אפשר לחוקק מחדש.
+        </div>
+        <div className="card">
+          <b>🌍 חברה שמשתנה</b> – כל שנה הרכב האוכלוסייה זז (חרדים וערבים גדלים, עלייה והגירה לפי מצב המדינה) ומפלגות שנשענות על מגזר שגדל מתחזקות בסקרים. אירועים גדולים (מלחמה, משבר, שלום, מהפכה) מזיזים את הציבור – והעמדות של המפלגות זזות איתו, לאט, לצמיתות. מפלגה שנכשלה בקלפי מחליפה יו"ר. את הקצב קובעים בתפריט (כבוי / רגיל / חזק). <b>🚧 מיזמים</b> – סיור שטח, בניית סניפים, קמפיין פרסום ומועדון תומכים: מתחילים היום, מניבים בעוד שבועות (ויש סיכונים). <b>🔗 שרשראות</b> – החלטות מובילות לאירועי המשך: אולטימטום מהשותפות, הסלמה משפטית, פיצויים אחרי מלחמה, דילמת הצנע ועוד. <b>🛠️ כלים מתקדמים</b> (בתפריט, עם אזהרה) – דילוג על שבועות ועריכת מספרים.
         </div>
         <div className="card">
           <b>📊 סקרים ותקשורת</b> – כל שבועיים מתפרסם סקר (בלוח ← "לסקר המלא"): מנדטים, מי מתאים/ה לראשות הממשלה, ראש בראש, כיוון המדינה, סוגיות, "ההפתעה", ואיך רואים אותך. הסקר משפיע באמת: מי שמזנק/ת מושך/ת עוד קולות, מנהיג/ה חזק/ה מושך/ת את המפלגה, ממשלה לא אהודה מלחיצה את השותפות, ובבחירה ישירה מדד ההתאמה כמעט מכריע. רוח הציבור (מלחמה → ניציות, יוקר → רווחה, משבר אמון → זעם על הממסד) מזיזה מנדטים בין המחנות. בעיתונים: לכל עיתון קו משלו, ובראיון השאלות תלויות במה שקורה.

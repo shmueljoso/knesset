@@ -4,9 +4,11 @@ import { TRANSFORM_INFO } from '../engine/data/transforms';
 import { isCoalition } from '../engine/systems/government';
 import { activeRuleNotes } from '../engine/systems/regime';
 import { latestSurvey, surveyName } from '../engine/systems/surveys';
+import { MAX_PROJECTS, PROJECT_INFO } from '../engine/systems/projects';
+import { SECTOR_LABEL, sectorWeights } from '../engine/systems/society';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import type { Skill, WorldKey } from '../engine/types';
-import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES } from '../engine/util';
+import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES, SECTOR_WEIGHTS } from '../engine/util';
 import { useGame, useStore } from '../store';
 import { Hemicycle, HemicycleLegend, LineChart } from './Charts';
 import { Meter } from './common';
@@ -37,6 +39,7 @@ export function Dashboard() {
   const toPrimaries = g.primariesWeek - g.week;
   const ruleNotes = activeRuleNotes(g);
   const sv = latestSurvey(g);
+  const sw = sectorWeights(g);
 
   const latest = g.pollHistory[g.pollHistory.length - 1]?.polls ?? {};
   const top = Object.values(g.parties)
@@ -184,6 +187,45 @@ export function Dashboard() {
             ))}
           </div>
         )}
+
+        {g.projects?.length > 0 && (
+          <div className="card" data-testid="projects">
+            <div className="card-title">
+              <h3>🚧 מיזמים פעילים</h3>
+              <span className="tiny muted">{g.projects.length}/{MAX_PROJECTS}</span>
+            </div>
+            {g.projects.map((x) => (
+              <Meter key={x.id} label={`${PROJECT_INFO[x.kind].icon} ${PROJECT_INFO[x.kind].name}${x.sector ? ` · ${SECTOR_LABEL[x.sector]}` : ''} · עוד ${Math.max(0, x.start + x.weeks - g.week)} שבועות`} value={g.week - x.start} max={x.weeks} color="var(--gold)" />
+            ))}
+          </div>
+        )}
+
+        {(g.flags.machine || g.flags.supporters) && (
+          <div className="card small" data-testid="assets">
+            <b>🏗️ נכסים שבנית</b>
+            <div className="muted">
+              {g.flags.machine ? `מכונה ארגונית ברמה ${String(g.flags.machine)}/5` : ''}
+              {g.flags.machine && g.flags.supporters ? ' · ' : ''}
+              {g.flags.supporters ? `מועדון תומכים ברמה ${String(g.flags.supporters)}/3 (+${(Number(g.flags.supporters) * 1.5).toFixed(1)} אלף ₪ בשבוע)` : ''}
+            </div>
+          </div>
+        )}
+
+        <div className="card" data-testid="demography">
+          <div className="card-title">
+            <h3>🌍 הרכב האוכלוסייה</h3>
+            <span className="tiny muted">משתנה עם השנים</span>
+          </div>
+          {SECTORS.map((sec) => {
+            const now = sw[sec] * 100;
+            const was = SECTOR_WEIGHTS[sec] * 100;
+            const d = now - was;
+            return (
+              <Meter key={sec} label={`${SECTOR_NAMES[sec]}${Math.abs(d) >= 0.3 ? ` ${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(1)}` : ''}`} value={now} max={45} color={d > 0.3 ? 'var(--good)' : d < -0.3 ? 'var(--bad)' : 'var(--muted)'} suffix="%" />
+            );
+          })}
+          <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = שינוי מאז תחילת המשחק. מפלגות שנשענות על מגזר שגדל מתחזקות בסקרים.</p>
+        </div>
 
         <GovernmentCard />
 

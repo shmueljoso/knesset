@@ -10,6 +10,7 @@ import { formGovernment, proposeCoalition } from './government';
 import { addNews } from './news';
 import { directElection, electedLead, enforceTermLimit, recordPmTerm, restoreNorwegian, runPmRace, termLimited } from './regime';
 import { log } from './report';
+import { afterElection } from './society';
 
 export const THRESHOLD = 0.0325;
 
@@ -163,6 +164,7 @@ export function runElection(s: GameState) {
   for (const id of Object.keys(votes)) votes[id] = Math.round((votes[id] / totalShare) * turnout);
   const surplus = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.surplusPartner]));
   const seats = allocateSeats(votes, surplus, 120, (s.rules?.threshold ?? 3.25) / 100);
+  const oldSeats = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.seats]));
 
   // הרכב הכנסת החדשה
   for (const n of Object.values(s.npcs)) n.isMK = false;
@@ -202,6 +204,7 @@ export function runElection(s: GameState) {
     addNews(s, `${p.name} מתפרקת אחרי הכישלון בקלפי`, 'neutral');
   }
   s.knesset += 1;
+  afterElection(s, oldSeats);
   s.player.defector = false;
   for (const n of Object.values(s.npcs)) n.pledges = [];
 

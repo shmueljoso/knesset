@@ -2,8 +2,9 @@ import { rand } from '../rng';
 import { salienceMultiplier } from './issues';
 import { reactToStance } from './relationships';
 import { playerSeatContribution } from './influence';
+import { demoFactor, sectorWeights } from './society';
 import type { GameState, Ideology, Sector, WorldKey } from '../types';
-import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
+import { AXES, SECTORS, SECTOR_IDEOLOGY, clamp, leanAlignment } from '../util';
 
 export const WORLD_NAMES: Record<WorldKey, string> = {
   economy: 'כלכלה',
@@ -72,9 +73,10 @@ export function govSatisfaction(s: GameState): number {
 export function playerElectoralAppeal(s: GameState): number {
   const p = s.player;
   let appeal = 0;
+  const sw = sectorWeights(s);
   for (const sec of SECTORS) {
     const fit = Math.max(0, (p.approval[sec] - 45) / 55);
-    appeal += SECTOR_WEIGHTS[sec] * fit;
+    appeal += sw[sec] * fit;
   }
   const fame = p.fame / 100;
   const party = p.partyId ? s.parties[p.partyId] : null;
@@ -98,7 +100,7 @@ export function updatePolls(s: GameState) {
   const gov = govSatisfaction(s);
   const parties = Object.values(s.parties);
   for (const p of parties) {
-    let target = p.base;
+    let target = p.base * demoFactor(s, p.sectors);
     const inCoal = s.coalition.parties.includes(p.id);
     target *= 1 + (inCoal ? gov * 0.18 : -gov * 0.1);
     if (p.playerFounded) target = playerElectoralAppeal(s) + (p.absorbed ?? 0);

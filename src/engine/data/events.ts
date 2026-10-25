@@ -11,6 +11,7 @@ import { issueLean } from '../systems/influence';
 import { playerCanRunForPresident } from '../systems/president';
 import { SHOCK_EVENTS } from './shocks';
 import { TRANSFORM_EVENTS } from './transforms';
+import { CHAIN_EVENTS } from './chains';
 
 export interface EventChoice {
   label: string;
@@ -1062,7 +1063,7 @@ EVENTS.push(
   },
 );
 
-export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id);
+export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id) ?? CHAIN_EVENTS.find((e) => e.id === id);
 
 export function debtCollectCandidate(s: GameState): Ctx | null {
   const due = s.player.debts.filter((d) => d.dir === 'player_owes' && s.week - d.week >= 4);
