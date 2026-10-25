@@ -6,6 +6,7 @@ import type { GameState } from '../types';
 import { clamp, ideologyDistance } from '../util';
 import { addNews } from './news';
 import { changeAttitude } from './relationships';
+import { releaseReplacement } from './regime';
 import { log } from './report';
 import { latestSurvey } from './surveys';
 
@@ -125,10 +126,18 @@ function applyPresidentResult(s: GameState) {
 }
 
 export function vacateSeat(s: GameState, id: string) {
+  releaseReplacement(s, id);
   const n = s.npcs[id];
   const party = n?.partyId ? s.parties[n.partyId] : null;
   if (!n || !party) return;
-  let next = party.list.find((x) => x !== 'player' && s.npcs[x] && !s.npcs[x].isMK && x !== id);
+  if (!s.seating.includes(id)) {
+    n.isMK = false;
+    n.role = 'candidate';
+    party.list = party.list.filter((x) => x !== id);
+    return;
+  }
+  const swappedOut = new Set(Object.keys(s.norwegianSwaps ?? {}));
+  let next = party.list.find((x) => x !== 'player' && s.npcs[x] && !s.npcs[x].isMK && x !== id && s.npcs[x].partyId === party.id && !swappedOut.has(x));
   if (!next) next = spawnCandidate(s, party.id).id;
   n.isMK = false;
   n.role = 'candidate';

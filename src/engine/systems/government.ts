@@ -202,6 +202,8 @@ export function formGovernment(s: GameState, coalition: string[], opts: GovOptio
   // החוק הנורבגי: שרים מפנים מושבים לפני חלוקת הוועדות, כך שהנכנסים מקבלים מקום בוועדות
   applyNorwegian(s);
   assignCommittees(s, opts.chairs);
+  // שחקן שכבר לא שר/ה בממשלה החדשה
+  if (s.player.rank === 'minister' && !s.player.ministry && pmId !== 'player') s.player.rank = s.player.isMK ? 'mk' : s.player.partyId ? 'activist' : 'citizen';
 }
 
 /** מינוי השחקן לשר (מחליף את מי שהחזיק בתיק). */
@@ -291,3 +293,19 @@ export function assignCommittees(s: GameState, chairs: Record<string, string> = 
     if (s.player.rank === 'chair' && !committees.some((c) => c.chairId === 'player')) s.player.rank = 'mk';
   }
 }
+
+/** שר/ה שעוזב/ת: התיק עובר לח"כ אחר/ת מאותה מפלגה (או מתפנה) */
+export function vacateMinistry(s: GameState, id: string) {
+  const n = s.npcs[id];
+  if (!n?.ministry || n.ministry === 'pm' || n.ministry === 'speaker') return;
+  const mid = n.ministry;
+  n.ministry = undefined;
+  n.title = undefined;
+  const repl = Object.values(s.npcs).filter((x) => x.isMK && x.partyId === n.partyId && !x.ministry && x.id !== id).sort((a, b) => b.influence - a.influence)[0];
+  if (repl) {
+    repl.ministry = mid;
+    repl.title = ministryTitle(mid, repl.gender);
+    s.ministers[mid] = repl.id;
+  } else delete s.ministers[mid];
+}
+

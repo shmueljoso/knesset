@@ -7,7 +7,9 @@ import type { GameState, Ideology, Party, Sector } from '../types';
 import { AXES, clamp, ideologyDistance, newId } from '../util';
 import { recomputeStability } from './coalition';
 import { addNews } from './news';
-import { addMomentum, pollSeats } from './opinion';
+import { addMomentum, normalizePolls, pollSeats } from './opinion';
+import { recountSeats } from './seats';
+import { restoreNorwegian } from './regime';
 import { addMemory, changeAttitude } from './relationships';
 import { log } from './report';
 
@@ -65,6 +67,7 @@ function members(s: GameState, party: Party): string[] {
  * נשמרים מקומות ריאליים לפי ההסכם.
  */
 export function mergeParties(s: GameState, keepId: string, goneId: string, share: Share = 'fair', name?: string): Party {
+  restoreNorwegian(s);
   const keep = s.parties[keepId];
   const gone = s.parties[goneId];
   const syn = synergy(keep, gone);
@@ -116,6 +119,8 @@ export function mergeParties(s: GameState, keepId: string, goneId: string, share
     s.coalition.parties = s.coalition.parties.filter((p) => p !== goneId);
   }
   removeParty(s, goneId, keepId);
+  recountSeats(s);
+  normalizePolls(s);
   recomputeStability(s);
   return keep;
 }
@@ -131,7 +136,9 @@ export function removeParty(s: GameState, id: string, heir?: string) {
     if (p.incompatible) p.incompatible = p.incompatible.filter((x) => x !== id);
   }
   for (const b of s.bills) if (b.agreementParty === id) b.agreementParty = heir;
+  s.succession = (s.succession ?? []).filter((x) => x.partyId !== id);
   delete s.parties[id];
+  normalizePolls(s);
 }
 
 // ---------- הצעת איחוד מהשחקן ----------
@@ -193,6 +200,8 @@ export function proposeMerger(s: GameState, partyId: string, terms: MergeTerms, 
 export function executeMerger(s: GameState, partyId: string, terms: MergeTerms, name?: string): Result {
   const me = playerLeads(s);
   if (!me || !s.parties[partyId]) return { ok: false, text: 'האיחוד לא יצא לפועל' };
+  const blocked = mergeBlocked(s, me.id, partyId);
+  if (blocked) return { ok: false, text: blocked };
   const them = s.parties[partyId];
   const leader = s.npcs[them.leaderId];
   const oldName = me.name;
@@ -221,6 +230,7 @@ export function executeMerger(s: GameState, partyId: string, terms: MergeTerms, 
 export function surplusBlocked(s: GameState, partyId: string): string | null {
   const me = playerLeads(s);
   if (!me) return 'רק יו"ר מפלגה';
+  if (!s.parties[partyId] || partyId === me.id) return 'מפלגה לא קיימת';
   if (me.surplusPartner) return `כבר יש לך הסכם עודפים עם ${s.parties[me.surplusPartner]?.short ?? ''}`;
   if (s.parties[partyId]?.surplusPartner) return 'כבר חתמו עם מפלגה אחרת';
   if (s.week >= s.electionWeek) return 'מאוחר מדי';
@@ -306,6 +316,7 @@ export function spawnParty(s: GameState, arch: Archetype): Party {
 
 /** פילוג במפלגה של NPC: מורדים לוקחים כשליש מהרשימה */
 export function npcSplit(s: GameState, fromId: string, arch: Omit<Archetype, 'ideology' | 'sectors'>): Party | null {
+  restoreNorwegian(s);
   const from = s.parties[fromId];
   if (!from || from.leaderId === 'player') return null;
   const rebels = from.list.filter((id) => id !== from.leaderId && id !== 'player' && s.npcs[id]).slice(1, 1 + Math.max(2, Math.round(from.list.length / 3)));
@@ -340,6 +351,7 @@ export function npcSplit(s: GameState, fromId: string, arch: Omit<Archetype, 'id
     s.coalition.parties.push(id);
     s.coalition.satisfaction[id] = 35;
   }
+  recountSeats(s);
   addMomentum(s, id, arch.momentum);
   addMomentum(s, fromId, -arch.momentum * 0.4);
   recomputeStability(s);

@@ -6,7 +6,10 @@ import type { GameState, Hypo, Ideology, Npc, Party, Succession } from '../types
 import { clamp, ideologyDistance } from '../util';
 import { listsOpen, spawnParty } from './mergers';
 import { addNews } from './news';
-import { addMomentum, playerElectoralAppeal } from './opinion';
+import { addMomentum, normalizePolls, playerElectoralAppeal } from './opinion';
+import { vacateMinistry } from './government';
+import { releaseReplacement, restoreNorwegian } from './regime';
+import { recountSeats } from './seats';
 import { changeAttitude } from './relationships';
 import { log } from './report';
 import { vacateSeat } from './president';
@@ -140,6 +143,7 @@ export function installLeader(s: GameState, partyId: string, newId: string, why:
     if (o.title === 'ראש הממשלה' || o.title === 'ראשת הממשלה' || wasOpp) o.title = undefined;
   }
   if (s.coalition.pmId === old && !opts.keepPM) {
+    if (newId !== 'player') vacateMinistry(s, newId); // היורש/ת היה/תה שר/ה: התיק עובר הלאה
     s.coalition.pmId = newId;
     s.ministers.pm = newId;
     if (newId === 'player') {
@@ -168,6 +172,8 @@ export function installLeader(s: GameState, partyId: string, newId: string, why:
 function leaveParliament(s: GameState, id: string, why: string) {
   const n = s.npcs[id];
   if (!n) return;
+  vacateMinistry(s, id);
+  releaseReplacement(s, id);
   if (n.isMK) vacateSeat(s, id);
   n.partyId = null;
   n.title = undefined;
@@ -228,8 +234,9 @@ function finishSuccession(s: GameState, partyId: string, winner: string | undefi
     installLeader(s, partyId, winner, 'פרישה');
     addNews(s, `${figureName(s, winner)} נבחר/ה ליו"ר ${p.name} במקום ${figureName(s, old)}`, 'neutral', winner === 'player' || partyId === s.player.partyId, undefined, 'ערוץ המשכן');
   }
-  // הפורש/ת: לרוב נשאר/ת ח"כ; לפעמים עוזב/ת את החיים הפוליטיים (ואז אפשר לשאול "מה אם יחזור")
-  if (old !== 'player' && s.npcs[old] && old !== winner) {
+  // הפורש/ת: לרוב נשאר/ת ח"כ; לפעמים עוזב/ת את החיים הפוליטיים (ואז אפשר לשאול "מה אם יחזור").
+  // רק אם נבחר/ה יורש/ת – אחרת המפלגה נשארת בלי יו"ר
+  if (winner && old !== 'player' && s.npcs[old] && old !== winner && s.parties[partyId]?.leaderId === winner) {
     if (chance(s, 0.5)) leaveParliament(s, old, 'פרש מהפוליטיקה');
     else s.npcs[old].ambition = Math.max(10, s.npcs[old].ambition - 30);
   }
@@ -273,10 +280,11 @@ registerSpecial('fg_stay', (s, ctx) => {
 /** דמות (NPC) עוזבת ומקימה רשימה חדשה; מי שחזרה מפרישה – מבטלת את הפרישה */
 export function foundByNpc(s: GameState, id: string): Party | null {
   const n = s.npcs[id];
-  if (!n || leads(s, id) || Object.keys(s.parties).length >= 16) return null;
+  if (!n || leads(s, id) || n.ministry || Object.keys(s.parties).length >= 16) return null;
   const from = n.partyId ? s.parties[n.partyId] : null;
   const [first, ...rest] = n.name.split(' ');
   const last = rest.join(' ') || first;
+  restoreNorwegian(s);
   const f = foundForecast(s, id);
   const party = spawnParty(s, {
     names: [`הדרך של ${first}`, `${last} ביחד`, `מפלגת ${last}`, `הרשימה של ${first}`],
@@ -287,8 +295,8 @@ export function foundByNpc(s: GameState, id: string): Party | null {
   });
   const gen = party.leaderId;
   // הדמות הופכת ליו"ר; היו"ר שנוצר בינתיים נשאר ברשימה
+  for (const q of Object.values(s.parties)) if (q.id !== party.id) q.list = q.list.filter((x) => x !== id);
   if (from) {
-    from.list = from.list.filter((x) => x !== id);
     if (n.isMK) from.seats = Math.max(0, from.seats - 1);
     from.base *= 0.97;
     from.poll *= 0.97;
@@ -302,6 +310,8 @@ export function foundByNpc(s: GameState, id: string): Party | null {
   party.base = party.poll;
   s.retired = s.retired.filter((r) => r.id !== id);
   s.buzz[id] = 0;
+  recountSeats(s);
+  normalizePolls(s);
   void gen;
   addNews(s, `${n.name} הקים/ה מפלגה חדשה: "${party.name}"`, 'neutral', false, `סקרים אחרונים נתנו ${f.seats} מנדטים. ${f.takes[0] ? `הכי נפגעת: ${s.parties[f.takes[0].party]?.name}.` : ''}`, 'ערוץ המשכן');
   return party;
@@ -434,6 +444,26 @@ registerSpecial('fg_rebels_split', (s, ctx) => {
 export function repairLeadership(s: GameState) {
   const mine = s.player.partyId;
   let changed = false;
+  // יו"ר שכבר לא בכנסת/לא במפלגה (לא משנה איך זה קרה): מחליפים ביורש/ת מתאים/ה
+  for (const p of Object.values(s.parties)) {
+    if (p.leaderId === 'player') continue;
+    const l = s.npcs[p.leaderId];
+    if (l && l.partyId === p.id && (l.isMK || p.seats === 0)) continue;
+    const heir = successors(s, p.id, p.leaderId)[0] ?? Object.values(s.npcs).find((n) => n.partyId === p.id && n.isMK);
+    if (!heir) continue;
+    installLeader(s, p.id, heir.id, 'תיקון');
+    changed = true;
+  }
+  // שרים שאינם ח"כים (ולא נורבגיים): התיק עובר הלאה
+  for (const [mid, who] of Object.entries(s.ministers)) {
+    if (mid === 'pm' || who === 'player') continue;
+    const n = s.npcs[who];
+    if (!n || (!n.isMK && !s.norwegianSwaps?.[who]) || n.ministry !== mid) {
+      if (n && n.ministry === mid) vacateMinistry(s, who);
+      else delete s.ministers[mid];
+      changed = true;
+    }
+  }
   for (const p of Object.values(s.parties)) {
     if (p.leaderId !== 'player' || p.id === mine) continue;
     const heir = successors(s, p.id, 'player')[0] ?? Object.values(s.npcs).find((n) => n.partyId === p.id && n.isMK);
@@ -485,6 +515,7 @@ export function resignPremiership(s: GameState): { ok: boolean; text: string } {
     // ראש הממשלה מפנה גם את ראשות מפלגתו
     installLeader(s, mine.id, heir.id, 'התפטרות');
   } else {
+    vacateMinistry(s, heir.id);
     s.coalition.pmId = heir.id;
     s.ministers.pm = heir.id;
     heir.title = heir.gender === 'm' ? 'ראש הממשלה' : 'ראשת הממשלה';

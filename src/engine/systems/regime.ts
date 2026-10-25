@@ -6,9 +6,10 @@ import { spawnCandidate } from '../newGame';
 import { rand } from '../rng';
 import type { GameState, PmRace, TransformId } from '../types';
 import { ideologyDistance } from '../util';
-import { MINISTRIES } from './government';
+import { MINISTRIES, vacateMinistry } from './government';
 import { addNews } from './news';
 import { log } from './report';
+import { recountSeats } from './seats';
 import { latestSurvey, pmFitOf } from './surveys';
 
 // ---------------- החוק הנורבגי ----------------
@@ -56,6 +57,11 @@ function swapBack(s: GameState, ministerId: string) {
   if (!repl) return;
   // השר/ה כבר חזר/ה לכנסת בדרך אחרת (למשל במקום ח"כ שהתפטר/ה) – מי שנכנס/ה נשאר/ת
   if (s.seating.includes(ministerId)) return;
+  // המחליף/ה כבר לא יושב/ת (עזב/ה את הכנסת): אין מושב להחזיר, והתיק עובר הלאה
+  if (!s.seating.includes(repl)) {
+    if (n) vacateMinistry(s, ministerId);
+    return;
+  }
   const back = !!n && !!n.partyId && s.parties[n.partyId]?.seats > 0;
   if (back) n.isMK = true;
   const into = back ? ministerId : repl;
@@ -64,7 +70,10 @@ function swapBack(s: GameState, ministerId: string) {
     c.members = c.members.map((m) => (m === repl ? into : m));
     if (c.chairId === repl) c.chairId = into;
   }
-  if (!back) return;
+  if (!back) {
+    if (n) vacateMinistry(s, ministerId);
+    return;
+  }
   if (repl === 'player') {
     s.player.isMK = false;
     s.player.committees = [];
@@ -77,13 +86,24 @@ function swapBack(s: GameState, ministerId: string) {
   }
 }
 
+/** מי שנכנס/ה במקום שר/ה (חוק נורבגי) ועומד/ת לעזוב את הכנסת: השר/ה חוזר/ת קודם, כדי שלא יישאר מושב שבור */
+export function releaseReplacement(s: GameState, id: string) {
+  const key = Object.keys(s.norwegianSwaps ?? {}).find((k) => s.norwegianSwaps[k] === id);
+  if (key) {
+    swapBack(s, key);
+    recountSeats(s);
+  }
+}
+
 export function restoreNorwegian(s: GameState) {
   for (const id of Object.keys(s.norwegianSwaps ?? {})) swapBack(s, id);
+  recountSeats(s);
 }
 
 /** כל שבוע ובהקמת ממשלה: שרים בתפקיד מפנים מושבים (עד המכסה), ושרים לשעבר חוזרים */
 export function applyNorwegian(s: GameState) {
   s.norwegianSwaps ??= {};
+  recountSeats(s);
   const limit = norwegianLimit(s);
   for (const id of Object.keys(s.norwegianSwaps)) {
     const n = s.npcs[id];

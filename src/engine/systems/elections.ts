@@ -33,7 +33,7 @@ export function allocateSeats(
   for (const p of passing) {
     if (seen.has(p)) continue;
     const partner = surplus[p];
-    if (partner && passing.includes(partner) && !seen.has(partner)) {
+    if (partner && partner !== p && passing.includes(partner) && !seen.has(partner)) {
       units.push([p, partner]);
       seen.add(partner);
     } else units.push([p]);
@@ -171,13 +171,28 @@ export function runElection(s: GameState) {
   const wasMK = s.player.isMK;
   s.player.isMK = false;
   const seating: string[] = [];
+  const taken = new Set<string>();
+  // רשימות לא עקביות: מי שמופיע/ה ברשימות של כמה מפלגות נשאר/ת רק במפלגה שאליה הוא/היא שייך/ת; ויו"ר תמיד בראש רשימתו/ה
+  for (const p of Object.values(s.parties)) {
+    p.list = p.list.filter((id) => {
+      if (id === 'player') return true;
+      const n = s.npcs[id];
+      if (!n) return false;
+      return n.partyId === p.id || !(n.partyId && s.parties[n.partyId]?.list.includes(id));
+    });
+    const lead = s.npcs[p.leaderId];
+    if (lead && lead.partyId === p.id && !p.list.includes(lead.id)) p.list.unshift(lead.id);
+  }
   const order = Object.values(s.parties).sort(
     (a, b) => a.ideology.security + a.ideology.judiciary - (b.ideology.security + b.ideology.judiciary),
   );
   for (const p of order) {
     p.seats = seats[p.id];
+    // אדם יכול לשבת רק במפלגה אחת: מי שכבר נבחר בסיעה אחרת (רשימות לא עקביות) מדולג
+    p.list = p.list.filter((id) => id === 'player' || (s.npcs[id] && !taken.has(id)));
     while (p.list.length < p.seats) spawnCandidate(s, p.id);
     const elected = p.list.slice(0, p.seats);
+    for (const id of elected) taken.add(id);
     for (const id of p.list) if (id !== 'player' && s.npcs[id]) s.npcs[id].partyId = p.id;
     for (const id of elected) {
       if (id === 'player') s.player.isMK = true;

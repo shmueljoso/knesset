@@ -142,16 +142,16 @@ export function createGame(opts: NewGameOptions): GameState {
       name: def.name,
       short: def.short,
       color: def.color,
-      ideology: def.ideology,
+      ideology: { ...def.ideology }, // עותק: אחרת הסחף האידיאולוגי והאיחודים מזהמים משחקים חדשים
       leaderId: list[0],
       seats: def.seats,
       poll: (def.seats / 120) * 100,
       base: (def.seats / 120) * 100,
       primaries: def.primaries,
-      sectors: def.sectors,
+      sectors: { ...def.sectors },
       list,
       inOutgoingKnesset: true,
-      incompatible: def.incompatible,
+      incompatible: def.incompatible ? [...def.incompatible] : undefined,
     };
     npcs[list[0]].influence = 95;
     npcs[list[0]].primaryStrength = 100;
@@ -205,7 +205,7 @@ export function createGame(opts: NewGameOptions): GameState {
     gender: opts.gender,
     background: opts.background,
     avatar: { ...opts.avatar, gender: opts.gender },
-    ideology: opts.ideology,
+    ideology: { ...opts.ideology },
     fame: bg.fame,
     approval,
     reputation: bg.reputation,

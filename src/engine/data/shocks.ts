@@ -9,6 +9,7 @@ import { openWindow } from '../systems/climate';
 import { listsOpen, mergeBlocked, mergeChance, npcSplit, playerLeads, spawnParty, type Archetype } from '../systems/mergers';
 import { addNews } from '../systems/news';
 import { shiftOpinion } from '../systems/society';
+import { installLeader, successors } from '../systems/figures';
 import { addMomentum, addWorldEffect } from '../systems/opinion';
 import type { GameState, Party } from '../types';
 import { ideologyDistance, leanAlignment } from '../util';
@@ -169,10 +170,9 @@ export const SHOCKS: ShockDef[] = [
       if (!pool.length) return null;
       const p = own && pool.includes(own) && s.player.isMK && rand(s) < 0.4 ? own : pick(s, pool);
       const old = s.npcs[p.leaderId];
-      const heir = p.list.find((id) => id !== old.id && id !== 'player' && s.npcs[id]);
+      const heir = successors(s, p.id, old.id)[0]?.id;
       if (!heir) return null;
-      p.leaderId = heir;
-      p.list = [heir, ...p.list.filter((id) => id !== heir)];
+      installLeader(s, p.id, heir, 'פרישה פתאומית');
       addMomentum(s, p.id, -3);
       addNews(s, `${old.name} מודיע/ה על פרישה מהפוליטיקה. ${s.npcs[heir].name} ממלא/ת את מקומו/ה בראשות ${p.short}`, 'neutral', p.id === s.player.partyId, undefined, 'ערוץ המשכן');
       return { party: p.id, npc: old.id, npc2: heir };
@@ -181,7 +181,8 @@ export const SHOCKS: ShockDef[] = [
   {
     id: 'shock_star_jump', weight: 3, when: listsOpen,
     setup: (s) => {
-      const stars = Object.values(s.npcs).filter((n) => !n.isMK && n.partyId && n.influence >= 55 && s.parties[n.partyId] && s.parties[n.partyId].leaderId !== n.id);
+      const swapped = new Set([...Object.keys(s.norwegianSwaps ?? {}), ...Object.values(s.norwegianSwaps ?? {})]);
+      const stars = Object.values(s.npcs).filter((n) => !n.isMK && !n.ministry && !swapped.has(n.id) && n.partyId && n.influence >= 55 && s.parties[n.partyId] && s.parties[n.partyId].leaderId !== n.id);
       if (!stars.length) return null;
       const star = pick(s, stars);
       const from = s.parties[star.partyId!];

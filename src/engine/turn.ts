@@ -17,7 +17,7 @@ import { applyNorwegian } from './systems/regime';
 import { SURVEY_EVERY, tickSurveys } from './systems/surveys';
 import { stateHeadlines } from './systems/headlines';
 import { tickSociety } from './systems/society';
-import { tickFigures } from './systems/figures';
+import { repairLeadership, tickFigures } from './systems/figures';
 import { supportersIncome, tickProjects } from './systems/projects';
 import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
 import { radicalClimate } from './systems/climate';
@@ -197,6 +197,7 @@ export function endWeek(s: GameState) {
   s.playerHistory.push({ week: s.week, fame: p.fame, approval: avgApproval(s), reputation: p.reputation });
   if (s.playerHistory.length > 260) s.playerHistory.shift();
 
+  repairLeadership(s); // רשת ביטחון: יו"ר/שר שנשארו במצב לא תקין מתוקנים
   const after = snapshot(s);
   s.report = {
     week: s.week - 1,

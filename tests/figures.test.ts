@@ -94,7 +94,7 @@ describe('leaders, retirement and new parties', () => {
 
   it('an ambitious figure with enough buzz founds a party; the Knesset stays consistent', () => {
     const s = createGame(base);
-    const n = Object.values(s.npcs).find((x) => x.isMK && x.notable && x.partyId && s.parties[x.partyId].leaderId !== x.id)!;
+    const n = Object.values(s.npcs).find((x) => x.isMK && x.notable && !x.ministry && x.partyId && s.parties[x.partyId].leaderId !== x.id)!;
     n.ambition = 90;
     const from = n.partyId!;
     const before = Object.keys(s.parties).length;

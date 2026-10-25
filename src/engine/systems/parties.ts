@@ -4,8 +4,11 @@ import type { GameState, Npc, Party } from '../types';
 import { clamp, ideologyDistance, newId } from '../util';
 import { partyMKs } from './government';
 import { installLeader, successors } from './figures';
+import { removeParty } from './mergers';
+import { restoreNorwegian } from './regime';
+import { recountSeats } from './seats';
 import { addNews } from './news';
-import { addMomentum, playerElectoralAppeal } from './opinion';
+import { addMomentum, normalizePolls, playerElectoralAppeal } from './opinion';
 import { addMemory, changeAttitude } from './relationships';
 import { log } from './report';
 
@@ -22,12 +25,36 @@ function partyPenalty(s: GameState, oldId: string, scale: number) {
   }
 }
 
+/** שחקן שעוזב מפלגה שהוא/היא יו"ר שלה: היורש/ת נכנס/ת, ומפלגה ריקה שהקמת – מתפרקת */
+function handOverLeadership(s: GameState, partyId: string, notes: string[]) {
+  const old = s.parties[partyId];
+  if (!old || old.leaderId !== 'player') return;
+  const heir = successors(s, partyId, 'player')[0] ?? Object.values(s.npcs).find((n) => n.partyId === partyId && n.id !== 'player');
+  if (heir) {
+    installLeader(s, partyId, heir.id, 'השחקן עזב', { keepPM: true });
+    notes.push(`${heir.name} ירש/ה את ראשות ${old.name}.`);
+    return;
+  }
+  // אין אף אחד: מפלגת היחיד מתפרקת
+  for (const n of Object.values(s.npcs)) if (n.partyId === partyId) n.partyId = null;
+  removeParty(s, partyId);
+  if (s.coalition.pmId === 'player' && !s.coalition.parties.length) s.coalition.parties = [];
+  notes.push(`${old.name} התפרקה.`);
+}
+
 /** עזיבת מפלגה שלא כח"כ: פגיעה במוניטין שגדלה עם כל מעבר נוסף. */
 function leaveAsMember(s: GameState, newPartyId: string | null): string[] {
   const p = s.player;
   const notes: string[] = [];
   if (!p.partyId) return notes;
+  handOverLeadership(s, p.partyId, notes);
   const old = s.parties[p.partyId];
+  if (!old) {
+    p.partySwitches += 1;
+    p.listPosition = null;
+    p.wantsList = false;
+    return notes;
+  }
   const recent = s.week - p.memberSince < 52;
   const repLoss = 4 + (recent ? 6 : 0) + p.partySwitches * 2;
   p.reputation = clamp(p.reputation - repLoss, 0, 100);
@@ -59,6 +86,10 @@ export function joinParty(s: GameState, partyId: string): Result {
   if (p.isMK) return { ok: false, text: 'ח"כ לא יכול לעבור סיעה באמצע כנסת – רק פילוג (שליש מהסיעה) או פרישה.' };
   const notes = leaveAsMember(s, partyId);
   p.partyId = partyId;
+  if (s.coalition.pmId === 'player' && !s.coalition.parties.includes(partyId)) {
+    s.coalition.parties.push(partyId);
+    s.coalition.satisfaction[partyId] = 70;
+  }
   p.memberSince = s.week;
   p.partyStanding = clamp(8 + p.reputation * 0.15 + p.fame * 0.1, 0, 100);
   if (p.rank === 'citizen' || p.rank === 'candidate') p.rank = 'activist';
@@ -121,17 +152,24 @@ function makePlayerParty(s: GameState, name: string, color: string, seats: numbe
   s.player.wantsList = true;
   party.poll = Math.max(0.5, playerElectoralAppeal(s));
   party.base = party.poll;
+  normalizePolls(s);
   return party;
 }
 
 /** פילוג חוקי: לפחות שליש מהסיעה עוזב יחד ומקים סיעה חדשה. */
 export function splitFaction(s: GameState, name: string, color: string): Result {
+  restoreNorwegian(s);
   const info = splitInfo(s);
   const p = s.player;
   if (!p.partyId) return { ok: false, text: 'אינך בסיעה' };
+  if (!p.isMK) return { ok: false, text: 'רק ח"כ יכול לפלג' };
+  if (s.parties[p.partyId].leaderId === 'player') {
+    if (s.parties[p.partyId].playerFounded) return { ok: false, text: 'זו המפלגה שהקמת – אי אפשר להתפצל ממנה. אפשר למזג אותה או להעביר את ההנהגה.' };
+    if (!successors(s, p.partyId, 'player').length && !Object.values(s.npcs).some((n) => n.partyId === p.partyId && n.isMK && !info.followers.includes(n))) return { ok: false, text: 'אין ח"כ שיישאר ויירש את המפלגה הישנה.' };
+  }
   const leaderCase = !!p.partyId && s.parties[p.partyId].leaderId === 'player';
   // יו"ר שעוזב/ת לא לוקח/ת את כולם: חלק נשאר נאמן למפלגה, ומהם יבוא היורש
-  const take = leaderCase ? Math.max(info.needed - 1, Math.min(Math.floor(info.followers.length * 0.65), info.seats - 2)) : info.followers.length;
+  const take = leaderCase ? Math.max(info.needed - 1, Math.min(Math.floor(info.followers.length * 0.65), Math.max(0, info.seats - 2))) : info.followers.length;
   const group = info.followers.slice(0, Math.max(info.needed - 1, take));
   if (group.length + 1 < info.needed) return { ok: false, text: `לפילוג חוקי צריך ${info.needed} ח"כים (כולל אותך). יש לך ${group.length + 1}.` };
   const old = s.parties[p.partyId];
@@ -159,6 +197,7 @@ export function splitFaction(s: GameState, name: string, color: string): Result 
   }
   // העברת מושבים במליאה: הסיעה החדשה יושבת יחד
   s.seating = [...s.seating.filter((id) => id !== 'player' && !group.some((g) => g.id === id)), 'player', ...group.map((g) => g.id)];
+  recountSeats(s);
   if (wasLeader) {
     // יו"ר שעזב/ה: המפלגה הישנה בוחרת יורש/ת; ראש הממשלה נשאר/ת בתפקיד (ראש ממשלת מעבר)
     const heir = successors(s, old.id, 'player')[0] ?? Object.values(s.npcs).find((n) => n.partyId === old.id && n.isMK);
@@ -173,7 +212,7 @@ export function splitFaction(s: GameState, name: string, color: string): Result 
     if (oppLeader) addNews(s, `${oppLeader.name} (${opp!.short}): "${wasPM ? 'ראש ממשלה בלי מפלגה – הגיע הזמן לבחירות' : 'המפלגה הזו התפרקה מבפנים'}"`, 'neutral', false, undefined, 'גלי הבירה', oppLeader.id);
     addMomentum(s, old.id, -0.8);
     if (wasPM) {
-      // הקואליציה: שתי הסיעות בממשלה, אבל הוותיקה כועסת
+      // (גם אם לא יו"ר) הקואליציה: שתי הסיעות בממשלה, אבל הוותיקה כועסת
       if (!s.coalition.parties.includes(party.id)) s.coalition.parties.push(party.id);
       s.coalition.satisfaction[party.id] = 85;
       if (s.coalition.satisfaction[old.id] !== undefined) s.coalition.satisfaction[old.id] = 30;
@@ -182,6 +221,12 @@ export function splitFaction(s: GameState, name: string, color: string): Result 
       s.eventQueue.push({ eventId: 'fg_pm_split', ctx: { heirName: heir?.name ?? 'יורש/ת', oldName: old.name } });
     }
   }
+  if (wasPM && !wasLeader) {
+    if (!s.coalition.parties.includes(party.id)) s.coalition.parties.push(party.id);
+    s.coalition.satisfaction[party.id] = 85;
+    s.coalition.stability = clamp(s.coalition.stability - 8, 0, 100);
+  }
+  normalizePolls(s);
   addNews(s, `פילוג ב${old.name}: ${p.name} ועוד ${group.length} ח"כים מקימים את "${name}"`, 'neutral', true);
   log(s, `פילוג חוקי: הקמת את סיעת ${name}.`, 'career');
   return { ok: true, text: `הפילוג אושר בוועדת הכנסת. ${name} היא סיעה עם ${group.length + 1} מנדטים.` };
@@ -219,6 +264,10 @@ export function foundParty(s: GameState, name: string, color: string): Result {
   const party = makePlayerParty(s, name.trim(), color, p.isMK ? 1 : 0);
   if (p.isMK) s.seating = [...s.seating.filter((id) => id !== 'player'), 'player'];
   p.rank = p.isMK ? p.rank : 'candidate';
+  if (s.coalition.pmId === 'player' && !s.coalition.parties.includes(party.id)) {
+    s.coalition.parties.push(party.id);
+    s.coalition.satisfaction[party.id] = 85;
+  }
   addNews(s, `${p.name} מקים/ה מפלגה חדשה: "${party.name}"`, 'neutral', true);
   log(s, `הקמת את ${party.name}. נרשמה אצל רשם המפלגות.`, 'career');
   return { ok: true, text: [`"${party.name}" נרשמה אצל רשם המפלגות. אתה עומד/ת בראשה.`, ...notes].join(' ') };
@@ -230,7 +279,7 @@ export function recruitCandidate(s: GameState): Result {
   const party = p.partyId ? s.parties[p.partyId] : null;
   if (!party?.playerFounded) return { ok: false, text: 'רק למפלגה שהקמת' };
   const pool = Object.values(s.npcs)
-    .filter((n) => n.role === 'candidate' && !party.list.includes(n.id))
+    .filter((n) => n.role === 'candidate' && !party.list.includes(n.id) && !Object.values(s.parties).some((x) => x.leaderId === n.id))
     .filter((n) => ideologyDistance(n.ideology, p.ideology) < 0.3 && n.attitude > -10)
     .sort((a, b) => b.attitude + b.influence - (a.attitude + a.influence));
   const target = pool[Math.floor(rand(s) * Math.min(5, pool.length))];

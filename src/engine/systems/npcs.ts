@@ -8,6 +8,8 @@ import type { GameState, Npc } from '../types';
 import { clamp } from '../util';
 import { isCoalition } from './government';
 import { applyLawEffects, onLawPassed, scheduleEvent } from './issues';
+import { spawnCandidate } from '../newGame';
+import { releaseReplacement } from './regime';
 import { addNews } from './news';
 import { takeStance } from './opinion';
 import { addMemory } from './relationships';
@@ -51,8 +53,18 @@ function npcResigns(s: GameState) {
   const cands = Object.values(s.npcs).filter((n) => n.isMK && !n.ministry && n.partyId && s.parties[n.partyId].leaderId !== n.id);
   if (!cands.length) return;
   const n = pick(s, cands);
+  releaseReplacement(s, n.id);
   const party = s.parties[n.partyId!];
-  const next = party.list.find((id) => id !== 'player' && s.npcs[id] && !s.npcs[id].isMK);
+  if (!s.seating.includes(n.id)) {
+    // היה/הייתה מחליף/ה של שר/ה (חוק נורבגי): המושב חזר לשר/ה
+    n.isMK = false;
+    n.role = 'candidate';
+    n.notable = false;
+    addNews(s, `${n.name} התפטר/ה מהכנסת בעקבות פרשה`, 'neutral', false, undefined, undefined, n.id);
+    return;
+  }
+  const swappedOut = new Set(Object.keys(s.norwegianSwaps ?? {}));
+  const next = party.list.find((id) => id !== 'player' && s.npcs[id] && !s.npcs[id].isMK && id !== n.id && s.npcs[id].partyId === party.id && !swappedOut.has(id)) ?? spawnCandidate(s, party.id).id;
   n.isMK = false;
   n.role = 'candidate';
   n.notable = false;

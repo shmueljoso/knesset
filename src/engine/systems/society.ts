@@ -134,7 +134,7 @@ export function afterElection(s: GameState, oldSeats: Record<string, number>) {
   for (const p of Object.values(s.parties)) {
     const was = oldSeats[p.id];
     if (!was || was < 6) continue;
-    if (p.seats <= was * 0.6 && p.leaderId !== 'player' && s.npcs[p.leaderId]) {
+    if (p.seats <= was * 0.6 && p.seats > 0 && p.leaderId !== 'player' && s.npcs[p.leaderId]) {
       const old = s.npcs[p.leaderId];
       const next = p.list.map((id) => s.npcs[id]).filter((n) => n && n.id !== old.id && n.isMK).sort((a, b) => b.influence - a.influence)[0];
       addNews(s, `${old.name} מתפטר/ת מראשות ${p.name} אחרי המפלה: ${was} ← ${p.seats} מנדטים`, 'neutral', p.id === s.player.partyId, next ? `${next.name} ייבחר/תיבחר למחליף/ה.` : undefined, 'ערוץ המשכן');
