@@ -194,6 +194,18 @@ export function offerDeal(s: GameState, partyId: string): { ok: boolean; text: s
   return { ok: false, text: `${p.name} דחתה את ההצעה (נכונות ${w}/70). צריך לתת יותר.` };
 }
 
+/** ביטול הסכם שנחתם: המפלגה יוצאת מהקואליציה המתהווה, והדרישות שהובטחו לה (תיקים, תקציב) חוזרות לקופה */
+export function cancelDeal(s: GameState, partyId: string): { ok: boolean; text: string } {
+  const n = s.negotiation;
+  const t = n?.talks.find((x) => x.partyId === partyId);
+  if (!n || !t || !t.signed) return { ok: false, text: 'אין הסכם לבטל' };
+  t.signed = false;
+  t.granted = t.granted.map(() => false);
+  t.base -= 4; // נעלבה, אבל לא טרקה את הדלת
+  n.log.push(`${s.parties[partyId].name}: ההסכם בוטל על ידי הפורמטור.`);
+  return { ok: true, text: `ההסכם עם ${s.parties[partyId].name} בוטל. היא כבר לא בקואליציה, והתיקים והתקציב שהובטחו לה חזרו לקופה.` };
+}
+
 export const formationSeats = (s: GameState) => {
   const n = s.negotiation!;
   return s.parties[n.formateurParty].seats + n.talks.filter((t) => t.signed).reduce((a, t) => a + s.parties[t.partyId].seats, 0);

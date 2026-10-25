@@ -10,6 +10,7 @@ import {
   formationSeats,
   meetPartner,
   offerDeal,
+  cancelDeal,
   partnerAcceptChance,
   partnerDecline,
   partnerLeverage,
@@ -45,6 +46,7 @@ function TalkCard({ t, g }: { t: PartnerTalk; g: GameState }) {
   const p = g.parties[t.partyId];
   const leader = g.npcs[p.leaderId];
   const w = willingness(g, t);
+  const n = g.negotiation!;
   const fit = Math.round((1 - ideologyDistance(p.ideology, g.parties[g.negotiation!.formateurParty].ideology)) * 100);
   return (
     <div className="card" style={{ opacity: t.walkedOut ? 0.5 : 1, borderColor: t.signed ? 'var(--good)' : undefined }}>
@@ -60,6 +62,19 @@ function TalkCard({ t, g }: { t: PartnerTalk; g: GameState }) {
         </div>
         {t.signed ? <span className="chip good">חתמה ✓</span> : t.walkedOut ? <span className="chip bad">עזבה</span> : <span className="chip">{open ? '▲' : '▼'}</span>}
       </button>
+      {t.signed && n.mode === 'formateur' && (
+        <button
+          className="btn sm block"
+          style={{ marginTop: 8 }}
+          data-testid={`cancel-${t.partyId}`}
+          onClick={() => {
+            const r = act((s) => cancelDeal(s, t.partyId));
+            toast(r.text, r.ok ? 'neutral' : 'bad');
+          }}
+        >
+          ❌ לבטל את ההסכם ולהוציא מהקואליציה
+        </button>
+      )}
       {!t.signed && !t.walkedOut && (
         <div style={{ marginTop: 8 }}>
           <div className="spread tiny muted">

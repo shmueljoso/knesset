@@ -70,3 +70,16 @@ test('long-term projects show on the dashboard', async ({ page }) => {
   await page.getByTestId('projects').scrollIntoViewIfNeeded();
   await shot(page, '103-projects');
 });
+
+test('coalition talks: a signed party can be cancelled', async ({ page }) => {
+  const { startFormateur } = await import('../src/engine/systems/coalition');
+  const g = game();
+  g.parties.merkaz.leaderId = 'player';
+  startFormateur(g);
+  const t = g.negotiation!.talks[0];
+  t.signed = true;
+  await load(page, g);
+  await page.getByText('הרכבת ממשלה', { exact: false }).first().click();
+  await page.getByTestId(`cancel-${t.partyId}`).click();
+  await expect(page.getByTestId(`cancel-${t.partyId}`)).toHaveCount(0);
+});

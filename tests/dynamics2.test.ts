@@ -203,3 +203,25 @@ describe('advanced tools', () => {
     expect(s.flags.usedTools).toBe(true);
   });
 });
+
+describe('coalition talks', () => {
+  it('a signed party can be removed so a smaller government can be sworn in', async () => {
+    const { startFormateur, swearIn, cancelDeal, formationSeats } = await import('../src/engine/systems/coalition');
+    const s = createGame(base);
+    s.parties.merkaz.leaderId = 'player';
+    startFormateur(s);
+    for (const t of s.negotiation!.talks) t.signed = true;
+    const all = formationSeats(s);
+    const biggest = s.negotiation!.talks.slice().sort((a, b) => s.parties[b.partyId].seats - s.parties[a.partyId].seats)[0];
+    s.negotiation!.talks[0].granted = s.negotiation!.talks[0].granted.map(() => true);
+    expect(cancelDeal(s, biggest.partyId).ok).toBe(true);
+    expect(biggest.signed).toBe(false);
+    expect(biggest.granted.some(Boolean)).toBe(false);
+    expect(formationSeats(s)).toBe(all - s.parties[biggest.partyId].seats);
+    expect(cancelDeal(s, biggest.partyId).ok).toBe(false);
+    if (formationSeats(s) >= 61) {
+      expect(swearIn(s).ok).toBe(true);
+      expect(s.coalition.parties).not.toContain(biggest.partyId);
+    }
+  });
+});
