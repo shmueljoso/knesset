@@ -3,15 +3,19 @@ import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { onRadicalPassed } from './transforms';
 import { ISSUES } from '../data/issues';
 import { rand } from '../rng';
-import type { GameState, IssueId, LawRecord } from '../types';
+import type { GameState, IssueId, LawRecord, Sector, WorldKey } from '../types';
 import { clamp, leanAlignment } from '../util';
 import { addNews } from './news';
 import { addWorldEffect } from './opinion';
 import { applyNorwegian, termLimited } from './regime';
 import { log } from './report';
 
+/** חוק שעבר לאחרונה ונותן מענה לסוגיה (חוק שמלבה אותה – לא נחשב) */
 export const recentLaw = (s: GameState, issue: IssueId, weeks = 52) =>
-  s.lawsPassed.some((l) => !l.struck && s.week - l.week <= weeks && templateById(l.templateId)?.issue === issue);
+  s.lawsPassed.some((l) => {
+    const t = templateById(l.templateId);
+    return !l.struck && s.week - l.week <= weeks && t?.issue === issue && !t.inflames;
+  });
 
 export const isHot = (s: GameState, issue: IssueId, level = 60) => s.issues[issue] >= level && !recentLaw(s, issue);
 
@@ -67,7 +71,10 @@ export function onLawPassed(s: GameState, rec: Omit<LawRecord, 'week'>) {
   const t = templateById(rec.templateId);
   s.lawsPassed.push({ ...rec, week: s.week });
   const impact = SCOPE_FACTOR[rec.scope];
-  if (t.issue) bumpIssue(s, t.issue, -(25 + 10 * rec.scope));
+  // חוק שנותן מענה מרגיע את הסוגיה; חוק שנוי במחלוקת מלבה אותה
+  if (t.issue) bumpIssue(s, t.issue, t.inflames ? 12 + 8 * rec.scope : -(25 + 10 * rec.scope));
+  for (const [id, d] of Object.entries(t.stirs ?? {})) bumpIssue(s, id as IssueId, d! * impact);
+  coalitionReaction(s, t.id, rec.scope);
   // מפלגות שהחוק "שלהן" מתחזקות, המתנגדות נחלשות מעט
   if (Object.keys(t.lean).length) {
     for (const p of Object.values(s.parties)) {
@@ -82,11 +89,63 @@ export function onLawPassed(s: GameState, rec: Omit<LawRecord, 'week'>) {
   if (t.radical) onRadicalPassed(s, t.id, rec.scope, rec.sponsor);
 }
 
+/** השפעות החוק על העולם: הבסיס, ו"הצד השני" לפי היקף ותזמון. factor כולל את ההיקף */
+export function applyLawEffects(s: GameState, templateId: string, scope: 1 | 2 | 3, factor: number, source: string, delay?: number) {
+  const t = templateById(templateId);
+  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as WorldKey, v! * factor, t.weeks, source, delay ?? t.delay);
+  for (const e of lawEffects(templateId, scope)) addWorldEffect(s, e.key, e.d * factor, e.weeks, source, delay ?? e.delay ?? 0);
+}
+
+export const lawEffects = (templateId: string, scope: 1 | 2 | 3) => (templateById(templateId).effects ?? []).filter((e) => (e.from ?? 1) <= scope);
+
+/** תדמית במגזרים לפי היקף (בסיס + תוספות של היקף רחב) – לפני הכפלה בהיקף */
+export function lawSectors(templateId: string, scope: 1 | 2 | 3): Partial<Record<Sector, number>> {
+  const t = templateById(templateId);
+  const out: Partial<Record<Sector, number>> = { ...t.sectors };
+  for (const x of t.scopeSectors ?? []) if (x.from <= scope) for (const [k, v] of Object.entries(x.sectors)) out[k as Sector] = (out[k as Sector] ?? 0) + v!;
+  return out;
+}
+
+/** איך השותפות בקואליציה יגיבו לחוק: מה שמתאים לבוחרים שלהן משמח, מה שנוגד אותם – מרגיז */
+export function coalitionMood(s: GameState, templateId: string, scope: 1 | 2 | 3): { id: string; d: number }[] {
+  const t = templateById(templateId);
+  if (t.radical || t.hidden) return [];
+  const pmParty = s.coalition.pmId === 'player' ? s.player.partyId : s.npcs[s.coalition.pmId]?.partyId;
+  const out: { id: string; d: number }[] = [];
+  for (const pid of s.coalition.parties) {
+    const p = s.parties[pid];
+    if (!p || s.coalition.satisfaction[pid] === undefined) continue;
+    const a = Object.keys(t.lean).length ? leanAlignment(p.ideology, t.lean) : 0;
+    let d = Math.abs(a) >= 0.3 ? a * 4 * SCOPE_FACTOR[scope] : 0;
+    if (t.partners && pid !== pmParty) d += t.partners * SCOPE_FACTOR[scope];
+    if (Math.abs(d) >= 1) out.push({ id: pid, d: Math.round(d * 10) / 10 });
+  }
+  return out;
+}
+
+function coalitionReaction(s: GameState, templateId: string, scope: 1 | 2 | 3) {
+  const t = templateById(templateId);
+  for (const { id, d } of coalitionMood(s, templateId, scope)) {
+    s.coalition.satisfaction[id] = clamp(s.coalition.satisfaction[id] + d, 0, 100);
+    if (d <= -4) addNews(s, `${s.parties[id].name} זועמת על "${t.title}": "זה לא מה שהבטחתם לנו"`, 'bad');
+  }
+}
+
 function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>, scope: 1 | 2 | 3) {
   switch (rule) {
     case 'threshold':
+      s.flags.thresholdBefore ??= s.rules.threshold;
       s.rules.threshold = [3.5, 4, 5][scope - 1];
-      addNews(s, `אחוז החסימה הועלה ל-${s.rules.threshold}%. המפלגות הקטנות בבהלה`, 'neutral');
+      addNews(s, `אחוז החסימה הועלה ל-${s.rules.threshold}%. המפלגות הקטנות בבהלה – ומתחילות לדבר על איחודים`, 'neutral');
+      break;
+    case 'thresholdDown':
+      s.flags.thresholdBefore ??= s.rules.threshold;
+      s.rules.threshold = [2.75, 2, 1.5][scope - 1];
+      addNews(s, `אחוז החסימה הורד ל-${s.rules.threshold}%. מפלגות קטנות חדשות כבר מתכוננות לבחירות`, 'neutral');
+      break;
+    case 'immunity':
+      s.rules.immunity = scope;
+      addNews(s, `${['"החוק הצרפתי"', 'חוק החסינות לשרים', 'חוק החסינות האוטומטית'][scope - 1]} עבר: ${['ראש ממשלה מכהן', 'ראש הממשלה והשרים', 'כל חברי הכנסת'][scope - 1]} לא ייחקרו בזמן הכהונה`, 'neutral', false, 'במחאה: "חוק עוקף משפט".');
       break;
     case 'norwegian':
       s.rules.norwegian = true;
@@ -113,7 +172,36 @@ function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateByI
   log(s, `כללי המשחק השתנו: ${templateById(ruleTemplate(rule)).title}`, 'system');
 }
 
-const ruleTemplate = (rule: string) => ({ threshold: 'threshold', norwegian: 'norwegian', termLimit: 'termlimit', override: 'override', entrench: 'basic_entrench', equality: 'basic_dignity' })[rule] ?? rule;
+const ruleTemplate = (rule: string) => ({ threshold: 'threshold', thresholdDown: 'threshold_down', norwegian: 'norwegian', termLimit: 'termlimit', override: 'override', entrench: 'basic_entrench', equality: 'basic_dignity', immunity: 'immunity' })[rule] ?? rule;
+
+/** בג"ץ פסל חוק שמשנה את כללי המשחק – הכלל חוזר לקדמותו */
+function revertRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>) {
+  switch (rule) {
+    case 'threshold':
+    case 'thresholdDown':
+      s.rules.threshold = Number(s.flags.thresholdBefore ?? 3.25);
+      delete s.flags.thresholdBefore;
+      break;
+    case 'norwegian':
+      s.rules.norwegian = false;
+      break;
+    case 'termLimit':
+      s.rules.termLimit = false;
+      break;
+    case 'override':
+      s.rules.override = false;
+      break;
+    case 'entrench':
+      s.rules.entrench = false;
+      break;
+    case 'equality':
+      s.rules.equality = false;
+      break;
+    case 'immunity':
+      s.rules.immunity = 0;
+      break;
+  }
+}
 
 /** הסיכוי שבג"ץ יפסול חוק */
 export function strikeChance(s: GameState, templateId: string): number {
@@ -133,6 +221,7 @@ export function strikeLaw(s: GameState, templateId: string) {
   rec.struck = true;
   const t = templateById(templateId);
   s.effects = s.effects.filter((e) => e.source !== rec.title && e.source !== t.title);
+  if (t.rule) revertRule(s, t.rule);
   addWorldEffect(s, 'trust', 1, 2, 'בג"ץ');
   addWorldEffect(s, 'cohesion', -1.5, 2, 'בג"ץ');
   if (t.issue) bumpIssue(s, t.issue, 15);
@@ -144,7 +233,8 @@ export function reenactLaw(s: GameState, templateId: string) {
   if (!rec) return;
   rec.struck = false;
   const t = templateById(templateId);
-  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * 0.7, t.weeks, t.title, 1);
+  applyLawEffects(s, templateId, rec.scope, 0.7, t.title, 1);
+  if (t.rule) applyRule(s, t.rule, rec.scope);
   addWorldEffect(s, 'trust', -4, 4, 'פסקת ההתגברות');
   addWorldEffect(s, 'cohesion', -3, 4, 'פסקת ההתגברות');
 }

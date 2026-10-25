@@ -291,7 +291,10 @@ export function activeRuleNotes(s: GameState): { icon: string; title: string; te
   else if (r.directPM)
     out.push({ icon: '🗳️', title: 'בחירה ישירה לראשות הממשלה', text: 'בליל הבחירות יש מרוץ ראש בראש. הזוכה מרכיב/ה, גם אם המפלגה שלו/ה לא הגדולה. אי-אמון מוביל לבחירות, ופיצול הפתק מחליש את המפלגות הגדולות.' });
   if (r.districts) out.push({ icon: '🗺️', title: 'מחוזות בחירה', text: 'בבחירות המפלגות הגדולות מקבלות יותר מנדטים מחלקן בקולות, והקטנות נמחקות.' });
-  if (r.threshold !== 3.25) out.push({ icon: '🚧', title: `אחוז חסימה ${r.threshold}%`, text: `רשימה מתחת ל-${r.threshold}% לא נכנסת לכנסת.` });
+  if (r.threshold > 3.25) out.push({ icon: '🚧', title: `אחוז חסימה ${r.threshold}%`, text: `רשימה מתחת ל-${r.threshold}% לא נכנסת לכנסת. מפלגות קטנות נאלצות להתאחד – או נעלמות.` });
+  else if (r.threshold < 3.25) out.push({ icon: '🪜', title: `אחוז חסימה ${r.threshold}%`, text: `גם רשימה עם ${r.threshold}% נכנסת לכנסת: יותר מפלגות קטנות, וקואליציות שבירות יותר.` });
+  if (r.immunity)
+    out.push({ icon: '🛡️', title: 'החוק הצרפתי', text: `${['ראש ממשלה מכהן/ת', 'ראש הממשלה והשרים', 'כל חברי הכנסת'][r.immunity - 1]} לא נחקרים בזמן הכהונה. חקירה נגדך מוקפאת כל עוד את/ה בתפקיד – ומתחדשת אחריו.` });
   if (r.norwegian) {
     const n = Object.keys(s.norwegianSwaps ?? {}).length;
     const lim = norwegianLimit(s);

@@ -48,7 +48,23 @@ test('active rules are listed, and contradicting bills are blocked', async ({ pa
   await shot(page, '96-rules');
   await page.locator('.tabbar').getByText('חקיקה').click();
   await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
-  await page.getByRole('button', { name: /^חברה$/ }).click();
+  await page.getByRole('button', { name: /^דת ומדינה$/ }).click();
   await page.getByRole('button', { name: /ברית הזוגיות/ }).click();
   await expect(page.getByTestId('bill-blocked')).toContainText('מדינת הלכה');
+});
+
+test('bill builder shows both sides of a law, by scope', async ({ page }) => {
+  await load(page, game());
+  await page.locator('.tabbar').getByText('חקיקה').click();
+  await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
+  await page.getByRole('button', { name: /קרן העושר/ }).click();
+  await page.getByRole('button', { name: /^מרחיק לכת$/ }).click();
+  await expect(page.getByTestId('bill-tradeoffs')).toContainText('חלוקה ישירה לאזרחים');
+  await page.getByTestId('bill-tradeoffs').scrollIntoViewIfNeeded();
+  await shot(page, '97-tradeoffs');
+  await page.getByRole('button', { name: /^מתון$/ }).click();
+  await expect(page.getByTestId('bill-tradeoffs')).not.toContainText('חלוקה ישירה לאזרחים');
+  await page.getByRole('button', { name: /^בריאות ורווחה$/ }).click();
+  await page.getByRole('button', { name: /תוספת המיטות/ }).click();
+  await expect(page.getByTestId('bill-tradeoffs')).toContainText('מס בריאות');
 });

@@ -7,9 +7,9 @@ import { queueOtherVote } from './legislation';
 import type { GameState, Npc } from '../types';
 import { clamp } from '../util';
 import { isCoalition } from './government';
-import { onLawPassed, scheduleEvent } from './issues';
+import { applyLawEffects, onLawPassed, scheduleEvent } from './issues';
 import { addNews } from './news';
-import { addWorldEffect, takeStance } from './opinion';
+import { takeStance } from './opinion';
 import { addMemory } from './relationships';
 import { billBlocked } from './regime';
 import { log } from './report';
@@ -34,7 +34,7 @@ function npcLawPasses(s: GameState) {
   }
   const co = s.flags[cosponsorKey(n.id)] === n.agenda;
   onLawPassed(s, { templateId: t.id, title: t.title, scope, sponsor: n.id, coSponsor: co || undefined });
-  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * SCOPE_FACTOR[scope] * 0.6, t.weeks, t.title, t.delay);
+  applyLawEffects(s, t.id, scope, SCOPE_FACTOR[scope] * 0.6, t.title);
   addNews(s, `הכנסת אישרה את "${t.title}" של ${n.name}`, 'neutral', co, undefined, undefined, n.id);
   if (co) {
     addStat(s, 'reputation', 3);

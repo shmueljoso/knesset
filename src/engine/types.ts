@@ -401,6 +401,7 @@ export interface Rules {
   directPM?: boolean; // בחירה ישירה לראשות הממשלה: אי-אמון = בחירות
   districts?: boolean; // מחוזות בחירה: המפלגות הגדולות מקבלות בונוס
   packedCourt?: boolean; // הקואליציה שולטת במינוי השופטים
+  immunity?: number; // חסינות מחקירה: 1 ראש ממשלה, 2 + שרים, 3 כל הח"כים
   norwegianLimit?: number; // החוק הנורבגי: כמה שרים מכל סיעה מפנים מושב
   termLimitScope?: 1 | 2 | 3; // הגבלת כהונה: 3 קדנציות / 2 רצופות / 2 לכל החיים
 }

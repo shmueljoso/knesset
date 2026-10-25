@@ -11,6 +11,15 @@ import { pardonBonus } from './president';
 
 export const SCANDAL_STAGES = ['', 'בדיקה מקדמית', 'חקירה פלילית', 'המלצות המשטרה', 'שימוע אצל היועמ"ש', 'כתב אישום'];
 
+/** האם חוק החסינות מגן כרגע על השחקן מפני חקירה */
+export function playerImmune(s: GameState): boolean {
+  const lvl = s.rules.immunity ?? 0;
+  if (!lvl) return false;
+  if (s.coalition.pmId === 'player') return true;
+  if (lvl >= 2 && s.player.ministry) return true;
+  return lvl >= 3 && s.player.isMK;
+}
+
 export function startScandal(s: GameState, source: string, heat: number) {
   if (s.scandal || s.gameOver) return;
   s.scandal = { stage: 1, heat, source, startWeek: s.week, nextWeek: s.week + 1 };
@@ -27,6 +36,17 @@ export function tickScandal(s: GameState) {
     return;
   }
   const sc = s.scandal;
+  // חוק החסינות: החקירה מוקפאת כל עוד את/ה בתפקיד
+  if (playerImmune(s)) {
+    if (!s.flags.immunityFrozen) {
+      s.flags.immunityFrozen = true;
+      addNews(s, `החקירה נגד ${s.player.name} הוקפאה בזכות חוק החסינות`, 'neutral', true, 'האופוזיציה: "חוק תפור".');
+      log(s, 'חוק החסינות הקפיא את החקירה נגדך – עד שתסיים/י את התפקיד.', 'career');
+    }
+    sc.nextWeek = Math.max(sc.nextWeek, s.week + 1);
+    return;
+  }
+  delete s.flags.immunityFrozen;
   if (s.week >= sc.nextWeek && !s.eventQueue.some((q) => q.eventId === 'scandal_stage')) {
     s.eventQueue.push({ eventId: 'scandal_stage', ctx: { stageName: SCANDAL_STAGES[sc.stage], source: sc.source } });
     sc.nextWeek = s.week + 99; // ייקבע מחדש אחרי ההחלטה

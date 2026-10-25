@@ -9,12 +9,12 @@ import { SECTORS, clamp, leanAlignment, newId } from '../util';
 import { onBillPassed, onBudgetPassed } from './coalition';
 import { callEarlyElections, completeCoalition } from './elections';
 import { resetMinistryBudget } from './ministry';
-import { onLawPassed, requiredMajority } from './issues';
+import { applyLawEffects, lawSectors, onLawPassed, requiredMajority } from './issues';
 import { billBlocked } from './regime';
 import { radicalClimate } from './climate';
 import { isCoalition, proposeCoalition } from './government';
 import { addNews } from './news';
-import { addWorldEffect, changeApproval, takeStance } from './opinion';
+import { changeApproval, takeStance } from './opinion';
 import { addDebt, changeAttitude, reactToLaw } from './relationships';
 import { log } from './report';
 import { LINE_NAMES, billImpact, billLean, effectiveLean, forecast, runVote, sponsorParty } from './votes';
@@ -304,7 +304,7 @@ function applyOtherVote(s: GameState, b: Bill, res: VoteResult): string {
   }
   b.stage = 'passed';
   onLawPassed(s, { templateId: t.id, title: b.title, scope: b.scope, sponsor: b.sponsor, coSponsor: s.flags[`cosp_${b.sponsor}`] === t.id || undefined });
-  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * billImpact(b) * 0.8, t.weeks, b.title, t.delay);
+  applyLawEffects(s, t.id, b.scope, billImpact(b) * 0.8, b.title);
   const sp = s.npcs[b.sponsor];
   addNews(s, `הכנסת אישרה את "${b.title}"${sp ? ` של ${sp.name}` : ''} (${tally})`, 'neutral', false, undefined, undefined, sp?.id);
   return `החוק עבר (${tally}).`;
@@ -621,10 +621,11 @@ function onPassed(s: GameState, b: Bill) {
   const impact = billImpact(b);
   onLawPassed(s, { templateId: t.id, title: b.title, scope: b.scope, sponsor: b.sponsor });
   if (b.sponsor === 'player' || b.sponsor === s.player.employerId) reactToLaw(s, t.id, billLean(b), b.title);
-  for (const [k, v] of Object.entries(t.world)) addWorldEffect(s, k as keyof typeof s.world, v! * impact, t.weeks, b.title, t.delay);
+  applyLawEffects(s, t.id, b.scope, impact, b.title);
   const own = b.sponsor === 'player' ? 1 : 0.35;
   const fameF = 0.5 + s.player.fame / 100;
-  for (const sec of SECTORS) changeApproval(s, sec, (t.sectors[sec] ?? 0) * impact * fameF * own);
+  const sectors = lawSectors(t.id, b.scope);
+  for (const sec of SECTORS) changeApproval(s, sec, (sectors[sec] ?? 0) * impact * fameF * own);
   addStat(s, 'reputation', 6 * own + 2);
   s.player.capital += 5 * own + 1;
   addStat(s, 'fame', 6 * own);

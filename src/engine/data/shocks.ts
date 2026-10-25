@@ -28,6 +28,13 @@ const canJoin = (s: GameState, ctx: Ctx) =>
 const roomForNew = (s: GameState) => listsOpen(s) && Object.keys(s.parties).length < 16;
 const seated = (s: GameState) => Object.values(s.parties).filter((p) => p.seats > 0);
 const npcLed = (p: Party) => p.leaderId !== 'player';
+/** כתב אישום: יו"ר מפלגה, בלי מי שמוגן/ת בחוק החסינות */
+const indictable = (s: GameState, p: Party) => {
+  const n = s.npcs[p.leaderId];
+  if (!npcLed(p) || p.seats < 4 || !n) return false;
+  const lvl = s.rules.immunity ?? 0;
+  return !(lvl && (p.leaderId === s.coalition.pmId || (lvl >= 2 && n.ministry) || (lvl >= 3 && n.isMK)));
+};
 
 const ARCH: Record<string, Archetype> = {
   general: {
@@ -128,10 +135,10 @@ export const SHOCKS: ShockDef[] = [
     },
   },
   {
-    id: 'shock_indict', weight: 3, when: (s) => seated(s).some((p) => npcLed(p) && p.seats >= 4),
+    id: 'shock_indict', weight: 3, when: (s) => seated(s).some((p) => indictable(s, p)),
     setup: (s) => {
       const own = s.player.partyId ? s.parties[s.player.partyId] : null;
-      const pool = seated(s).filter((p) => npcLed(p) && p.seats >= 4 && s.npcs[p.leaderId]);
+      const pool = seated(s).filter((p) => indictable(s, p));
       const p = own && pool.includes(own) && s.player.isMK && rand(s) < 0.3 ? own : pick(s, pool);
       addMomentum(s, p.id, -7);
       if (p.leaderId === s.coalition.pmId) openWindow(s, 'sovereignty', 20, 'אחרי כתב האישום נגד ראש הממשלה');

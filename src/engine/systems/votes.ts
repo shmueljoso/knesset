@@ -66,6 +66,10 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
   // חוקים שמשנים את כללי המשחק: כל מפלגה מצביעה לפי האינטרס שלה
   const rule = templateById(b.templateId).rule;
   if (rule === 'threshold') return p.seats >= 12 ? 'for' : 'against';
+  // הורדת החסימה: הקטנות בעד, הגדולות נגד (פחות מתחרות, קואליציות יציבות יותר)
+  if (rule === 'thresholdDown') return p.seats <= 10 ? 'for' : p.seats >= 20 ? 'against' : 'free';
+  // חסינות: מפלגת ראש הממשלה בעד, האופוזיציה נגד
+  if (rule === 'immunity') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'for' : isCoalition(s, partyId) ? 'free' : 'against';
   if (rule === 'norwegian') return isCoalition(s, partyId) ? 'for' : 'against';
   if (rule === 'termLimit') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'against' : isCoalition(s, partyId) ? 'free' : 'for';
   if (isCoalition(s, partyId)) {

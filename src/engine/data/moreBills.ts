@@ -10,6 +10,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { traditional: 4, haredi: 4, arab: 4, olim: 3, secular: 1, religious: 2 },
     world: { affordability: 5, economy: -2 }, weeks: 16, delay: 3, cost: 3,
     scopes: ['לחם וחלב', 'סל מוצרי יסוד', 'כל המזון הטרי'],
+    effects: [{ key: 'trust', d: -1, weeks: 20, delay: 10, note: 'חלק מההוזלה נבלע ברשתות השיווק' }],
   },
   {
     id: 'rent', title: 'חוק השכירות ההוגנת', icon: '🔑', committee: 'interior', category: 'economy', issue: 'housing',
@@ -18,6 +19,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { secular: 4, olim: 4, arab: 2, traditional: 2, religious: 0, haredi: 1 },
     world: { housing: 4, economy: -1.5 }, weeks: 20, delay: 4, cost: 0.2,
     scopes: ['חוזה סטנדרטי', 'תקרת העלאה במדד', 'פיקוח מלא על שכר הדירה'],
+    effects: [{ key: 'housing', d: -3, weeks: 52, delay: 30, from: 3, note: 'משקיעים מוכרים דירות – פחות דירות להשכרה' }],
   },
   {
     id: 'fast_build', title: 'חוק התכנון המהיר', icon: '🏗️', committee: 'interior', category: 'economy', issue: 'housing',
@@ -26,6 +28,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { secular: 2, traditional: 3, olim: 3, haredi: 3, religious: 2, arab: 1 },
     world: { housing: 6, cohesion: -1 }, weeks: 52, delay: 16, cost: 0.5,
     scopes: ['מסלול ירוק לפרויקטים גדולים', 'רפורמה בוועדות', 'ביטול רוב ההיתרים'],
+    effects: [{ key: 'trust', d: -2, weeks: 30, delay: 10, from: 2, note: 'פחות פיקוח = יותר שחיתות ונזק לסביבה' }], scopeSectors: [{ from: 3, sectors: { secular: -2 }, note: 'ירוקים וארגוני סביבה נגד' }],
   },
   {
     id: 'third_home', title: 'מס על דירה שלישית', icon: '🏚️', committee: 'finance', category: 'economy', issue: 'housing',
@@ -34,22 +37,25 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { secular: 3, olim: 3, traditional: 1, arab: 2, religious: -1, haredi: 1 },
     world: { housing: 3, economy: -1 }, weeks: 30, delay: 6, cost: -1.5,
     scopes: ['1% מהשווי', '2% מהשווי', '3% + הפקעה לדירות ריקות'],
+    effects: [{ key: 'affordability', d: -1, weeks: 16, note: 'בעלי הדירות מגלגלים את המס לשוכרים' }],
   },
   {
     id: 'wealth_fund', title: 'קרן העושר הלאומית', icon: '💎', committee: 'finance', category: 'economy',
     summary: 'הכנסות הגז מושקעות בקרן לאומית לטובת חינוך, בריאות ופנסיה.',
     lean: { econ: -15 },
     sectors: { secular: 2, traditional: 2, arab: 2, olim: 2, religious: 2, haredi: 1 },
-    world: { economy: 3, trust: 2 }, weeks: 60, delay: 20, cost: -0.5,
+    world: { economy: 3, trust: 2 }, weeks: 60, delay: 20, cost: 0.5,
     scopes: ['20% מההכנסות', '50% מההכנסות', 'כל ההכנסות + חלוקה לאזרחים'],
+    effects: [{ key: 'affordability', d: -1, weeks: 20, note: 'פחות כסף לתקציב השוטף בשנים הראשונות' }, { key: 'affordability', d: 4, weeks: 30, delay: 10, from: 3, note: 'חלוקה ישירה לאזרחים' }, { key: 'economy', d: -2, weeks: 52, delay: 20, from: 3, note: 'מה שמחולק – לא מושקע' }], scopeSectors: [{ from: 3, sectors: { traditional: 2, arab: 2, haredi: 2 }, note: 'מענק לכל אזרח' }],
   },
   {
-    id: 'nursing', title: 'חוק הביטוח הסיעודי הממלכתי', icon: '🧓', committee: 'labor', category: 'economy', issue: 'wages',
+    id: 'nursing', title: 'חוק הביטוח הסיעודי הממלכתי', icon: '🧓', committee: 'labor', category: 'welfare', issue: 'wages',
     summary: 'ביטוח סיעודי ציבורי לכל אזרח במקום ביטוחים פרטיים.',
     lean: { econ: -45 },
     sectors: { traditional: 4, olim: 5, arab: 3, secular: 2, haredi: 2, religious: 2 },
     world: { affordability: 3, cohesion: 2, economy: -1 }, weeks: 40, delay: 10, cost: 2.2,
     scopes: ['לגיל 75 ומעלה', 'לגיל 67 ומעלה', 'ביטוח אוניברסלי מלא'],
+    effects: [{ key: 'economy', d: -1, weeks: 30, delay: 6, from: 3, note: 'דמי ביטוח גבוהים לכולם' }],
   },
   {
     id: 'exec_pay', title: 'הגבלת שכר הבכירים', icon: '🤑', committee: 'labor', category: 'economy', issue: 'wages',
@@ -58,22 +64,25 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { traditional: 3, arab: 3, secular: 1, olim: 2, haredi: 2, religious: 1 },
     world: { trust: 2, economy: -0.5 }, weeks: 12, delay: 4, cost: 0,
     scopes: ['בנקים וביטוח', 'כל החברות הציבוריות', 'כל המשק'],
+    effects: [{ key: 'economy', d: -1.5, weeks: 40, delay: 20, from: 3, note: 'בריחת מנהלים וחברות לחו"ל' }],
   },
   {
-    id: 'yeshiva', title: 'חוק מעמד לומדי התורה', icon: '📖', committee: 'security', category: 'society', issue: 'draft', petitionRisk: 0.45, aftermath: [['draft_backlash', 2]],
+    id: 'yeshiva', title: 'חוק מעמד לומדי התורה', icon: '📖', committee: 'security', category: 'religion', issue: 'draft', petitionRisk: 0.45, aftermath: [['draft_backlash', 2]],
     summary: 'עיגון פטור משירות ללומדי תורה ותקציב קבוע לישיבות.',
     lean: { religion: 70, security: -10 },
     sectors: { haredi: 12, religious: 2, traditional: -2, secular: -8, olim: -6, arab: 0 },
     world: { cohesion: -5, economy: -2 }, weeks: 20, delay: 2, cost: 1.5,
     scopes: ['הסדרה זמנית', 'פטור קבוע', 'פטור + הטבות כלכליות'],
+    inflames: true, effects: [{ key: 'economy', d: -1, weeks: 52, delay: 26, note: 'פחות חרדים בשוק העבודה' }],
   },
   {
-    id: 'conversion', title: 'חוק הגיור הממלכתי', icon: '✡️', committee: 'constitution', category: 'society', issue: 'religion',
+    id: 'conversion', title: 'חוק הגיור הממלכתי', icon: '✡️', committee: 'constitution', category: 'religion', issue: 'religion',
     summary: 'רבני ערים יוכלו לגייר, כדי לפתוח את הדלת לעולי ברית המועצות.',
     lean: { religion: -30 },
     sectors: { olim: 9, secular: 3, traditional: 1, religious: 0, haredi: -8, arab: 0 },
     world: { cohesion: 2 }, weeks: 20, delay: 4, cost: 0.1,
     scopes: ['בתי דין נוספים', 'גיור ברבנות העירונית', 'גיור אזרחי'],
+    effects: [{ key: 'cohesion', d: -1, weeks: 8, note: 'הרבנות הראשית מאיימת לא להכיר' }],
   },
   {
     id: 'druze', title: 'תיקון חוק הלאום – שוויון לדרוזים ולמיעוטים', icon: '🤝', committee: 'constitution', category: 'society',
@@ -82,6 +91,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { arab: 6, secular: 2, traditional: 1, olim: 1, religious: -2, haredi: -1 },
     world: { cohesion: 4, trust: 1 }, weeks: 20, delay: 4, cost: 0.6,
     scopes: ['תקציב פיתוח', 'עיגון שוויון', 'שוויון מלא בחוק יסוד'],
+    effects: [{ key: 'cohesion', d: -1, weeks: 6, from: 3, note: 'בימין: "פגיעה בחוק הלאום"' }],
   },
   {
     id: 'guns', title: 'הרחבת רישוי כלי הנשק', icon: '🔫', committee: 'security', category: 'security', issue: 'security', petitionRisk: 0.1,
@@ -90,6 +100,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { religious: 4, traditional: 3, olim: 2, secular: -2, arab: -6, haredi: 0 },
     world: { security: 1, cohesion: -2 }, weeks: 10, delay: 2, cost: 0.1,
     scopes: ['ביישובי ספר', 'ליוצאי יחידות קרביות', 'לכל מי ששירת'],
+    effects: [{ key: 'security', d: -1, weeks: 30, delay: 10, from: 3, note: 'יותר נשק ברחוב = יותר אירועי ירי' }], stirs: { crime: 10 },
   },
   {
     id: 'ag_split', title: 'פיצול תפקיד היועמ"ש', icon: '🔪', committee: 'constitution', category: 'governance', issue: 'judiciary', petitionRisk: 0.4,
@@ -98,14 +109,16 @@ export const EXTRA_BILLS: BillTemplate[] = [
     sectors: { religious: 4, traditional: 3, haredi: 2, secular: -5, arab: -3, olim: 0 },
     world: { trust: -3 }, weeks: 8, delay: 2, cost: 0.05,
     scopes: ['ועדה לבחינת הפיצול', 'פיצול', 'פיצול + מינוי פוליטי'],
+    inflames: true, effects: [{ key: 'cohesion', d: -1, weeks: 6, note: 'מחאה בשערי משרד המשפטים' }],
   },
   {
-    id: 'paternity', title: 'חופשת לידה שוויונית', icon: '👶', committee: 'labor', category: 'society',
+    id: 'paternity', title: 'חופשת לידה שוויונית', icon: '👶', committee: 'labor', category: 'welfare',
     summary: 'שישה שבועות חופשה בתשלום לאבות, שאינם באים על חשבון האם.',
     lean: { econ: -30, religion: -20 },
     sectors: { secular: 4, olim: 3, arab: 1, traditional: 2, religious: 1, haredi: -1 },
     world: { cohesion: 1, economy: -0.5 }, weeks: 20, delay: 6, cost: 0.9,
     scopes: ['שבועיים', 'שישה שבועות', 'חלוקה שווה של כל החופשה'],
+    effects: [{ key: 'economy', d: 1, weeks: 52, delay: 40, note: 'יותר נשים בעמדות בכירות' }],
   },
 ];
 

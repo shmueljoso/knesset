@@ -39,7 +39,7 @@ import { Hemicycle, VOTE_COLORS, VOTE_NAMES } from './Charts';
 import { Empty, Sheet } from './common';
 import { LawBook } from './Issues';
 import { ISSUES } from '../engine/data/issues';
-import { requiredMajority, strikeChance } from '../engine/systems/issues';
+import { coalitionMood, lawEffects, lawSectors, requiredMajority, strikeChance } from '../engine/systems/issues';
 import { TRANSFORM_INFO, TRANSFORM_LEVELS } from '../engine/data/transforms';
 import { hasTransform, publicSupport } from '../engine/systems/transforms';
 import { billBlocked, constitutionReferendum } from '../engine/systems/regime';
@@ -387,6 +387,8 @@ export function VoteSheet({ id }: { id: string }) {
 
 const CATEGORIES: [string, string][] = [
   ['economy', 'כלכלה'],
+  ['welfare', 'בריאות ורווחה'],
+  ['religion', 'דת ומדינה'],
   ['society', 'חברה'],
   ['security', 'ביטחון'],
   ['governance', 'ממשל'],
@@ -408,6 +410,9 @@ export function BillBuilder() {
   const t = templateById(tid);
   const role = legislativeRole(g);
   const blocked = billBlocked(g, tid);
+  const effects = lawEffects(tid, scope);
+  const stirs = Object.entries(t.stirs ?? {});
+  const partners = coalitionMood(g, tid, scope);
 
   const preview = useMemo(() => {
     const fake: Bill = {
@@ -529,11 +534,44 @@ export function BillBuilder() {
               {(v! * preview.impact).toFixed(1)}
             </span>
           ))}
-          <span className="chip">עלות: {(t.cost * SCOPE_FACTOR[scope]).toFixed(1)} מיליארד ₪</span>
+          <span className="chip">{t.cost < 0 ? `חיסכון/הכנסה: ${(-t.cost * SCOPE_FACTOR[scope]).toFixed(1)}` : `עלות: ${(t.cost * SCOPE_FACTOR[scope]).toFixed(1)}`} מיליארד ₪</span>
         </div>
+        {(effects.length > 0 || t.inflames || stirs.length > 0) && (
+          <div data-testid="bill-tradeoffs" style={{ marginTop: 10 }}>
+            <div className="small muted" style={{ marginBottom: 4 }}>⚖️ הצד השני של המטבע</div>
+            {effects.map((e, i) => (
+              <div key={i} className="small" style={{ marginBottom: 3 }}>
+                <span className={e.d > 0 ? 'good' : 'bad'}>
+                  {e.d > 0 ? '▲' : '▼'} {WORLD_NAMES[e.key]} {e.d > 0 ? '+' : ''}
+                  {(e.d * preview.impact).toFixed(1)}
+                </span>{' '}
+                <span className="muted">
+                  · {e.note} ({(e.delay ?? 0) <= 2 ? 'מיד' : `אחרי ${e.delay} שבועות`}
+                  {e.from === 3 ? ' · רק בהיקף מרחיק לכת' : e.from === 2 ? ' · מהיקף בינוני ומעלה' : ''})
+                </span>
+              </div>
+            ))}
+            {t.inflames && t.issue && <div className="small bad">🔥 מלבה את הסוגיה "{ISSUES.find((i) => i.id === t.issue)!.name}" – צפויות מחאות</div>}
+            {stirs.map(([id, d]) => (
+              <div key={id} className={`small ${d! > 0 ? 'bad' : 'good'}`}>
+                {d! > 0 ? '🔥 מלבה' : '🧯 מרגיע'} את "{ISSUES.find((i) => i.id === id)!.name}"
+              </div>
+            ))}
+          </div>
+        )}
+        {partners.length > 0 && (
+          <div className="small" style={{ marginTop: 8 }} data-testid="bill-partners">
+            <span className="muted">השותפות בקואליציה: </span>
+            {partners.map(({ id, d }) => (
+              <span key={id} className={`chip ${d > 0 ? 'good' : 'bad'}`} style={{ marginInlineEnd: 4 }}>
+                {g.parties[id].short} {d > 0 ? '😊' : '😠'}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="small muted" style={{ margin: '10px 0 6px' }}>על התדמית שלך במגזרים</div>
         <div className="chips">
-          {Object.entries(t.sectors)
+          {Object.entries(lawSectors(t.id, scope))
             .filter(([, v]) => v)
             .map(([k, v]) => (
               <span key={k} className={`chip ${v! > 0 ? 'good' : 'bad'}`}>
@@ -542,6 +580,11 @@ export function BillBuilder() {
               </span>
             ))}
         </div>
+        {(t.scopeSectors ?? []).filter((x) => x.from <= scope).map((x) => (
+          <p key={x.note} className="tiny warn" style={{ margin: '4px 0 0' }}>
+            בהיקף הזה: {x.note}
+          </p>
+        ))}
       </div>
 
       <div className="section-label">תחזית פוליטית (כרגע)</div>
