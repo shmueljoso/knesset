@@ -75,10 +75,15 @@ export function PapersView() {
 /** הסקר המלא: מנדטים, מדד ההתאמה, ראש בראש, כיוון המדינה, סוגיות, ההפתעה, ואת/ה */
 export function PollsView() {
   const g = useGame();
-  const sv = latestSurvey(g);
+  const [pick, setPick] = useState<string | null>(null);
+  const latest = latestSurvey(g);
   const thr = g.rules.threshold;
-  if (!sv) return <p className="muted small">הסקר הראשון יתפרסם בשבוע הבא.</p>;
-  const prev = g.surveys.length > 1 ? g.surveys[g.surveys.length - 2] : null;
+  if (!latest) return <p className="muted small">הסקר הראשון יתפרסם בשבוע הבא.</p>;
+  // הסקר האחרון של כל מכון; ברירת המחדל – החדש ביותר
+  const byPollster = [...new Map(g.surveys.map((x) => [x.pollster, x])).values()].sort((a, b) => b.week - a.week);
+  const sv = byPollster.find((x) => x.pollster === pick) ?? latest;
+  const prev = [...g.surveys].reverse().find((x) => x.pollster === sv.pollster && x.week < sv.week) ?? null;
+  const ago = g.week - sv.week;
   const rows = Object.values(g.parties)
     .filter((p) => sv.pct[p.id] !== undefined)
     .sort((a, b) => (sv.seats[b.id] ?? 0) - (sv.seats[a.id] ?? 0) || sv.pct[b.id] - sv.pct[a.id]);
@@ -95,12 +100,22 @@ export function PollsView() {
   const mood = moodLines(g);
   return (
     <>
+      {byPollster.length > 1 && (
+        <div className="filter-row" style={{ marginBottom: 8 }} data-testid="pollster-tabs">
+          {byPollster.map((x) => (
+            <button key={x.pollster} className={x.pollster === sv.pollster ? 'on' : ''} onClick={() => setPick(x.pollster)}>
+              {x.pollster}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="card" data-testid="polls-view">
         <div className="spread">
           <h3>📊 סקר {sv.pollster}</h3>
-          <span className="tiny muted">
-            {shortDateLabel(g, sv.week)} · {sv.sample} נשאלים · ±{sv.margin}%
-          </span>
+          <span className="chip gold">{ago <= 0 ? 'פורסם השבוע' : `לפני ${ago} שבועות`}</span>
+        </div>
+        <div className="tiny muted" style={{ margin: '2px 0 6px' }}>
+          {shortDateLabel(g, sv.week)} · {sv.sample} נשאלים · טעות דגימה ±{sv.margin}% · לכל מכון יש נטייה קטנה משלו
         </div>
         <div className="spread small" style={{ margin: '4px 0 8px' }}>
           <span className="gold">קואליציה {sv.blocs.coalition} · אופוזיציה {sv.blocs.opposition}</span>
@@ -121,6 +136,30 @@ export function PollsView() {
         })}
         <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = מול הסקר הקודם. ⚠️ = מתחת לאחוז החסימה ({thr}%). לכל מכון יש נטייה קטנה משלו.</p>
       </div>
+
+      {sv.hypos && sv.hypos.length > 0 && (
+        <div className="card" style={{ marginTop: 10 }} data-testid="hypos">
+          <h3>🔮 ומה אם?</h3>
+          {sv.hypos.map((h, i) => (
+            <div key={i} style={{ padding: '6px 0', borderBottom: i < sv.hypos!.length - 1 ? '1px solid var(--line)' : undefined, fontWeight: h.who === 'player' ? 800 : 400 }}>
+              <div className="small">{h.text}</div>
+              <div className="spread tiny">
+                <span className={h.kind === 'quit' ? 'bad' : 'gold'}>{h.seats ? `${h.seats} מנדטים (${h.pct}%)` : `${h.pct}% – מתחת לאחוז החסימה`}</span>
+                {h.detail && <span className="muted">{h.detail}</span>}
+              </div>
+            </div>
+          ))}
+          <p className="tiny faint" style={{ margin: '6px 0 0' }}>תרחישים שהסוקרים בדקו. סקר שנותן הרבה מנדטים מדליק את הדמות – ואז היא עלולה באמת לעשות את זה.</p>
+        </div>
+      )}
+
+      {sv.resign !== undefined && g.coalition.pmId && (
+        <div className="card" style={{ marginTop: 10 }} data-testid="resign">
+          <h3>🙏 לחץ ציבורי</h3>
+          <Meter label={`${name(g.coalition.pmId)} צריך/ה לפרוש`} value={sv.resign} color={sv.resign >= 55 ? '#f87171' : '#94a3b8'} suffix="%" />
+          <p className="tiny faint" style={{ margin: '4px 0 0' }}>מעל 60% – ראש ממשלה NPC עלול להודיע על פרישה. הלחץ תלוי באהדה לממשלה, ביציבות ובפרשות.</p>
+        </div>
+      )}
 
       {(sv.surprise || sv.loser) && (
         <div className="card" style={{ marginTop: 10 }} data-testid="poll-surprise">

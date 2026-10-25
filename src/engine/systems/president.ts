@@ -124,7 +124,7 @@ function applyPresidentResult(s: GameState) {
   addNews(s, `${n?.name ?? '?'} נבחר/ה לנשיא/ת המדינה בסבב ה-${race.rounds.length} (${votes} קולות)`, 'neutral', race.playerVote === w, undefined, 'ערוץ המשכן');
 }
 
-function vacateSeat(s: GameState, id: string) {
+export function vacateSeat(s: GameState, id: string) {
   const n = s.npcs[id];
   const party = n?.partyId ? s.parties[n.partyId] : null;
   if (!n || !party) return;

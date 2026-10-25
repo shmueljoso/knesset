@@ -71,6 +71,8 @@ test('freshman MK proposes a bill and opens the vote counter', async ({ page }) 
   await page.locator('.tabbar').getByText('חקיקה').click();
   await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
   await shot(page, '07-builder');
+  await page.locator('.law-row').first().click();
+  await expect(page.getByTestId('bill-odds')).toBeVisible();
   await page.getByRole('button', { name: /להניח על שולחן הכנסת/ }).click();
   await expect(page.locator('.sheet')).toContainText('הונחה על שולחן הכנסת');
   await shot(page, '08-bill');

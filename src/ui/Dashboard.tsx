@@ -227,6 +227,8 @@ export function Dashboard() {
           <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = שינוי מאז תחילת המשחק. מפלגות שנשענות על מגזר שגדל מתחזקות בסקרים.</p>
         </div>
 
+        <PartyStatusCard />
+
         <GovernmentCard />
 
         <div className="card">
@@ -234,6 +236,11 @@ export function Dashboard() {
             <h3>📈 סקרים (מנדטים)</h3>
             {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {pollSeats(g.parties[p.partyId].poll)}</span>}
           </div>
+          {sv && (
+            <div className="tiny muted" style={{ marginBottom: 4 }} data-testid="dash-pollster">
+              📊 סקר <b>{sv.pollster}</b> · {g.week - sv.week <= 0 ? 'השבוע' : `לפני ${g.week - sv.week} שבועות`}
+            </div>
+          )}
           {sv && (
             <div className="small" style={{ marginBottom: 6 }}>
               <span className="muted">👑 מתאים/ה לראשות הממשלה: </span>
@@ -353,6 +360,56 @@ export function Dashboard() {
           <NextWeekButton block />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** מצב המפלגה שלי: מי היו"ר, מה הלחץ עליו/עליה, מורדים, ומה קורה אם אני פורש/ת או מקים/ה מפלגה */
+function PartyStatusCard() {
+  const g = useGame();
+  const p = g.player;
+  const party = p.partyId ? g.parties[p.partyId] : null;
+  if (!party) return null;
+  const sv = latestSurvey(g);
+  const leader = party.leaderId === 'player' ? null : g.npcs[party.leaderId];
+  const mineLeader = party.leaderId === 'player';
+  const seats = sv?.seats[party.id] ?? pollSeats(party.poll, g.rules.threshold);
+  const trend = party.poll - party.base;
+  const rebels = party.list.map((id) => g.npcs[id]).filter((n) => n && n.isMK && n.ambition >= 65 && n.influence >= 40);
+  const succ = g.succession.find((x) => x.partyId === party.id);
+  const mine = sv?.hypos?.find((h) => h.who === 'player');
+  const buzz = Math.round(g.buzz?.player ?? 0);
+  const age = leader?.avatar.age ?? 0;
+  const retireRisk = leader ? (age >= 70 || party.poll < party.base * 0.72 ? 'גבוה' : age >= 64 ? 'בינוני' : 'נמוך') : '';
+  return (
+    <div className="card" data-testid="party-status">
+      <div className="card-title">
+        <h3>🏛️ המפלגה שלי</h3>
+        <span className="small gold">{party.short}: {seats} מנדטים</span>
+      </div>
+      <div className="small">
+        {mineLeader ? (
+          <span>את/ה יו"ר המפלגה.</span>
+        ) : leader ? (
+          <span>
+            יו"ר: <b>{leader.name}</b> (גיל {age}) · סיכוי לפרישה בקרוב: <b className={retireRisk === 'גבוה' ? 'bad' : ''}>{retireRisk}</b>
+          </span>
+        ) : null}
+      </div>
+      <div className="small muted" style={{ marginTop: 4 }}>
+        {trend >= 0.4 ? '▲ המפלגה מעל הבסיס שלה' : trend <= -0.4 ? '▼ המפלגה מתחת לבסיס שלה – לחץ פנימי עולה' : 'המפלגה יציבה'}
+      </div>
+      {succ && <div className="small gold" style={{ marginTop: 6 }}>⏳ המאבק על הירושה: ההכרעה בעוד {Math.max(0, succ.week - g.week)} שבועות.</div>}
+      {mineLeader && rebels.length > 0 && (
+        <div className="small warn" style={{ marginTop: 6 }}>🗡️ שאפתנים ברשימה: {rebels.slice(0, 3).map((n) => n.name).join(', ')}{party.poll < party.base * 0.85 ? ' – כשהסקרים יורדים, הם מסוכנים.' : '.'}</div>
+      )}
+      {mine && (
+        <div className="small" style={{ marginTop: 6 }}>
+          🔮 {mine.text}: <b className={mine.kind === 'quit' ? 'bad' : 'gold'}>{mine.seats ? `${mine.seats} מנדטים` : 'מתחת לחסימה'}</b>
+          {mine.detail ? <span className="muted"> · {mine.detail}</span> : null}
+        </div>
+      )}
+      {buzz >= 30 && <Meter label="קריאות להקים מפלגה" value={buzz} color="var(--gold)" suffix="%" />}
     </div>
   );
 }

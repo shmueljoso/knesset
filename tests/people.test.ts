@@ -37,7 +37,8 @@ describe('NPC personality', () => {
 
   it('NPCs pass laws of their own over time', () => {
     const s = createGame(base);
-    for (let i = 0; i < 80; i++) {
+    s.player.isMK = false; // ח"כ מצביע בעצמו בהצבעה חיה; כאן בודקים את החקיקה ברקע
+    for (let i = 0; i < 200; i++) {
       s.eventQueue = [];
       endWeek(s);
     }

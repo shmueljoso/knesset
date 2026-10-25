@@ -83,3 +83,38 @@ test('coalition talks: a signed party can be cancelled', async ({ page }) => {
   await page.getByTestId(`cancel-${t.partyId}`).click();
   await expect(page.getByTestId(`cancel-${t.partyId}`)).toHaveCount(0);
 });
+
+test('bill builder: search, hot topics and the details screen', async ({ page }) => {
+  const g = game();
+  g.issues.housing = 85;
+  await load(page, g);
+  await page.locator('.tabbar').getByText('חקיקה').click();
+  await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
+  await expect(page.getByRole('button', { name: /בוער עכשיו/ })).toBeVisible();
+  await shot(page, '104-builder-list');
+  await page.getByTestId('bill-search').fill('שבת');
+  await expect(page.locator('.law-row')).toHaveCount(await page.locator('.law-row').count());
+  await page.locator('.law-row').first().click();
+  await expect(page.getByTestId('bill-odds')).toContainText('סיכוי');
+  await shot(page, '105-builder-details');
+});
+
+test('polls: pollster is visible and what-if polls show', async ({ page }) => {
+  const g = game();
+  g.player.fame = 50;
+  for (let i = 0; i < 8; i++) {
+    g.eventQueue = [];
+    endWeek(g);
+  }
+  g.eventQueue = [];
+  g.report = null;
+  await load(page, g);
+  await page.locator('.tabbar').getByText('לוח').click();
+  await expect(page.getByTestId('dash-pollster')).toContainText('סקר');
+  await expect(page.getByTestId('party-status')).toBeVisible();
+  await page.getByTestId('open-polls').click();
+  await expect(page.getByTestId('pollster-tabs')).toBeVisible();
+  await expect(page.getByTestId('hypos')).toContainText('אם');
+  await expect(page.getByTestId('resign')).toContainText('לחץ ציבורי');
+  await shot(page, '106-polls-whatif');
+});

@@ -17,6 +17,7 @@ import { applyNorwegian } from './systems/regime';
 import { SURVEY_EVERY, tickSurveys } from './systems/surveys';
 import { stateHeadlines } from './systems/headlines';
 import { tickSociety } from './systems/society';
+import { tickFigures } from './systems/figures';
 import { supportersIncome, tickProjects } from './systems/projects';
 import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
 import { radicalClimate } from './systems/climate';
@@ -128,6 +129,7 @@ export function endWeek(s: GameState) {
   updatePolls(s);
   tickSurveys(s);
   tickSociety(s);
+  tickFigures(s);
   tickProjects(s);
   tickPartyDynamics(s);
   tickLegislation(s);

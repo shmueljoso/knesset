@@ -53,6 +53,26 @@ function lawTitle(id: string): string {
 const T = (id: string, icon: string, title: string, body: string, choices: GameEvent['choices']): GameEvent => ({ id, queued: true, icon, title, body, choices });
 
 export const CHAIN_EVENTS: GameEvent[] = [
+  // ---- דמויות ומפלגות ----
+  T('fg_succession', '👑', 'מי ירש את {partyName}?', 'היו"ר הודיע/ה על פרישה. בסיעה שני מועמדים בולטים: {c0Name} ו{c1Name}. מעמדך במפלגה מאפשר לך להיכנס למרוץ – או להשפיע על מי שינצח.', [
+    { label: 'להתמודד על ראשות המפלגה', hint: 'הסיכוי תלוי במעמד, במוכרות ובמוניטין · הפסד עולה במעמד', ops: [{ op: 'special', id: 'fg_run', label: 'המאבק על הירושה' }] },
+    { label: 'לתמוך ב{c0Name}', hint: 'המועמד/ת המוביל/ה – יזכור לך', ops: [{ op: 'special', id: 'fg_back0', label: 'תמיכה במוביל/ה' }] },
+    { label: 'לתמוך ב{c1Name}', hint: 'הימור: אם ינצח/תנצח – חבר/ה חזק/ה', ops: [{ op: 'special', id: 'fg_back1', label: 'תמיכה במתמודד/ת השני/ה' }] },
+    { label: 'להישאר מחוץ למאבק', ops: [{ op: 'special', id: 'fg_stay', label: 'המאבק מוכרע בלעדיך' }] },
+  ]),
+  T('fg_rebels', '🗡️', '{npcName} מאיים/ת לפרוש ולהקים רשימה', 'הסקרים יורדים, ובסיעה כבר לא מסתירים: {npcName} מקשר/ת קשר עם עיתונאים ובודק/ת מימון. אם לא תפעל/י, יהיה פילוג.', [
+    { label: 'להבטיח מקום ריאלי ותפקיד', hint: 'מרגיע – אבל יש מחיר', ops: [{ op: 'att', who: '@ctx', d: 18 }, { op: 'capital', d: -3 }, { op: 'partyStanding', d: -1 }, { op: 'memory', who: '@ctx', text: 'הבטיח/ה לי מקום ריאלי', d: 10 }], result: 'הפיצוץ נדחה. בינתיים.' },
+    { label: 'להתעמת', hint: 'סיכוי לפי נאום ומעמד · אם נכשל – הם הולכים', chance: { p: (s) => 0.4 + s.player.skills.speech / 200 + s.player.partyStanding / 400, fail: [{ op: 'special', id: 'fg_rebels_split', label: 'הפילוג' }], failText: 'ההתעמתות נכשלה.' }, ops: [{ op: 'att', who: '@ctx', d: -12 }, { op: 'reputation', d: 1.5 }], result: 'הם נסוגו. הצבעת אמון מובטחת.' },
+    { label: 'לתת להם ללכת', hint: 'המפלגה מפסידה כוח – אבל נפטרים מהסיכון', ops: [{ op: 'special', id: 'fg_rebels_split', label: 'הם הולכים' }, { op: 'consistency', d: 1 }] },
+  ]),
+  T('fg_call_found', '📣', '"שיקימו מפלגה": קריאה לציבור', 'הסקרים עוסקים בך: אם תקים/י מפלגה – {pct}% ({seats} מנדטים), בעיקר על חשבון {takes}. פרשנים, תורמים ופעילים מתקשרים. מה עושים עם זה?', [
+    { label: 'להשאיר את הדלת פתוחה', hint: 'מוכרות וסקרים – ולחץ שיימשך', ops: [{ op: 'fame', d: 3 }, { op: 'special', id: 'fg_call_hint', label: 'ספקולציות בתקשורת' }] },
+    { label: 'לא עכשיו', hint: 'הלחץ דועך', ops: [{ op: 'reputation', d: 1 }, { op: 'special', id: 'fg_call_decline', label: 'מכבים את הלהבות' }] },
+  ]),
+  T('fg_call_retire', '🪫', '"הגיע הזמן לפרוש?"', '{partyName} ירדה מ-{now} ל-{seats} מנדטים בסקרים. בסיעה ובתקשורת קוראים לך לפנות את הכיסא. מה את/ה עושה?', [
+    { label: 'להילחם: "עוד לא אמרתי את דברי"', hint: 'מוניטין, וסיכון להמשך הירידה', ops: [{ op: 'consistency', d: 2 }, { op: 'reputation', d: 1 }, { op: 'momentum', party: '@player', d: -0.5 }] },
+    { label: 'לפרוש מראשות המפלגה ולהישאר ח"כ', hint: 'מחליף/ה ייכנס/תיכנס; את/ה נשאר/ת בכנסת', ops: [{ op: 'special', id: 'fg_step_down', label: 'פרישה מההנהגה' }] },
+  ]),
   // ---- אולטימטום קואליציוני ----
   T('ch_ultimatum', '⏳', '{partyName}: "או שהחוק יוקפא – או שאנחנו יוצאים"', '"{title}" עבר – ו{partyName} לא מוכנה לשתוק. נציגיה מודיעים בשעה טובה: אם החוק לא יוקפא, הם פורשים מהקואליציה.', [
     { label: 'להקפיא את החוק', hint: 'השותפה נרגעת – אבל מי שרצה את החוק יזכור', ops: [{ op: 'special', id: 'ch_freeze_law', label: 'החוק מוקפא' }] },

@@ -57,6 +57,7 @@ test('bill builder shows both sides of a law, by scope', async ({ page }) => {
   await load(page, game());
   await page.locator('.tabbar').getByText('חקיקה').click();
   await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
+  await page.getByRole('button', { name: /^כלכלה$/ }).click();
   await page.getByRole('button', { name: /קרן העושר/ }).click();
   await page.getByRole('button', { name: /^מרחיק לכת$/ }).click();
   await expect(page.getByTestId('bill-tradeoffs')).toContainText('חלוקה ישירה לאזרחים');
@@ -64,6 +65,7 @@ test('bill builder shows both sides of a law, by scope', async ({ page }) => {
   await shot(page, '97-tradeoffs');
   await page.getByRole('button', { name: /^מתון$/ }).click();
   await expect(page.getByTestId('bill-tradeoffs')).not.toContainText('חלוקה ישירה לאזרחים');
+  await page.getByRole('button', { name: /חזרה לרשימת החוקים/ }).click();
   await page.getByRole('button', { name: /^בריאות ורווחה$/ }).click();
   await page.getByRole('button', { name: /תוספת המיטות/ }).click();
   await expect(page.getByTestId('bill-tradeoffs')).toContainText('מס בריאות');

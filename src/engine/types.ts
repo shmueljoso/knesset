@@ -335,6 +335,9 @@ export interface Survey {
   /** ראש בראש בין שני המובילים במדד ההתאמה */
   h2h: { a: string; b: string; pa: number; pb: number };
   rightTrack: number;
+  /** כמה אחוזים חושבים שראש הממשלה צריך לפרוש */
+  resign?: number;
+  hypos?: Hypo[];
   govApproval: number;
   topIssues: { id: IssueId; pct: number }[];
   surprise?: { party: string; d: number };
@@ -345,6 +348,25 @@ export interface Survey {
   billQ?: { templateId: string; title: string; yes: number; no: number };
   /** מי ראוי/ה לנשיאות (כשהבחירה בכנסת מתקרבת) */
   presidentQ?: { id: string; pct: number }[];
+}
+
+/** "מה אם": תחזית לתרחיש היפותטי שנשאל בסקר */
+export interface Hypo {
+  kind: 'found' | 'quit' | 'merge' | 'comeback';
+  /** מזהה האדם ('player' או NPC) או המפלגה */
+  who: string;
+  text: string;
+  pct: number;
+  seats: number;
+  /** כמה מנדטים המפלגה/ות הקיימות מאבדות (לדוגמה: לוקח/ת בעיקר מ...) */
+  detail?: string;
+}
+
+export interface Succession {
+  partyId: string;
+  week: number;
+  why: string;
+  oldLeader: string;
 }
 
 export interface PmRace {
@@ -416,6 +438,12 @@ export interface GameState {
   /** כמה כל מפלגה זזה מהעמדות המקוריות שלה (נצבר לאורך השנים) */
   drift: Record<string, Ideology>;
   projects: Project[];
+  /** פורשים מהחיים הפוליטיים (אפשר לשאול "מה אם יחזור") */
+  retired: { id: string; week: number; why: string }[];
+  /** "באז": כמה הציבור והתקשורת דוחפים אדם להקים מפלגה (0-100) */
+  buzz: Record<string, number>;
+  /** יו"רים שהודיעו על פרישה וממתינים למחליף */
+  succession: Succession[];
   /** סקרים שפורסמו (האחרון בסוף) */
   surveys: Survey[];
   /** רוח הציבור: לאן נוטה הציבור עכשיו בכל ציר (-50..50), לפי מצב המדינה */

@@ -125,7 +125,7 @@ describe('news and papers', () => {
   it('interview questions follow the situation', () => {
     for (const id of ['iv_poll', 'iv_pm', 'iv_rule', 'iv_war', 'iv_scandal', 'iv_bill', 'iv_rival']) expect(eventById(id)).toBeDefined();
     const seen = new Set<string>();
-    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+    for (let seed = 1; seed <= 30; seed++) {
       const s = createGame({ ...base, seed });
       s.world.security = 30;
       s.player.location = 'studio';

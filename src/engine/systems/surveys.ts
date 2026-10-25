@@ -11,6 +11,7 @@ export { moodPull } from './opinion';
 import { pickCandidates } from './president';
 import { directElection, termLimited } from './regime';
 import { publicSupport } from './transforms';
+import { makeHypos, resignPressure } from './figures';
 
 export const POLLSTERS: { name: string; lean: Partial<Ideology>; sample: number; outlet: string }[] = [
   { name: 'מכון מדגמים', lean: {}, sample: 700, outlet: 'חדשות 13+' },
@@ -172,6 +173,8 @@ export function makeSurvey(s: GameState): Survey {
     pmNone,
     h2h,
     rightTrack: Math.round(clamp(40 + gov * 30 + (rand(s) - 0.5) * 6, 8, 85)),
+    resign: undefined,
+    hypos: makeHypos(s),
     govApproval: Math.round(clamp(38 + gov * 30 + (s.coalition.stability - 50) * 0.12 + (rand(s) - 0.5) * 6, 8, 85)),
     topIssues,
     surprise,
@@ -189,6 +192,7 @@ export const surveyName = (s: GameState, id: string) => (id === 'player' ? s.pla
 export function publishSurvey(s: GameState) {
   const prev = latestSurvey(s);
   const sv = makeSurvey(s);
+  sv.resign = resignPressure(s, sv.govApproval);
   s.surveys = [...(s.surveys ?? []), sv].slice(-12);
   const P = POLLSTERS.find((p) => p.name === sv.pollster)!;
   const top = Object.entries(sv.seats).sort((a, b) => b[1] - a[1])[0];
@@ -231,6 +235,10 @@ export function publishSurvey(s: GameState) {
   const mine = s.player.partyId;
   if (mine && sv.seats[mine] === 0 && s.parties[mine]?.leaderId === 'player' && s.electionWeek - s.week <= 20)
     addNews(s, `סקר ${sv.pollster}: ${name(mine)} מתחת לאחוז החסימה`, 'bad', true, 'הבוחרים מתחילים לחשוב על "קול אבוד". אולי הגיע הזמן לאיחוד?');
+  // סקר "מה אם": אחד מהם מגיע לכותרות
+  const hy = sv.hypos?.[Math.floor(rand(s) * (sv.hypos?.length ?? 0))];
+  if (hy && chance(s, 0.6)) addNews(s, `סקר ${sv.pollster}: ${hy.text} – ${hy.seats ? `${hy.seats} מנדטים` : 'מתחת לאחוז החסימה'}`, 'neutral', hy.who === 'player', hy.detail, P.outlet);
+  if (sv.resign && sv.resign >= 55 && s.coalition.pmId && chance(s, 0.5)) addNews(s, `${sv.resign}% סבורים שראש הממשלה צריך/ה לפרוש`, 'bad', s.coalition.pmId === 'player', undefined, P.outlet);
   if (sv.billQ && chance(s, 0.35)) addNews(s, `${sv.billQ.yes}% תומכים ב"${sv.billQ.title}", ${sv.billQ.no}% מתנגדים`, 'neutral', s.bills.some((b) => b.templateId === sv.billQ!.templateId && b.sponsor === 'player'), undefined, P.outlet);
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { inSession } from '../engine/calendar';
 import { BILL_TEMPLATES, SCOPE_FACTOR, templateById } from '../engine/data/bills';
 import {
@@ -32,7 +32,7 @@ import { WORLD_NAMES } from '../engine/systems/opinion';
 import { attitudeColor } from '../engine/systems/relationships';
 import { LINE_NAMES, billImpact, forecast } from '../engine/systems/votes';
 import type { Bill, GameState, VoteResult, WorldKey } from '../engine/types';
-import { SECTOR_NAMES, type SECTORS } from '../engine/util';
+import { SECTOR_NAMES, leanAlignment, type SECTORS } from '../engine/util';
 import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Hemicycle, VOTE_COLORS, VOTE_NAMES } from './Charts';
@@ -396,23 +396,140 @@ const CATEGORIES: [string, string][] = [
   ['radical', '🌋 מהפכות'],
 ];
 
+/** תגיות לשורת חוק: למה כדאי (או אי אפשר) להגיש אותו עכשיו */
+function lawTags(g: GameState, id: string): { text: string; cls: string }[] {
+  const t = templateById(id);
+  const out: { text: string; cls: string }[] = [];
+  if (billBlocked(g, id)) out.push({ text: '🚫 חסום', cls: 'bad' });
+  if (t.issue && g.issues[t.issue] >= 60 && !t.inflames) out.push({ text: '🔥 סוגיה בוערת', cls: 'gold' });
+  if (t.issue && g.issues[t.issue] >= 60 && t.inflames) out.push({ text: '⚠️ ילבה מחאות', cls: 'warn' });
+  if (Object.keys(t.lean).length && leanAlignment(g.player.ideology, t.lean) >= 0.55) out.push({ text: '⭐ בקו שלך', cls: 'good' });
+  if (t.basic) out.push({ text: `🏛️ חוק יסוד ${requiredMajority(g, id)}`, cls: '' });
+  if (t.referendum) out.push({ text: '🗳️ משאל עם', cls: '' });
+  if (t.rule) out.push({ text: '📜 משנה כללים', cls: '' });
+  return out.slice(0, 3);
+}
+
+function Section({ title, children, open = true }: { title: string; children: React.ReactNode; open?: boolean }) {
+  return (
+    <details className="fold" open={open}>
+      <summary>{title}</summary>
+      <div className="fold-body">{children}</div>
+    </details>
+  );
+}
+
 export function BillBuilder() {
   const g = useGame();
   const act = useStore((s) => s.act);
   const close = useStore((s) => s.close);
   const open = useStore((s) => s.open);
   const toast = useStore((s) => s.toast);
-  const [tid, setTid] = useState(BILL_TEMPLATES[0].id);
-  const [scope, setScope] = useState<1 | 2 | 3>(2);
-  const [cat, setCat] = useState<string>('economy');
   const canGov = !!g.player.ministry || g.coalition.pmId === 'player';
   const [gov, setGov] = useState(canGov);
+  const [tid, setTid] = useState<string | null>(null);
+  const [scope, setScope] = useState<1 | 2 | 3>(2);
+  const [query, setQuery] = useState('');
+  const visible = BILL_TEMPLATES.filter((x) => !x.hidden);
+  const hot = visible.filter((x) => x.issue && g.issues[x.issue] >= 60 && !x.inflames && !x.radical && !billBlocked(g, x.id)).sort((a, b) => g.issues[b.issue!] - g.issues[a.issue!]);
+  const [cat, setCat] = useState<string>(hot.length ? 'hot' : 'economy');
+  const role = legislativeRole(g);
+
+  const q = query.trim();
+  const list = q
+    ? visible.filter((x) => `${x.title} ${x.summary}`.includes(q))
+    : cat === 'hot'
+      ? hot.slice(0, 10)
+      : visible.filter((x) => x.category === cat);
+
+  useEffect(() => {
+    document.querySelectorAll('.sheet, .sheet-body').forEach((el) => el.scrollTo?.({ top: 0 }));
+  }, [tid]);
+  const sub = role.sponsor && role.sponsor !== 'player' ? `בשם ${g.npcs[role.sponsor].name}` : gov ? 'הצעת חוק ממשלתית' : 'הצעת חוק פרטית';
+  if (!tid) {
+    return (
+      <Sheet title="✍️ ניסוח הצעת חוק" sub={sub}>
+        {canGov && (
+          <div className="seg" style={{ marginBottom: 10 }}>
+            <button className={gov ? 'on' : ''} onClick={() => setGov(true)}>
+              🏛️ ממשלתית
+            </button>
+            <button className={!gov ? 'on' : ''} onClick={() => setGov(false)}>
+              👤 פרטית
+            </button>
+          </div>
+        )}
+        {gov && <p className="tiny gold" style={{ marginTop: 0 }}>תזכיר חוק (21 יום) ← ועדת שרים ← ישר לקריאה ראשונה. אם ועדת השרים לא מאשרת – ההצעה נגנזת.</p>}
+        <input className="text-input" placeholder="🔍 חיפוש חוק (למשל: דיור, שבת, מס)" value={query} onChange={(e) => setQuery(e.target.value)} data-testid="bill-search" />
+        {!q && (
+          <div className="chip-grid" style={{ margin: '10px 0' }}>
+            {hot.length > 0 && (
+              <button className={cat === 'hot' ? 'on' : ''} onClick={() => setCat('hot')}>
+                🔥 בוער עכשיו
+              </button>
+            )}
+            {CATEGORIES.map(([id, label]) => (
+              <button key={id} className={cat === id ? 'on' : ''} onClick={() => setCat(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {q && <div className="tiny muted" style={{ margin: '8px 0' }}>{list.length} תוצאות</div>}
+        {cat === 'hot' && !q && <div className="tiny muted" style={{ marginBottom: 6 }}>סוגיות שהציבור כועס עליהן ועוד לא נחקק בהן חוק – הזדמנות לקרדיט.</div>}
+        {list.length === 0 && <Empty>לא נמצאו חוקים.</Empty>}
+        {list.map((x) => {
+          const tags = lawTags(g, x.id);
+          return (
+            <button key={x.id} className="list-item law-row" onClick={() => { setTid(x.id); setScope(2); }}>
+              <span style={{ fontSize: 24 }}>{x.icon}</span>
+              <div className="grow" style={{ textAlign: 'start' }}>
+                <div style={{ fontWeight: 700 }}>{x.title}</div>
+                <div className="tiny muted law-sum">{x.summary}</div>
+                {tags.length > 0 && (
+                  <div className="chips" style={{ marginTop: 4 }}>
+                    {tags.map((tg) => (
+                      <span key={tg.text} className={`chip ${tg.cls}`}>
+                        {tg.text}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="muted">‹</span>
+            </button>
+          );
+        })}
+      </Sheet>
+    );
+  }
+
+  return (
+    <Sheet title={`${templateById(tid).icon} ${templateById(tid).title}`} sub={sub}>
+      <BillDetails tid={tid} scope={scope} setScope={setScope} gov={gov} back={() => setTid(null)} close={close} open={open} toast={toast} act={act} />
+    </Sheet>
+  );
+}
+
+function BillDetails({ tid, scope, setScope, gov, back, close, open, toast, act }: {
+  tid: string;
+  scope: 1 | 2 | 3;
+  setScope: (s: 1 | 2 | 3) => void;
+  gov: boolean;
+  back: () => void;
+  close: () => void;
+  open: ReturnType<typeof useStore.getState>['open'];
+  toast: ReturnType<typeof useStore.getState>['toast'];
+  act: ReturnType<typeof useStore.getState>['act'];
+}) {
+  const g = useGame();
   const t = templateById(tid);
   const role = legislativeRole(g);
   const blocked = billBlocked(g, tid);
   const effects = lawEffects(tid, scope);
   const stirs = Object.entries(t.stirs ?? {});
   const partners = coalitionMood(g, tid, scope);
+  const need = t.basic ? requiredMajority(g, tid) ?? 61 : 61;
 
   const preview = useMemo(() => {
     const fake: Bill = {
@@ -424,6 +541,9 @@ export function BillBuilder() {
     const f = forecast(g, fake);
     return { gov: fake.govPosition, eFor: f.eFor, eAgainst: f.eAgainst, impact: billImpact(fake) };
   }, [g, tid, scope, t, role.sponsor, gov]);
+
+  const odds = preview.eFor >= need ? 'good' : preview.eFor >= need - 12 ? 'warn' : 'bad';
+  const oddsText = odds === 'good' ? 'סיכוי טוב' : odds === 'warn' ? 'צריך לגייס עוד' : 'קשה מאוד';
 
   const submit = () => {
     if (g.player.ap < 2) return toast('צריך 2 זמן כדי לנסח ולהגיש', 'bad');
@@ -440,79 +560,29 @@ export function BillBuilder() {
   };
 
   return (
-    <Sheet title="✍️ ניסוח הצעת חוק" sub={role.sponsor && role.sponsor !== 'player' ? `בשם ${g.npcs[role.sponsor].name}` : gov ? 'הצעת חוק ממשלתית' : 'הצעת חוק פרטית'}>
-      {canGov && (
-        <div className="seg" style={{ marginBottom: 10 }}>
-          <button className={gov ? 'on' : ''} onClick={() => setGov(true)}>
-            🏛️ ממשלתית
-          </button>
-          <button className={!gov ? 'on' : ''} onClick={() => setGov(false)}>
-            👤 פרטית
-          </button>
-        </div>
+    <>
+      <button className="btn sm" onClick={back} style={{ marginBottom: 8 }}>
+        ‹ חזרה לרשימת החוקים
+      </button>
+      <p className="small" style={{ marginTop: 0 }}>{t.summary}</p>
+      <div className="chips" style={{ marginBottom: 10 }}>
+        {t.issue && (
+          <span className={`chip ${g.issues[t.issue] >= 60 ? 'bad' : ''}`}>
+            {ISSUES.find((i) => i.id === t.issue)!.icon} {ISSUES.find((i) => i.id === t.issue)!.name} ({Math.round(g.issues[t.issue])})
+          </span>
+        )}
+        {t.basic && <span className="chip gold">חוק יסוד: רוב של {requiredMajority(g, t.id)}</span>}
+        {t.rule && <span className="chip gold">משנה את כללי המשחק</span>}
+        {t.petitionRisk ? <span className="chip warn">סיכון פסילה: {Math.round(strikeChance(g, t.id) * 100)}%</span> : null}
+        {(t.referendum || constitutionReferendum(g, t.id)) && <span className="chip gold">משאל עם · סקר {publicSupport(g, t.id)}% בעד</span>}
+      </div>
+      {blocked && (
+        <p className="small bad" data-testid="bill-blocked">
+          🚫 {blocked}
+        </p>
       )}
-      {gov && <p className="tiny gold" style={{ marginTop: 0 }}>תזכיר חוק (21 יום) ← ועדת שרים ← ישר לקריאה ראשונה. אם ועדת השרים לא מאשרת – ההצעה נגנזת.</p>}
-      <div className="seg" style={{ marginBottom: 8 }}>
-        {CATEGORIES.map(([id, label]) => (
-          <button key={id} className={cat === id ? 'on' : ''} onClick={() => { setCat(id); setTid(BILL_TEMPLATES.find((x) => x.category === id)!.id); }}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="filter-row">
-        {BILL_TEMPLATES.filter((x) => x.category === cat && !x.hidden).map((x) => (
-          <button key={x.id} className={tid === x.id ? 'on' : ''} onClick={() => setTid(x.id)}>
-            {x.icon} {x.title.replace('חוק ', '')}
-          </button>
-        ))}
-      </div>
-      <div className="card" style={{ marginTop: 10 }}>
-        <h3>
-          {t.icon} {t.title}
-        </h3>
-        <p className="small muted" style={{ margin: '6px 0 10px' }}>{t.summary}</p>
-        <div className="chips" style={{ marginBottom: 10 }}>
-          {t.issue && (
-            <span className={`chip ${g.issues[t.issue] >= 60 ? 'bad' : ''}`}>
-              {ISSUES.find((i) => i.id === t.issue)!.icon} סוגיה: {ISSUES.find((i) => i.id === t.issue)!.name} ({Math.round(g.issues[t.issue])})
-            </span>
-          )}
-          {t.basic && <span className="chip gold">חוק יסוד: דרוש רוב של {requiredMajority(g, t.id)} בקריאה השלישית</span>}
-          {t.rule && <span className="chip gold">משנה את כללי המשחק</span>}
-          {t.petitionRisk ? <span className="chip warn">סיכון פסילה בבג"ץ: {Math.round(strikeChance(g, t.id) * 100)}%</span> : null}
-          {(t.referendum || constitutionReferendum(g, t.id)) && <span className="chip gold">דורש משאל עם · סקר: {publicSupport(g, t.id)}% בעד</span>}
-        </div>
-        {blocked && (
-          <p className="small bad" style={{ margin: '0 0 10px' }} data-testid="bill-blocked">
-            🚫 {blocked}
-          </p>
-        )}
-        {t.radical && (
-          <div className="card small" style={{ background: 'var(--bg)', margin: '0 0 10px' }} data-testid="radical-info">
-            <b>🌋 הצעה מרחיקת לכת</b>
-            <div className="muted">אין משמעת קואליציונית: כל ח"כ מצביע לפי המצפון והפחד מההשלכות. כמעט אין סיכוי שתעבור.</div>
-            <div style={{ marginTop: 6 }}>
-              <b>אם תעבור{t.referendum ? ' ותאושר במשאל עם' : ''}:</b> {TRANSFORM_INFO[t.radical].now}
-            </div>
-            <div className="gold" style={{ marginTop: 6 }} data-testid="radical-level">
-              <b>ברמה שבחרת ({['מתון', 'בינוני', 'מרחיק לכת'][scope - 1]}):</b> {TRANSFORM_LEVELS[t.radical][scope - 1]}
-            </div>
-            <div className="tiny muted">רמה גבוהה = קיצונית יותר = פחות ח"כים יתמכו.</div>
-            {(() => {
-              const c = radicalClimate(g, t.id);
-              return (
-                <div style={{ marginTop: 8 }} data-testid="radical-climate">
-                  <b>🌡️ אקלים פוליטי: {c.bonus >= 0.55 ? 'הרעיון באוויר!' : c.bonus >= 0.25 ? 'פתוח לדיון' : 'קר'}</b>
-                  <div className="count-bar">
-                    <i style={{ width: `${Math.round(c.bonus * 100)}%` }} />
-                  </div>
-                  {c.reasons.length ? c.reasons.map((r) => <div key={r} className="tiny">• {r}</div>) : <div className="tiny muted">כדי שזה יקרה צריך ממשלה שתומכת ברעיון, קואליציה רחבה, או "חלון הזדמנויות" אחרי זעזוע (מלחמה, מחדל, משבר, מחאה).</div>}
-                </div>
-              );
-            })()}
-            {hasTransform(g, t.radical) && <div className="gold">השינוי הזה כבר בתוקף.</div>}
-          </div>
-        )}
+
+      <div className="card">
         <div className="small muted" style={{ marginBottom: 6 }}>היקף ההצעה</div>
         <div className="seg">
           {([1, 2, 3] as const).map((sc) => (
@@ -522,11 +592,57 @@ export function BillBuilder() {
           ))}
         </div>
         <p className="tiny gold" style={{ margin: '6px 0 0' }}>{t.scopes[scope - 1]}</p>
+        <p className="tiny muted" style={{ margin: '2px 0 0' }}>היקף רחב = השפעה גדולה ויותר מתנגדים (×{SCOPE_FACTOR[scope]}).</p>
       </div>
 
-      <div className="section-label">השפעה צפויה אם יעבור (×{SCOPE_FACTOR[scope]})</div>
-      <div className="card">
-        <div className="small muted" style={{ marginBottom: 6 }}>על המדינה (בהדרגה, החל מ-{t.delay} שבועות אחרי)</div>
+      <div className="card" data-testid="bill-odds">
+        <div className="spread">
+          <b>סיכוי לעבור (טרומית)</b>
+          <span className={`chip ${odds}`}>{oddsText}</span>
+        </div>
+        <div className="odds-bar">
+          <i style={{ width: `${Math.min(100, (preview.eFor / 120) * 100)}%` }} className="for" />
+          <i style={{ width: `${Math.min(100, (preview.eAgainst / 120) * 100)}%` }} className="against" />
+          <span className="need" style={{ insetInlineStart: `${(need / 120) * 100}%` }} />
+        </div>
+        <div className="spread tiny">
+          <span className="good">{Math.round(preview.eFor)} בעד</span>
+          <span className="muted">דרוש {need}</span>
+          <span className="bad">{Math.round(preview.eAgainst)} נגד</span>
+        </div>
+        <div className="small" style={{ marginTop: 6 }}>
+          {gov ? 'ועדת השרים (ממשלתית):' : 'ועדת השרים צפויה:'} <b className={preview.gov === 'support' ? 'good' : preview.gov === 'oppose' ? 'bad' : 'warn'}>{GOV_POS_NAMES[preview.gov!]}</b>
+        </div>
+      </div>
+
+      {t.radical && (
+        <div className="card small" data-testid="radical-info">
+          <b>🌋 הצעה מרחיקת לכת</b>
+          <div className="muted">אין משמעת קואליציונית: כל ח"כ מצביע לפי המצפון והפחד מההשלכות. כמעט אין סיכוי שתעבור.</div>
+          <div style={{ marginTop: 6 }}>
+            <b>אם תעבור{t.referendum ? ' ותאושר במשאל עם' : ''}:</b> {TRANSFORM_INFO[t.radical].now}
+          </div>
+          <div className="gold" style={{ marginTop: 6 }} data-testid="radical-level">
+            <b>ברמה שבחרת ({['מתון', 'בינוני', 'מרחיק לכת'][scope - 1]}):</b> {TRANSFORM_LEVELS[t.radical][scope - 1]}
+          </div>
+          {(() => {
+            const c = radicalClimate(g, t.id);
+            return (
+              <div style={{ marginTop: 8 }} data-testid="radical-climate">
+                <b>🌡️ אקלים פוליטי: {c.bonus >= 0.55 ? 'הרעיון באוויר!' : c.bonus >= 0.25 ? 'פתוח לדיון' : 'קר'}</b>
+                <div className="count-bar">
+                  <i style={{ width: `${Math.round(c.bonus * 100)}%` }} />
+                </div>
+                {c.reasons.length ? c.reasons.map((r) => <div key={r} className="tiny">• {r}</div>) : <div className="tiny muted">כדי שזה יקרה צריך ממשלה שתומכת ברעיון, קואליציה רחבה, או "חלון הזדמנויות" אחרי זעזוע (מלחמה, מחדל, משבר, מחאה).</div>}
+              </div>
+            );
+          })()}
+          {hasTransform(g, t.radical) && <div className="gold">השינוי הזה כבר בתוקף.</div>}
+        </div>
+      )}
+
+      <Section title="🌍 מה זה ישנה במדינה">
+        <div className="small muted" style={{ marginBottom: 6 }}>בהדרגה, החל מ-{t.delay} שבועות אחרי</div>
         <div className="chips">
           {Object.entries(t.world).map(([k, v]) => (
             <span key={k} className={`chip ${v! > 0 ? 'good' : 'bad'}`}>
@@ -536,11 +652,13 @@ export function BillBuilder() {
           ))}
           <span className="chip">{t.cost < 0 ? `חיסכון/הכנסה: ${(-t.cost * SCOPE_FACTOR[scope]).toFixed(1)}` : `עלות: ${(t.cost * SCOPE_FACTOR[scope]).toFixed(1)}`} מיליארד ₪</span>
         </div>
-        {(effects.length > 0 || t.inflames || stirs.length > 0) && (
-          <div data-testid="bill-tradeoffs" style={{ marginTop: 10 }}>
-            <div className="small muted" style={{ marginBottom: 4 }}>⚖️ הצד השני של המטבע</div>
+      </Section>
+
+      {(effects.length > 0 || t.inflames || stirs.length > 0) && (
+        <Section title="⚖️ הצד השני של המטבע">
+          <div data-testid="bill-tradeoffs">
             {effects.map((e, i) => (
-              <div key={i} className="small" style={{ marginBottom: 3 }}>
+              <div key={i} className="small" style={{ marginBottom: 4 }}>
                 <span className={e.d > 0 ? 'good' : 'bad'}>
                   {e.d > 0 ? '▲' : '▼'} {WORLD_NAMES[e.key]} {e.d > 0 ? '+' : ''}
                   {(e.d * preview.impact).toFixed(1)}
@@ -558,18 +676,22 @@ export function BillBuilder() {
               </div>
             ))}
           </div>
-        )}
-        {partners.length > 0 && (
-          <div className="small" style={{ marginTop: 8 }} data-testid="bill-partners">
-            <span className="muted">השותפות בקואליציה: </span>
+        </Section>
+      )}
+
+      {partners.length > 0 && (
+        <Section title="🤝 איך תגיב הקואליציה">
+          <div className="small" data-testid="bill-partners">
             {partners.map(({ id, d }) => (
               <span key={id} className={`chip ${d > 0 ? 'good' : 'bad'}`} style={{ marginInlineEnd: 4 }}>
                 {g.parties[id].short} {d > 0 ? '😊' : '😠'}
               </span>
             ))}
           </div>
-        )}
-        <div className="small muted" style={{ margin: '10px 0 6px' }}>על התדמית שלך במגזרים</div>
+        </Section>
+      )}
+
+      <Section title="🪞 איך זה ישפיע על התדמית שלך" open={false}>
         <div className="chips">
           {Object.entries(lawSectors(t.id, scope))
             .filter(([, v]) => v)
@@ -585,22 +707,13 @@ export function BillBuilder() {
             בהיקף הזה: {x.note}
           </p>
         ))}
-      </div>
+      </Section>
 
-      <div className="section-label">תחזית פוליטית (כרגע)</div>
-      <div className="card">
-        <div className="spread small">
-          <span>{gov ? 'ועדת השרים (ממשלתית):' : 'ועדת השרים צפויה:'} <b className={preview.gov === 'support' ? 'good' : preview.gov === 'oppose' ? 'bad' : 'warn'}>{GOV_POS_NAMES[preview.gov!]}</b></span>
-          <span>
-            טרומית: <span className="good">{Math.round(preview.eFor)}</span> / <span className="bad">{Math.round(preview.eAgainst)}</span>
-          </span>
-        </div>
-        <p className="tiny muted" style={{ margin: '6px 0 0' }}>היקף רחב = השפעה גדולה ויותר מתנגדים. יחסים, טובות והסתייגויות יכולים לשנות את התמונה.</p>
+      <div className="sticky-submit">
+        <button className="btn primary block" onClick={submit} disabled={!role.canPropose || !!blocked}>
+          להניח על שולחן הכנסת (⏱2)
+        </button>
       </div>
-
-      <button className="btn primary block" style={{ marginTop: 14 }} onClick={submit} disabled={!role.canPropose || !!blocked}>
-        להניח על שולחן הכנסת (⏱2)
-      </button>
-    </Sheet>
+    </>
   );
 }

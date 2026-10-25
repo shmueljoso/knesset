@@ -70,7 +70,8 @@ test('bill builder shows Basic Law requirements', async ({ page }) => {
   await load(page, game());
   await page.locator('.tabbar').getByText('חקיקה').click();
   await page.getByRole('button', { name: /הצעת חוק חדשה/ }).click();
-  await page.locator('.sheet .seg button').filter({ hasText: 'חוקי יסוד' }).click();
-  await expect(page.locator('.sheet')).toContainText('דרוש רוב של');
+  await page.locator('.sheet .chip-grid button').filter({ hasText: 'חוקי יסוד' }).click();
+  await page.locator('.law-row').first().click();
+  await expect(page.locator('.sheet')).toContainText('חוק יסוד: רוב של');
   await shot(page, '34-basic-law');
 });

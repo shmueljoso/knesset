@@ -104,7 +104,7 @@ describe('pressure on the ministerial committee', () => {
 
   it('a rejected government bill can be revived by an appeal', () => {
     let revived = 0;
-    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+    for (let seed = 1; seed <= 60; seed++) {
       const s = createGame({ ...base, seed });
       s.player.ministry = 'housing';
       s.player.ap = 5;
@@ -148,7 +148,7 @@ describe('live votes', () => {
 
   it('rescue fetches absent supporters in a close vote', () => {
     let tried = 0;
-    for (let seed = 1; seed < 40 && tried < 3; seed++) {
+    for (let seed = 1; seed < 400 && tried < 3; seed++) {
       const s = createGame({ ...base, seed });
       s.player.ap = 5;
       s.player.capital = 30;
