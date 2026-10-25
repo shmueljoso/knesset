@@ -2,6 +2,8 @@ import { COMMITTEE_DEFS } from '../data/committees';
 import { MINISTRY_DEFS } from '../data/ministries';
 import type { AgreementItem, Committee, GameState, Npc } from '../types';
 import { ideologyDistance } from '../util';
+import { applyNorwegian, pmFor, restoreNorwegian } from './regime';
+import { log } from './report';
 
 export const MINISTRIES: { id: string; m: string; f: string }[] = [
   { id: 'defense', m: 'שר הביטחון', f: 'שרת הביטחון' },
@@ -37,12 +39,16 @@ export const coalitionSeats = (s: GameState, parties: string[]) =>
 
 export const isCoalition = (s: GameState, partyId: string | null) => !!partyId && s.coalition.parties.includes(partyId);
 
-/** מציאת קואליציה סבירה: מתחילים מהמפלגות הגדולות ומוסיפים את הקרובות אידיאולוגית עד 61. */
-export function proposeCoalition(s: GameState, exclude: string[] = []): string[] {
+/**
+ * מציאת קואליציה סבירה: מתחילים מהמפלגות הגדולות ומוסיפים את הקרובות אידיאולוגית עד 61.
+ * forceLead: ראש ממשלה שנבחר ישירות – הקואליציה נבנית סביב המפלגה שלו/ה גם אם היא לא הגדולה.
+ */
+export function proposeCoalition(s: GameState, exclude: string[] = [], forceLead?: string | null): string[] {
   const parties = Object.values(s.parties).filter((p) => p.seats > 0 && !exclude.includes(p.id));
   const bySeats = [...parties].sort((a, b) => b.seats - a.seats);
   const options: { members: string[]; seats: number; spread: number; lead: number }[] = [];
-  for (const lead of bySeats.slice(0, 3)) {
+  const forced = forceLead && s.parties[forceLead] && !exclude.includes(forceLead) ? s.parties[forceLead] : null;
+  for (const lead of forced ? [forced] : bySeats.slice(0, 3)) {
     const members = [lead.id];
     let seats = lead.seats;
     const rest = parties.filter((p) => p.id !== lead.id);
@@ -66,10 +72,15 @@ export function proposeCoalition(s: GameState, exclude: string[] = []): string[]
     options.sort((a, b) => b.lead - a.lead || a.spread - b.spread);
     return options[0].members;
   }
-  // ממשלת אחדות
-  const members = [bySeats[0].id, bySeats[1].id];
-  let seats = bySeats[0].seats + bySeats[1].seats;
-  for (const p of bySeats.slice(2)) {
+  // ממשלת אחדות (סביב ראש הממשלה הנבחר/ת, אם יש)
+  const first = forced ?? bySeats[0];
+  const second = forced
+    ? bySeats.find((p) => p.id !== first.id && !first.incompatible?.includes(p.id) && !p.incompatible?.includes(first.id)) ?? bySeats.find((p) => p.id !== first.id)
+    : bySeats[1];
+  if (!second) return [first.id];
+  const members = [first.id, second.id];
+  let seats = first.seats + second.seats;
+  for (const p of bySeats.filter((x) => !members.includes(x.id))) {
     if (seats >= 61) break;
     if (members.some((m) => s.parties[m].incompatible?.includes(p.id))) continue;
     members.push(p.id);
@@ -91,6 +102,10 @@ export interface GovOptions {
   chairs?: Record<string, string>;
   agreement?: AgreementItem[];
   satisfaction?: Record<string, number>;
+  /** המפלגה המובילה (ראש ממשלה שנבחר/ה ישירות) */
+  lead?: string;
+  /** ראש הממשלה בפועל, אם הוא/היא לא יו"ר המפלגה (למשל: הגבלת כהונה) */
+  pmId?: string;
 }
 
 export const ministryTitle = (mid: string, gender: 'm' | 'f') => {
@@ -109,18 +124,22 @@ function playerMinisterEligible(s: GameState, partyId: string): boolean {
 
 /** הקמת ממשלה: חלוקת תיקים, יו"ר כנסת, יו"ר ועדות וחברות בוועדות. */
 export function formGovernment(s: GameState, coalition: string[], opts: GovOptions = {}) {
+  restoreNorwegian(s);
   for (const n of Object.values(s.npcs)) {
     n.title = undefined;
     n.ministry = undefined;
   }
   s.player.ministry = null;
-  const lead = s.negotiation?.formateurParty && coalition.includes(s.negotiation.formateurParty)
-    ? s.negotiation.formateurParty
-    : [...coalition].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
-  const pmId = s.parties[lead].leaderId;
+  const lead = opts.lead && coalition.includes(opts.lead)
+    ? opts.lead
+    : s.negotiation?.formateurParty && coalition.includes(s.negotiation.formateurParty)
+      ? s.negotiation.formateurParty
+      : [...coalition].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
+  const pmId = opts.pmId ?? pmFor(s, lead);
   const satisfaction: Record<string, number> = {};
   for (const p of coalition) satisfaction[p] = opts.satisfaction?.[p] ?? 68;
-  s.coalition = { parties: [...coalition], pmId, stability: 70, formedWeek: s.week, satisfaction, agreement: opts.agreement ?? [], minoritySince: null };
+  // בשיטה נשיאותית הממשלה לא תלויה ברוב בכנסת
+  s.coalition = { parties: [...coalition], pmId, stability: s.rules.presidential ? 85 : 70, formedWeek: s.week, satisfaction, agreement: opts.agreement ?? [], minoritySince: null };
   s.ministers = { pm: pmId };
   if (pmId === 'player') {
     s.player.rank = 'minister';
@@ -130,6 +149,7 @@ export function formGovernment(s: GameState, coalition: string[], opts: GovOptio
     pm.title = pm.gender === 'm' ? 'ראש הממשלה' : 'ראשת הממשלה';
     pm.ministry = 'pm';
   }
+  if (lead === s.player.partyId && pmId !== 'player' && s.parties[lead].leaderId === 'player') log(s, `הגבלת הכהונה: ${s.npcs[pmId]?.name} מכהן/ת כראש הממשלה מטעם המפלגה שלך.`, 'career');
 
   // הקצאת תיקים: קודם מה שסוכם, ואת השאר לפי גודל (D'Hondt) והעדפות
   const alloc: Record<string, string> = { ...(opts.ministries ?? {}) };
@@ -179,6 +199,8 @@ export function formGovernment(s: GameState, coalition: string[], opts: GovOptio
     const ol = s.npcs[opposition.leaderId];
     if (ol) ol.title = ol.gender === 'm' ? 'יו"ר האופוזיציה' : 'יו"רית האופוזיציה';
   }
+  // החוק הנורבגי: שרים מפנים מושבים לפני חלוקת הוועדות, כך שהנכנסים מקבלים מקום בוועדות
+  applyNorwegian(s);
   assignCommittees(s, opts.chairs);
 }
 

@@ -8,6 +8,7 @@ import { addNews } from './systems/news';
 import { takeStance } from './systems/opinion';
 import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
+import { noConfidenceFrozen } from './systems/regime';
 import { askBudget } from './systems/ministry';
 import { pressFactor } from './systems/influence';
 import { noConfidenceBill, startVote } from './systems/legislation';
@@ -375,7 +376,7 @@ export const ACTIONS: ActionDef[] = [
     run: (s) => {
       s.flags.nocWeek = s.week;
       addStat(s, 'fame', 2);
-      if (s.rules.presidential) {
+      if (noConfidenceFrozen(s)) {
         const r = tryNoConfidence(s);
         return { text: r.text, good: r.passed };
       }

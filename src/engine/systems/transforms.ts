@@ -11,6 +11,7 @@ import { addNews } from './news';
 import { windowOpen } from './climate';
 import { addMomentum, addWorldEffect } from './opinion';
 import { foundParty } from './parties';
+import { TRANSFORM_CONFLICTS, constitutionReferendum } from './regime';
 import { log } from './report';
 
 export const hasTransform = (s: GameState, id: TransformId) => (s.transforms ?? []).some((t) => t.id === id);
@@ -29,7 +30,8 @@ export function publicSupport(s: GameState, templateId: string): number {
 export function onRadicalPassed(s: GameState, templateId: string, scope: 1 | 2 | 3, sponsor: string) {
   const t = templateById(templateId);
   if (!t.radical) return;
-  if (t.referendum) {
+  // חוקה נוקשה: כל שינוי משטר עובר גם משאל עם
+  if (t.referendum || constitutionReferendum(s, templateId)) {
     const forecast = publicSupport(s, templateId);
     scheduleEvent(s, 'referendum', 4, { law: t.id, title: t.title, scope: String(scope), sponsor, forecast: String(forecast) });
     addNews(s, `"${t.title}" עברה בכנסת! בעוד חודש – משאל עם. סקר: ${forecast}% בעד`, 'neutral', true, undefined, 'ערוץ המשכן');
@@ -51,6 +53,14 @@ function swingBy(s: GameState, axis: 'econ' | 'security' | 'religion' | 'judicia
 
 export function applyTransform(s: GameState, id: TransformId, scope: 1 | 2 | 3, sponsor: string, templateId: string) {
   if (hasTransform(s, id)) return;
+  // מהפכה שסותרת מהפכה קודמת – מבטלת אותה
+  for (const other of TRANSFORM_CONFLICTS[id] ?? []) {
+    const prev = s.transforms.find((x) => x.id === other);
+    if (!prev) continue;
+    const law = s.lawsPassed.find((l) => templateById(l.templateId)?.radical === other && !l.struck)?.templateId ?? '';
+    undoTransform(s, other, law);
+    addNews(s, `${TRANSFORM_INFO[other].icon} ${TRANSFORM_INFO[other].name} – בוטל/ה. ${TRANSFORM_INFO[id].name} תופס/ת את מקומו/ה`, 'neutral', false, undefined, 'ערוץ המשכן');
+  }
   const k = SCOPE_FACTOR[scope];
   s.transforms.push({ id, week: s.week, scope, sponsor });
   const info = TRANSFORM_INFO[id];
@@ -215,6 +225,8 @@ export function undoTransform(s: GameState, id: TransformId, templateId: string)
     s.rules.districts = false;
   }
   if (id === 'sovereignty') s.rules.packedCourt = false;
+  // ביטול החוקה: השריון נשאר רק אם חוק השריון עצמו בתוקף
+  if (id === 'constitution') s.rules.entrench = s.lawsPassed.some((l) => l.templateId === 'basic_entrench' && !l.struck);
 }
 
 function runReferendum(s: GameState, ctx: Ctx, bias: number): string {

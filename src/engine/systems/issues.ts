@@ -7,6 +7,7 @@ import type { GameState, IssueId, LawRecord } from '../types';
 import { clamp, leanAlignment } from '../util';
 import { addNews } from './news';
 import { addWorldEffect } from './opinion';
+import { applyNorwegian, termLimited } from './regime';
 import { log } from './report';
 
 export const recentLaw = (s: GameState, issue: IssueId, weeks = 52) =>
@@ -19,8 +20,12 @@ function issueTarget(s: GameState, id: IssueId): number {
   const w = s.world;
   let t: number;
   if (def.world) t = clamp((70 - w[def.world]) * 1.6 + 30, 5, 100);
-  else if (id === 'draft') t = clamp(50 + (50 - w.cohesion) * 0.6, 10, 95);
-  else t = clamp(55 + (50 - w.security) * 0.5, 10, 95); // פשיעה
+  else if (id === 'draft') {
+    // צבא מקצועי: אין יותר שאלת גיוס (מתון – הוויכוח רק נרגע)
+    const army = (s.transforms ?? []).find((x) => x.id === 'volunteer')?.scope ?? 0;
+    if (army >= 2) return 0;
+    t = clamp(50 + (50 - w.cohesion) * 0.6, 10, 95) * (army ? 0.5 : 1);
+  } else t = clamp(55 + (50 - w.security) * 0.5, 10, 95); // פשיעה
   if (recentLaw(s, id)) t = Math.min(t, 25);
   return t;
 }
@@ -85,10 +90,15 @@ function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateByI
       break;
     case 'norwegian':
       s.rules.norwegian = true;
+      s.rules.norwegianLimit = [1, 5, 99][scope - 1];
       for (const p of s.coalition.parties) s.coalition.satisfaction[p] = clamp((s.coalition.satisfaction[p] ?? 60) + 8, 0, 100);
+      applyNorwegian(s);
+      addNews(s, 'החוק הנורבגי בתוקף: שרים מתפטרים מהכנסת והבאים ברשימות נכנסים', 'neutral');
       break;
     case 'termLimit':
       s.rules.termLimit = true;
+      s.rules.termLimitScope = scope;
+      if (termLimited(s, s.coalition.pmId)) addNews(s, 'הגבלת הכהונה: ראש הממשלה המכהן/ת לא יוכל/תוכל לרוץ שוב', 'neutral', s.coalition.pmId === 'player');
       break;
     case 'override':
       s.rules.override = true;

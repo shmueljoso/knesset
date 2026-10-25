@@ -8,6 +8,7 @@ import { applyRecruits } from './influence';
 import { applySlots, removeParty } from './mergers';
 import { formGovernment, proposeCoalition } from './government';
 import { addNews } from './news';
+import { directElection, electedLead, enforceTermLimit, recordPmTerm, restoreNorwegian, runPmRace, termLimited } from './regime';
 import { log } from './report';
 
 export const THRESHOLD = 0.0325;
@@ -143,6 +144,10 @@ export function runElection(s: GameState) {
     s.flags.pmTermWin = true;
     s.gameOver = 'pm_term';
   }
+  // הגבלת כהונה: ראש הממשלה היוצא/ת סוגר/ת קדנציה, ומנהיגים חסומים מוחלפים
+  recordPmTerm(s);
+  enforceTermLimit(s);
+  restoreNorwegian(s);
   const ranForKnesset = s.player.isMK || s.player.listPosition !== null;
   const votes: Record<string, number> = {};
   const turnout = 4_700_000 + Math.round(rand(s) * 400_000);
@@ -152,6 +157,8 @@ export function runElection(s: GameState) {
   }
   // מחוזות בחירה: יתרון מובנה למפלגות הגדולות
   if (s.rules.districts) for (const id of Object.keys(votes)) votes[id] = Math.pow(votes[id], 1.4);
+  // בחירה ישירה בלי מחוזות: פיצול הפתק – "ראש ממשלה לגדולה, כנסת לקטנה" (כמו 1996)
+  else if (directElection(s)) for (const id of Object.keys(votes)) votes[id] *= votes[id] >= 15 ? 0.85 : votes[id] < 9 ? 1.12 : 1;
   const totalShare = Object.values(votes).reduce((a, b) => a + b, 0);
   for (const id of Object.keys(votes)) votes[id] = Math.round((votes[id] / totalShare) * turnout);
   const surplus = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.surplusPartner]));
@@ -199,7 +206,8 @@ export function runElection(s: GameState) {
   for (const n of Object.values(s.npcs)) n.pledges = [];
 
   const playerPos = s.player.listPosition;
-  s.lastElection = { week: s.week, knesset: s.knesset, votes, seats, playerElected: s.player.isMK, playerPosition: playerPos };
+  const pmRace = runPmRace(s, votes) ?? undefined;
+  s.lastElection = { week: s.week, knesset: s.knesset, votes, seats, playerElected: s.player.isMK, playerPosition: playerPos, pmRace };
   if (s.player.isMK) {
     if (!wasMK) {
       s.player.rank = 'mk';
@@ -245,22 +253,24 @@ export function runElection(s: GameState) {
   const below = Object.values(s.parties).filter((p) => seats[p.id] === 0);
   if (below.length) addNews(s, `מתחת לאחוז החסימה: ${below.map((p) => p.name).join(', ')}`, 'neutral');
 
-  // הקמת ממשלה: השחקן כפורמטור, כשותפה, או הקמה אוטומטית
+  // הקמת ממשלה: השחקן כפורמטור, כשותפה, או הקמה אוטומטית.
+  // בבחירה ישירה – מי שנבחר/ה לראשות הממשלה מרכיב/ה, גם אם המפלגה שלו/ה לא הגדולה
   const playerParty = s.player.partyId ? s.parties[s.player.partyId] : null;
-  const plan = proposeCoalition(s);
-  const lead = [...plan].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
-  if (playerParty && playerParty.leaderId === 'player' && s.player.isMK && playerParty.seats > 0) {
-    if (lead === playerParty.id) startFormateur(s);
-    else if (plan.includes(playerParty.id)) startPartner(s, lead);
-    else completeCoalition(s, plan);
-  } else completeCoalition(s, plan);
+  const forced = electedLead(s);
+  const plan = proposeCoalition(s, [], forced);
+  const lead = forced ?? [...plan].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
+  const playerLeads = playerParty && playerParty.leaderId === 'player' && s.player.isMK && playerParty.seats > 0;
+  if (pmRace?.winner === 'player') startFormateur(s);
+  else if (playerLeads && !pmRace && lead === playerParty.id && !termLimited(s, 'player')) startFormateur(s);
+  else if (playerLeads && lead !== playerParty.id && plan.includes(playerParty.id)) startPartner(s, lead);
+  else completeCoalition(s, plan, lead);
 
   s.electionWeek = s.week + 208;
   s.primariesWeek = s.electionWeek - 12;
 }
 
-export function completeCoalition(s: GameState, coalition: string[]) {
-  formGovernment(s, coalition);
+export function completeCoalition(s: GameState, coalition: string[], lead?: string) {
+  formGovernment(s, coalition, { lead });
   const pmName = s.coalition.pmId === 'player' ? s.player.name : s.npcs[s.coalition.pmId].name;
   addNews(s, `${pmName} השביע/ה ממשלה חדשה: ${coalition.map((c) => s.parties[c].short).join(', ')} (${coalition.reduce((a, c) => a + s.parties[c].seats, 0)} ח"כים)`, 'neutral', false);
   log(s, `הוקמה ממשלה בראשות ${pmName}.`, s.coalition.pmId === 'player' ? 'career' : 'system');
@@ -270,6 +280,10 @@ export function callEarlyElections(s: GameState, reason: string) {
   if (s.electionWeek - s.week <= 14) return;
   if (s.rules.presidential) {
     addNews(s, `${reason} – אבל בשיטה הנשיאותית אין בחירות מוקדמות. הממשלה ממשיכה`, 'neutral');
+    return;
+  }
+  if ((s.transforms ?? []).some((t) => t.id === 'emergency')) {
+    addNews(s, `${reason} – אבל חוק שעת החירום דחה את הבחירות. הממשלה ממשיכה`, 'neutral');
     return;
   }
   s.electionWeek = s.week + 13;

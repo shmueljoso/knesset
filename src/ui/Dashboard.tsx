@@ -2,6 +2,7 @@ import { inSession, SESSION_NAMES, sessionOf, shortDateLabel } from '../engine/c
 import { SKILL_NAMES } from '../engine/ops';
 import { TRANSFORM_INFO } from '../engine/data/transforms';
 import { isCoalition } from '../engine/systems/government';
+import { activeRuleNotes } from '../engine/systems/regime';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import type { Skill, WorldKey } from '../engine/types';
 import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES } from '../engine/util';
@@ -33,6 +34,7 @@ export function Dashboard() {
   const idx = g.coalition.pmId === 'player' ? 6 : RANK_IDX[p.rank];
   const toElection = g.electionWeek - g.week;
   const toPrimaries = g.primariesWeek - g.week;
+  const ruleNotes = activeRuleNotes(g);
 
   const latest = g.pollHistory[g.pollHistory.length - 1]?.polls ?? {};
   const top = Object.values(g.parties)
@@ -160,6 +162,22 @@ export function Dashboard() {
                 </b>{' '}
                 <span className="tiny muted">(מאז {shortDateLabel(g, x.week)}{x.sponsor === 'player' ? ' · ביוזמתך' : ''})</span>
                 <div className="muted">{TRANSFORM_INFO[x.id].now}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {ruleNotes.length > 0 && (
+          <div className="card" data-testid="rules">
+            <div className="card-title">
+              <h3>📜 כללי המשחק בתוקף</h3>
+            </div>
+            {ruleNotes.map((x) => (
+              <div key={x.title} className="small" style={{ marginBottom: 6 }}>
+                <b>
+                  {x.icon} {x.title}
+                </b>
+                <div className="muted">{x.text}</div>
               </div>
             ))}
           </div>

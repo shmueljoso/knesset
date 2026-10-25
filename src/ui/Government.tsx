@@ -198,7 +198,8 @@ export function NegotiationSheet() {
           פתח/י כל מפלגה, סמן/י אילו דרישות לתת, והצע/י הסכם. כל תיק שתיתן/י – פחות לאנשים במפלגה שלך. סעיפי חקיקה יהפכו להצעות חוק ממשלתיות שתצטרך/י להעביר.
         </p>
       </div>
-      {seats >= 61 && (
+      {g.rules.presidential && seats < 61 && <p className="tiny gold">🏛️ שיטה נשיאותית: ראש הממשלה הנבחר/ת יכול/ה להשביע ממשלה גם בלי 61 – אבל בלי רוב יהיה קשה להעביר חוקים.</p>}
+      {(seats >= 61 || g.rules.presidential) && (
         <button
           className="btn primary block"
           style={{ marginTop: 12 }}

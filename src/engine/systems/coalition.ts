@@ -9,6 +9,7 @@ import { MINISTRIES, MINISTRY_PREFS, coalitionSeats, formGovernment, ministryTit
 import { addNews } from './news';
 import { addWorldEffect, changeApproval, govSatisfaction } from './opinion';
 import { changeAttitude } from './relationships';
+import { electedLead, noConfidenceFrozen } from './regime';
 import { log } from './report';
 
 export const SENIOR = ['defense', 'finance', 'justice', 'foreign'];
@@ -230,7 +231,8 @@ function buildAgreement(s: GameState, talks: PartnerTalk[]) {
 export function swearIn(s: GameState): { ok: boolean; text: string } {
   const n = s.negotiation!;
   const seats = formationSeats(s);
-  if (seats < 61) return { ok: false, text: `יש לך ${seats} מנדטים. צריך 61.` };
+  // בשיטה נשיאותית ראש הממשלה הנבחר/ת לא צריך/ה רוב בכנסת
+  if (seats < 61 && !s.rules.presidential) return { ok: false, text: `יש לך ${seats} מנדטים. צריך 61.` };
   const signed = n.talks.filter((t) => t.signed);
   const coalition = [n.formateurParty, ...signed.map((t) => t.partyId)];
   const { ministries, chairs, agreement, satisfaction } = buildAgreement(s, signed);
@@ -281,12 +283,12 @@ export function partnerSign(s: GameState): { ok: boolean; text: string } {
   const n = s.negotiation!;
   const t = n.talks[0];
   if (rand(s) < partnerAcceptChance(s)) {
-    const plan = proposeCoalition(s);
+    const plan = proposeCoalition(s, [], n.formateurParty);
     const coalition = plan.includes(t.partyId) ? plan : [...plan, t.partyId];
     const { ministries, chairs, agreement, satisfaction } = buildAgreement(s, [t]);
     s.flags.promisedMinistry = true;
     s.negotiation = null;
-    formGovernment(s, coalition, { ministries, chairs, agreement, satisfaction });
+    formGovernment(s, coalition, { ministries, chairs, agreement, satisfaction, lead: n.formateurParty });
     // תקציב שהושג – מגיע לבוחרים מיד
     for (const d of grantedOf(t)) if (d.kind === 'budget') changeApproval(s, d.sector, d.amount * 2.5);
     addNews(s, `${s.parties[t.partyId].name} בראשות ${s.player.name} מצטרפת לממשלה`, 'good', true);
@@ -309,8 +311,9 @@ export function partnerSign(s: GameState): { ok: boolean; text: string } {
 
 export function partnerDecline(s: GameState, reason = 'נשארת באופוזיציה.') {
   const own = s.player.partyId;
+  const lead = s.negotiation?.formateurParty ?? electedLead(s);
   s.negotiation = null;
-  completeCoalition(s, proposeCoalition(s, own ? [own] : []));
+  completeCoalition(s, proposeCoalition(s, own ? [own] : [], lead), lead ?? undefined);
   s.player.consistency = clamp(s.player.consistency + 4, 0, 100);
   log(s, reason, 'career');
 }
@@ -326,6 +329,18 @@ export function tickNegotiation(s: GameState) {
     return;
   }
   const own = n.formateurParty;
+  // ראש ממשלה שנבחר/ה ישירות לא "מחזיר/ה מנדט"
+  if (electedLead(s) === own) {
+    if (s.rules.presidential) {
+      const r = swearIn(s);
+      log(s, `בשיטה הנשיאותית לא צריך רוב: ${r.text}`, 'career');
+      return;
+    }
+    s.negotiation = null;
+    completeCoalition(s, proposeCoalition(s, [], own), own);
+    if (coalitionSeats(s, s.coalition.parties) < 61) callEarlyElections(s, 'ראש הממשלה הנבחר/ת לא הצליח/ה לגייס רוב בכנסת');
+    return;
+  }
   s.negotiation = null;
   addNews(s, `${s.player.name} החזיר/ה את המנדט לנשיא – לא עלה בידו/ה להרכיב ממשלה`, 'bad', true);
   log(s, 'המנדט פקע.', 'career');
@@ -363,7 +378,8 @@ export function recomputeStability(s: GameState) {
   const seats = partners.reduce((a, p) => a + s.parties[p].seats, 0) || 1;
   let st = partners.reduce((a, p) => a + (s.coalition.satisfaction[p] ?? 60) * s.parties[p].seats, 0) / seats;
   const total = coalitionSeats(s, s.coalition.parties);
-  if (total < 61) st -= 20;
+  if (s.rules.presidential) st += 10; // אין אי-אמון: לשותפות אין איום אמיתי
+  else if (total < 61) st -= 20;
   else if (total < 64) st -= 6;
   s.coalition.stability = clamp(Math.round(st), 0, 100);
 }
@@ -402,13 +418,14 @@ export function partyQuits(s: GameState, partyId: string, reason: string) {
   const seats = coalitionSeats(s, c.parties);
   addNews(s, `${s.parties[partyId].name} פורשת מהקואליציה: "${reason}". לממשלה נותרו ${seats} ח"כים`, 'bad', partyId === s.player.partyId);
   log(s, `${s.parties[partyId].name} פרשה מהקואליציה (${seats} ח"כים).`, 'system');
-  if (seats < 61 && c.minoritySince === null) c.minoritySince = s.week;
+  if (seats < 61 && c.minoritySince === null && !s.rules.presidential) c.minoritySince = s.week;
   recomputeStability(s);
 }
 
 /** אי-אמון קונסטרוקטיבי: צריך 61 ח"כים שתומכים בממשלה חלופית. */
 export function tryNoConfidence(s: GameState): { passed: boolean; text: string } {
-  if (s.rules.presidential) return { passed: false, text: 'בשיטה הנשיאותית הכנסת לא יכולה להפיל את הממשלה באי-אמון.' };
+  const frozen = noConfidenceFrozen(s);
+  if (frozen) return { passed: false, text: frozen };
   const pm = pmParty(s);
   const alt = proposeCoalition(s, [pm]);
   const altSeats = coalitionSeats(s, alt);
@@ -452,7 +469,7 @@ export function tickCoalition(s: GameState) {
     else if (s.week - c.minoritySince >= 3) {
       c.minoritySince = null;
       // ח"כ מצביע/ה בעצמו/ה – בהצבעה חיה
-      if (s.player.isMK && !s.rules.presidential && !s.liveVote) {
+      if (s.player.isMK && !noConfidenceFrozen(s) && !s.liveVote) {
         const opp = Object.values(s.parties).filter((p) => p.seats > 0 && !c.parties.includes(p.id)).sort((a, b) => b.seats - a.seats)[0];
         const sponsor = opp ? (opp.leaderId === 'player' ? 'player' : opp.leaderId) : '';
         if (sponsor && sponsor !== 'player') {

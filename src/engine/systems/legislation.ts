@@ -10,6 +10,7 @@ import { onBillPassed, onBudgetPassed } from './coalition';
 import { callEarlyElections, completeCoalition } from './elections';
 import { resetMinistryBudget } from './ministry';
 import { onLawPassed, requiredMajority } from './issues';
+import { billBlocked } from './regime';
 import { radicalClimate } from './climate';
 import { isCoalition, proposeCoalition } from './government';
 import { addNews } from './news';
@@ -55,6 +56,8 @@ export function createBill(s: GameState, templateId: string, scope: 1 | 2 | 3, o
   const mine = activeBills(s).filter((b) => isPlayerBill(s, b) && !b.agreementParty && !!b.government === gov);
   if (mine.length >= 3) return 'יש כבר 3 הצעות פעילות מהסוג הזה – התמקד בהן';
   if (activeBills(s).some((b) => b.templateId === templateId && isPlayerBill(s, b))) return 'כבר הגשת הצעה בנושא הזה';
+  const blocked = billBlocked(s, templateId);
+  if (blocked) return blocked;
   const t = templateById(templateId);
   const b: Bill = {
     id: newId(s, 'bill'),

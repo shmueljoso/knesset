@@ -13,6 +13,7 @@ import { checkMissions } from './systems/missions';
 import { tickScandal } from './systems/scandals';
 import { tickCareer } from './systems/legacy';
 import { tickPresident } from './systems/president';
+import { applyNorwegian } from './systems/regime';
 import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
 import { radicalClimate } from './systems/climate';
 import { BILL_TEMPLATES } from './data/bills';
@@ -38,9 +39,10 @@ const QUOTES = [
 ];
 
 function weeklyIncome(s: GameState): number {
-  if (s.player.isMK) return 11;
-  if (s.player.employerId) return 4;
-  return 3; // עבודה במקצוע המקורי
+  const base = s.player.isMK ? 11 : s.player.employerId ? 4 : 3; // אחרת: עבודה במקצוע המקורי
+  const tf = (id: string) => (s.transforms ?? []).find((t) => t.id === id)?.scope ?? 0;
+  // הכנסה בסיסית: 2,000-6,000 ₪ לחודש לכל אזרח/ית. מדינה מינימלית: כמעט בלי מס הכנסה
+  return base + tf('ubi') * 0.5 + (tf('libertarian') ? base * (0.15 + 0.1 * tf('libertarian')) : 0);
 }
 
 function worldNews(s: GameState) {
@@ -130,6 +132,7 @@ export function endWeek(s: GameState) {
   tickScandal(s);
   tickCareer(s);
   tickPresident(s);
+  if (!s.negotiation) applyNorwegian(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);

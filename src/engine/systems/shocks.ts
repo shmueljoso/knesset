@@ -37,7 +37,9 @@ export function rollShocks(s: GameState) {
     if (last !== undefined && s.week - last < 52) return false;
     return d.when ? d.when(s) : true;
   });
-  const def = pickWeighted(s, pool, (d) => d.weight);
+  // שלום מוריד את הסיכוי למלחמה; סיפוח מעלה אותו
+  const tf = (id: string) => (s.transforms ?? []).some((x) => x.id === id);
+  const def = pickWeighted(s, pool, (d) => (d.id === 'shock_war' ? d.weight * (tf('peace') ? 0.3 : tf('annexation') ? 1.6 : 1) : d.weight));
   if (!def) return;
   const ctx = def.setup(s);
   if (!ctx) return;

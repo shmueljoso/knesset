@@ -18,3 +18,4 @@
 - אקלים למהפכות (`systems/climate.ts`): `radicalClimate` (ממשלה תומכת / קואליציה רחבה / חלון הזדמנויות) מרכך את הפחד, מיישר את הקואליציה ומזיז את חלון אוברטון (`effectiveLean`). חלונות נפתחים ב-`openWindow` מתוך טלטלות. הממשלה מעלה מהפכה בעצמה ב-`governmentRevolution` (turn.ts).
 - נשיא/ה: `systems/president.ts` – מרוץ בסבבים כל 364 שבועות; הנבחר/ת מפנה מושב (`vacateSeat`).
 - בדיקת איזון: סימולציה ארוכה ב-`tests/engine.test.ts`; לפני שינוי מספרים כדאי להריץ סימולציה של 10 שנים בכמה זרעים.
+- כללי משחק שחוקים משנים (`systems/regime.ts`): החוק הנורבגי (`applyNorwegian`, `s.norwegianSwaps`), הגבלת כהונה (`pmTerms`, `termLimited`, `pmFor`), מרוץ ישיר לראשות הממשלה בליל הבחירות (`runPmRace` → `lastElection.pmRace`, הקואליציה נבנית סביב `electedLead`), חוקים שנחסמים במדינה שהשתנתה (`billBlocked`), מהפכות סותרות (`TRANSFORM_CONFLICTS`). חוק שמבטיח שינוי – צריך להשפיע כאן או במנוע, ולהופיע ב-`activeRuleNotes`.

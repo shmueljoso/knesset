@@ -209,7 +209,7 @@ export const BILL_TEMPLATES: BillTemplate[] = [
   },
   {
     id: 'norwegian', title: 'החוק הנורבגי', icon: '🔄', committee: 'constitution', category: 'governance', rule: 'norwegian',
-    summary: 'שר יכול להתפטר זמנית מהכנסת והבא ברשימה נכנס במקומו.',
+    summary: 'שרים מתפטרים מהכנסת והבאים ברשימה נכנסים במקומם (גם את/ה, אם את/ה הבא/ה בתור). כשהשר/ה עוזב/ת את הממשלה – המושב חוזר.',
     lean: {},
     sectors: { secular: -1, traditional: -1, arab: -1, olim: -1, religious: -1, haredi: -1 },
     world: { economy: -0.5 }, weeks: 2, delay: 0, cost: 0.2, basic: { majority: 61 },
@@ -217,7 +217,7 @@ export const BILL_TEMPLATES: BillTemplate[] = [
   },
   {
     id: 'termlimit', title: 'הגבלת כהונת ראש הממשלה', icon: '⏳', committee: 'constitution', category: 'governance', rule: 'termLimit',
-    summary: 'ראש ממשלה יכהן לכל היותר שתי קדנציות רצופות.',
+    summary: 'מי שהגיע/ה למכסה לא יכול/ה לכהן שוב כראש ממשלה: המפלגה שלו/ה בוחרת מנהיג/ה אחר/ת. חל גם עלייך.',
     lean: { judiciary: -30 },
     sectors: { secular: 3, traditional: 0, arab: 2, olim: 1, religious: 0, haredi: -1 },
     world: { trust: 2 }, weeks: 2, delay: 0, cost: 0, basic: { majority: 61 },

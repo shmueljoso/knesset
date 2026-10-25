@@ -42,6 +42,7 @@ import { ISSUES } from '../engine/data/issues';
 import { requiredMajority, strikeChance } from '../engine/systems/issues';
 import { TRANSFORM_INFO, TRANSFORM_LEVELS } from '../engine/data/transforms';
 import { hasTransform, publicSupport } from '../engine/systems/transforms';
+import { billBlocked, constitutionReferendum } from '../engine/systems/regime';
 import { radicalClimate } from '../engine/systems/climate';
 
 function Pipeline({ b }: { b: Bill }) {
@@ -406,6 +407,7 @@ export function BillBuilder() {
   const [gov, setGov] = useState(canGov);
   const t = templateById(tid);
   const role = legislativeRole(g);
+  const blocked = billBlocked(g, tid);
 
   const preview = useMemo(() => {
     const fake: Bill = {
@@ -473,8 +475,13 @@ export function BillBuilder() {
           {t.basic && <span className="chip gold">חוק יסוד: דרוש רוב של {requiredMajority(g, t.id)} בקריאה השלישית</span>}
           {t.rule && <span className="chip gold">משנה את כללי המשחק</span>}
           {t.petitionRisk ? <span className="chip warn">סיכון פסילה בבג"ץ: {Math.round(strikeChance(g, t.id) * 100)}%</span> : null}
-          {t.referendum && <span className="chip gold">דורש משאל עם · סקר: {publicSupport(g, t.id)}% בעד</span>}
+          {(t.referendum || constitutionReferendum(g, t.id)) && <span className="chip gold">דורש משאל עם · סקר: {publicSupport(g, t.id)}% בעד</span>}
         </div>
+        {blocked && (
+          <p className="small bad" style={{ margin: '0 0 10px' }} data-testid="bill-blocked">
+            🚫 {blocked}
+          </p>
+        )}
         {t.radical && (
           <div className="card small" style={{ background: 'var(--bg)', margin: '0 0 10px' }} data-testid="radical-info">
             <b>🌋 הצעה מרחיקת לכת</b>
@@ -548,7 +555,7 @@ export function BillBuilder() {
         <p className="tiny muted" style={{ margin: '6px 0 0' }}>היקף רחב = השפעה גדולה ויותר מתנגדים. יחסים, טובות והסתייגויות יכולים לשנות את התמונה.</p>
       </div>
 
-      <button className="btn primary block" style={{ marginTop: 14 }} onClick={submit} disabled={!role.canPropose}>
+      <button className="btn primary block" style={{ marginTop: 14 }} onClick={submit} disabled={!role.canPropose || !!blocked}>
         להניח על שולחן הכנסת (⏱2)
       </button>
     </Sheet>

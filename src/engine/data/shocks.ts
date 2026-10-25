@@ -213,6 +213,7 @@ export const SHOCKS: ShockDef[] = [
   },
   {
     id: 'shock_draft', weight: 2,
+    when: (s) => !(s.transforms ?? []).some((x) => x.id === 'volunteer' && x.scope >= 2), // אין גיוס חובה – אין מחאת גיוס
     setup: (s) => {
       bumpIssue(s, 'draft', 30);
       for (const p of Object.values(s.parties)) addMomentum(s, p.id, p.ideology.religion > 60 ? 1.2 : (-p.ideology.religion / 100) * 2.5);
@@ -238,7 +239,7 @@ export const SHOCKS: ShockDef[] = [
     },
   },
   {
-    id: 'shock_snap', weight: 1, when: (s) => s.coalition.stability < 45 && s.electionWeek - s.week > 30 && s.settings?.drama !== 'calm' && !s.negotiation,
+    id: 'shock_snap', weight: 1, when: (s) => s.coalition.stability < 45 && s.electionWeek - s.week > 30 && s.settings?.drama !== 'calm' && !s.negotiation && !s.rules.presidential && !(s.transforms ?? []).some((x) => x.id === 'emergency'),
     setup: (s) => {
       callEarlyElections(s, 'הפתעה בלילה: שותפה בכירה פירקה את הקואליציה');
       return {};

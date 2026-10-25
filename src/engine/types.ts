@@ -302,6 +302,16 @@ export interface ElectionResult {
   seats: Record<string, number>;
   playerElected: boolean;
   playerPosition: number | null;
+  /** בחירה ישירה / שיטה נשיאותית: המרוץ לראשות הממשלה */
+  pmRace?: PmRace;
+}
+
+export interface PmRace {
+  /** סבב ראשון, ואם אף אחד לא עבר 50% – סבב שני בין שני המובילים */
+  rounds: { candidates: string[]; pct: number[] }[];
+  winner: string;
+  /** המפלגה של כל מועמד/ת */
+  parties: Record<string, string>;
 }
 
 export interface GameState {
@@ -356,6 +366,10 @@ export interface GameState {
   transforms: Transform[];
   liveVote: LiveVote | null;
   customEvents: CustomEvent[];
+  /** החוק הנורבגי: שר/ה → מי שנכנס/ה לכנסת במקומו/ה */
+  norwegianSwaps: Record<string, string>;
+  /** קדנציות כראש ממשלה (סה"כ ורצופות) – להגבלת כהונה */
+  pmTerms: Record<string, { total: number; streak: number }>;
   windows: Partial<Record<TransformId, number>>; // חלונות הזדמנויות למהפכות: עד איזה שבוע
   president: { id: string; name: string; sinceWeek: number } | null;
   presidentNextWeek: number;
@@ -387,6 +401,8 @@ export interface Rules {
   directPM?: boolean; // בחירה ישירה לראשות הממשלה: אי-אמון = בחירות
   districts?: boolean; // מחוזות בחירה: המפלגות הגדולות מקבלות בונוס
   packedCourt?: boolean; // הקואליציה שולטת במינוי השופטים
+  norwegianLimit?: number; // החוק הנורבגי: כמה שרים מכל סיעה מפנים מושב
+  termLimitScope?: 1 | 2 | 3; // הגבלת כהונה: 3 קדנציות / 2 רצופות / 2 לכל החיים
 }
 
 export interface Caucus {

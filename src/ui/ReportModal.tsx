@@ -2,6 +2,7 @@ import { dateLabel } from '../engine/calendar';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import { useEffect, useState } from 'react';
 import { allocateSeats } from '../engine/systems/elections';
+import { pmRaceLabel } from '../engine/systems/regime';
 import type { GameState, WorldKey } from '../engine/types';
 import { useGame, useStore } from '../store';
 import { Delta } from './common';
@@ -126,6 +127,58 @@ function seatsAt(g: GameState, phase: number): Record<string, number> {
   return allocateSeats(votes, surplus, 120, (g.rules?.threshold ?? 3.25) / 100);
 }
 
+/** המרוץ הישיר לראשות הממשלה: אחוזים שמתייצבים עם הספירה, וסיבוב שני אם צריך */
+function PmRaceCard({ phase }: { phase: number }) {
+  const g = useGame();
+  const race = g.lastElection?.pmRace;
+  if (!race) return null;
+  const final = phase >= COUNT_PHASES.length - 1;
+  const shown = final ? race.rounds : race.rounds.slice(0, 1);
+  return (
+    <div className="card" style={{ margin: '10px 0' }} data-testid="pm-race">
+      <div className="card-title">
+        <h3>🗳️ הבחירה הישירה לראשות הממשלה</h3>
+      </div>
+      {shown.map((r, ri) => {
+        const pct = final ? r.pct : r.pct.map((x, i) => x * (1 + noise(r.candidates[i] + 'pm' + phase) * COUNT_PHASES[phase].noise));
+        const sum = pct.reduce((a, b) => a + b, 0) || 1;
+        const norm = pct.map((x) => (x / sum) * 100);
+        const lead = norm.indexOf(Math.max(...norm));
+        return (
+          <div key={ri} style={{ marginBottom: 8 }}>
+            {race.rounds.length > 1 && <div className="tiny gold">{ri === 0 ? 'סיבוב ראשון' : 'סיבוב שני'}</div>}
+            {r.candidates.map((c, i) => {
+              const party = g.parties[race.parties[c]];
+              return (
+                <div key={c} style={{ margin: '6px 0' }}>
+                  <div className="spread small" style={{ fontWeight: c === 'player' ? 800 : 400 }}>
+                    <span>
+                      {pmRaceLabel(g, c)} <span className="tiny muted">({party?.short ?? '?'})</span>
+                    </span>
+                    <b className={!final && i === lead ? 'beat' : ''}>{norm[i].toFixed(1)}%</b>
+                  </div>
+                  <div className="count-bar" style={{ height: 10, position: 'relative' }}>
+                    <i style={{ width: `${norm[i]}%`, background: party?.color ?? '#64748b' }} />
+                    <span style={{ position: 'absolute', top: -2, bottom: -2, insetInlineStart: '50%', width: 2, background: '#f87171' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+      {!final && race.rounds.length > 1 && <p className="suspense tiny">אף מועמד/ת עוד לא חצה/תה את ה-50%…</p>}
+      {final && (
+        <p className="small" style={{ margin: '6px 0 0' }}>
+          <b className={race.winner === 'player' ? 'good' : ''}>{pmRaceLabel(g, race.winner)}</b> {race.winner === 'player' ? 'נבחרת לראשות הממשלה!' : 'נבחר/ה לראשות הממשלה'} ומרכיב/ה את הממשלה
+          {g.parties[race.parties[race.winner]] && Object.values(g.parties).some((p) => p.seats > g.parties[race.parties[race.winner]].seats) ? ' – למרות שהמפלגה שלו/ה לא הגדולה.' : '.'}
+          {g.rules.presidential ? ' בשיטה הנשיאותית לא צריך 61.' : ''}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ElectionModal() {
   const g = useGame();
   const act = useStore((s) => s.act);
@@ -192,6 +245,7 @@ export function ElectionModal() {
             <Hemicycle />
           </div>
         )}
+        <PmRaceCard phase={phase} />
         {!final && (
           <button className="btn sm" style={{ margin: '8px 0' }} onClick={() => setPhase(COUNT_PHASES.length - 1)}>
             ⏩ לתוצאות הסופיות
