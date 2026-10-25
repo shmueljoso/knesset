@@ -13,6 +13,7 @@ import { vacateSeat } from './president';
 import { scheduleEvent } from './issues';
 import { latestSurvey } from './surveys';
 import { addStat } from '../stats';
+import { callEarlyElections } from './elections';
 
 const thr = (s: GameState) => s.rules.threshold ?? 3.25;
 const seatsOf = (s: GameState, pct: number) => (pct < thr(s) ? 0 : Math.round((pct / 100) * 120));
@@ -126,7 +127,7 @@ export function resignPressure(s: GameState, govApproval: number): number {
 // ---------------- החלפת יו"ר ----------------
 
 /** מחליף יו"ר מפלגה, כולל ראש הממשלה, תארים ויו"ר האופוזיציה */
-export function installLeader(s: GameState, partyId: string, newId: string, why: string) {
+export function installLeader(s: GameState, partyId: string, newId: string, why: string, opts: { keepPM?: boolean } = {}) {
   const p = s.parties[partyId];
   if (!p || (newId !== 'player' && !s.npcs[newId])) return;
   const old = p.leaderId;
@@ -138,7 +139,7 @@ export function installLeader(s: GameState, partyId: string, newId: string, why:
     if (o.ministry === 'pm') o.ministry = undefined;
     if (o.title === 'ראש הממשלה' || o.title === 'ראשת הממשלה' || wasOpp) o.title = undefined;
   }
-  if (s.coalition.pmId === old) {
+  if (s.coalition.pmId === old && !opts.keepPM) {
     s.coalition.pmId = newId;
     s.ministers.pm = newId;
     if (newId === 'player') {
@@ -174,7 +175,7 @@ function leaveParliament(s: GameState, id: string, why: string) {
   s.retired.push({ id, week: s.week, why });
 }
 
-function successors(s: GameState, partyId: string, exclude: string): Npc[] {
+export function successors(s: GameState, partyId: string, exclude: string): Npc[] {
   const p = s.parties[partyId];
   return p.list
     .map((id) => s.npcs[id])
@@ -309,6 +310,7 @@ export function foundByNpc(s: GameState, id: string): Party | null {
 // ---------------- שבוע אחר שבוע ----------------
 
 export function tickFigures(s: GameState) {
+  repairLeadership(s);
   const sv = latestSurvey(s);
   // באז: סקר "מה אם" שנותן הרבה מנדטים מדליק את הדמות; בלי חיזוק הוא דועך
   for (const [id, v] of Object.entries(s.buzz)) s.buzz[id] = Math.max(0, v * 0.985 - 0.2);
@@ -390,19 +392,130 @@ registerSpecial('fg_call_hint', (s) => {
   addNews(s, `ספקולציות: ${s.player.name} שוקל/ת להקים מפלגה`, 'neutral', true, undefined, 'פוליטיקה עכשיו');
   addStat(s, 'fame', 2);
 });
-registerSpecial('fg_step_down', (s, ctx) => {
-  const p = s.parties[ctx.party];
-  if (!p) return;
-  const cands = successors(s, p.id, 'player');
-  const heir = cands[0];
-  if (!heir) return 'אין מחליף/ה ראוי/ה – את/ה נשאר/ת.';
+export function stepDownBlocked(s: GameState): string | null {
+  const p = s.player.partyId ? s.parties[s.player.partyId] : null;
+  if (!p || p.leaderId !== 'player') return 'רק ליו"ר מפלגה';
+  if (!s.player.isMK) return 'רק ח"כ';
+  if (!successors(s, p.id, 'player').length) return 'אין מחליף/ה ראוי/ה ברשימה';
+  return null;
+}
+
+/** פרישה מראשות המפלגה (ומראשות הממשלה, אם המפלגה מובילה אותה): היורש/ת נכנס/ת, ואת/ה נשאר/ת ח"כ */
+export function stepDownLeader(s: GameState): { ok: boolean; text: string } {
+  const blocked = stepDownBlocked(s);
+  if (blocked) return { ok: false, text: blocked };
+  const p = s.parties[s.player.partyId!];
+  const heir = successors(s, p.id, 'player')[0];
+  const wasPM = s.coalition.pmId === 'player';
   installLeader(s, p.id, heir.id, 'פרישה');
+  if (wasPM) {
+    s.player.ministry = null;
+    s.ministryState = null;
+    s.player.rank = 'mk';
+  }
   s.player.partyStanding = clamp(s.player.partyStanding - 10, 0, 100);
   addStat(s, 'reputation', 3);
-  addNews(s, `${s.player.name} פורש/ת מראשות ${p.name}; ${heir.name} ייכנס/תיכנס לנעליו/ה`, 'neutral', true, 'הצעד נחשב לאחראי – גם מי שלא אוהב אותך מודה בכך.', 'ערוץ המשכן');
-  return `${heir.name} יו"ר ${p.name}. את/ה ממשיך/ה כח"כ.`;
-});
+  addNews(s, `${s.player.name} פורש/ת מראשות ${p.name}${wasPM ? ' ומראשות הממשלה' : ''}; ${heir.name} ייכנס/תיכנס לנעליו/ה`, 'neutral', true, 'הצעד נחשב לאחראי – גם מי שלא אוהב אותך מודה בכך.', 'ערוץ המשכן');
+  return { ok: true, text: `${heir.name} יו"ר ${p.name}${wasPM ? ' וראש/ת הממשלה' : ''}. את/ה ממשיך/ה כח"כ.` };
+}
+
+registerSpecial('fg_step_down', (s) => stepDownLeader(s).text);
 registerSpecial('fg_rebels_split', (s, ctx) => {
   const f = foundByNpc(s, ctx.npc);
   return f ? `${ctx.npcName} עזב/ה והקים/ה את "${f.name}".` : 'הם איימו – ונשארו.';
 });
+
+// ---------------- ראש ממשלה שפרש מהמפלגה, התפטרות ופיזור ----------------
+
+/**
+ * מצב שבור/חריג: מפלגה שהיו"ר שלה כבר לא חבר בה (למשל ראש ממשלה שהקים סיעה חדשה).
+ * ממנה יורש/ת למפלגה הישנה, מצרפת את הסיעה החדשה לקואליציה אם השחקן ראש הממשלה, ומציעה לו/לה לבחור את המשך הדרך.
+ */
+export function repairLeadership(s: GameState) {
+  const mine = s.player.partyId;
+  let changed = false;
+  for (const p of Object.values(s.parties)) {
+    if (p.leaderId !== 'player' || p.id === mine) continue;
+    const heir = successors(s, p.id, 'player')[0] ?? Object.values(s.npcs).find((n) => n.partyId === p.id && n.isMK);
+    if (!heir) continue;
+    installLeader(s, p.id, heir.id, 'השחקן עזב', { keepPM: true });
+    addNews(s, `${heir.name} נבחר/ה ליו"ר ${p.name} אחרי שהיו"ר הקודם עזב/ה`, 'neutral', true, undefined, 'ערוץ המשכן');
+    s.flags.pmSplitHeir = heir.id;
+    s.flags.pmSplitOld = p.id;
+    changed = true;
+  }
+  if (mine && s.coalition.pmId === 'player' && !s.coalition.parties.includes(mine)) {
+    s.coalition.parties.push(mine);
+    s.coalition.satisfaction[mine] = 85;
+    changed = true;
+  }
+  if (changed && s.coalition.pmId === 'player' && !s.flags.pmSplitAsked && !s.eventQueue.some((e) => e.eventId === 'fg_pm_split')) {
+    s.flags.pmSplitAsked = s.week;
+    const heir = s.npcs[String(s.flags.pmSplitHeir ?? '')];
+    s.eventQueue.push({ eventId: 'fg_pm_split', ctx: { heirName: heir?.name ?? 'יורש/ת', oldName: s.parties[String(s.flags.pmSplitOld ?? '')]?.name ?? 'המפלגה הישנה' } });
+  }
+  return changed;
+}
+
+/** מי יכול/ה לרשת את ראש הממשלה: ראש הסיעה הגדולה בקואליציה (חוץ ממפלגת השחקן, אלא אם אין אחרת) */
+export function premierSuccessor(s: GameState): { id: string; partyId: string } | null {
+  const mine = s.player.partyId;
+  const parties = s.coalition.parties.map((id) => s.parties[id]).filter((p) => p && p.seats > 0 && p.leaderId !== 'player' && s.npcs[p.leaderId]).sort((a, b) => b.seats - a.seats);
+  const other = parties.find((p) => p.id !== mine) ?? parties[0];
+  if (other) return { id: other.leaderId, partyId: other.id };
+  const p = mine ? s.parties[mine] : null;
+  const heir = p ? successors(s, p.id, 'player')[0] : null;
+  return heir && p ? { id: heir.id, partyId: p.id } : null;
+}
+
+export function resignBlocked(s: GameState): string | null {
+  if (s.coalition.pmId !== 'player') return 'רק לראש הממשלה';
+  if (!premierSuccessor(s)) return 'אין מי שיירש/תירש את ראשות הממשלה';
+  return null;
+}
+
+/** התפטרות מראשות הממשלה: השרביט עובר לראש הסיעה הגדולה בקואליציה, וממשיכים בלי בחירות */
+export function resignPremiership(s: GameState): { ok: boolean; text: string } {
+  const blocked = resignBlocked(s);
+  if (blocked) return { ok: false, text: blocked };
+  const succ = premierSuccessor(s)!;
+  const heir = s.npcs[succ.id];
+  const mine = s.player.partyId ? s.parties[s.player.partyId] : null;
+  if (mine && mine.leaderId === 'player' && succ.partyId === mine.id) {
+    // ראש הממשלה מפנה גם את ראשות מפלגתו
+    installLeader(s, mine.id, heir.id, 'התפטרות');
+  } else {
+    s.coalition.pmId = heir.id;
+    s.ministers.pm = heir.id;
+    heir.title = heir.gender === 'm' ? 'ראש הממשלה' : 'ראשת הממשלה';
+    heir.ministry = 'pm';
+    s.coalition.stability = clamp(s.coalition.stability - 5, 0, 100);
+  }
+  s.player.ministry = null;
+  s.ministryState = null;
+  s.player.rank = s.player.isMK ? 'mk' : 'citizen';
+  addStat(s, 'reputation', 2);
+  addNews(s, `${s.player.name} התפטר/ה מראשות הממשלה; ${heir.name} מוביל/ה את הממשלה`, 'neutral', true, 'הקואליציה ממשיכה לכהן ללא בחירות.', 'ערוץ המשכן');
+  log(s, `התפטרת מראשות הממשלה. ${heir.name} ראש הממשלה החדש/ה.`, 'career');
+  return { ok: true, text: `${heir.name} ראש/ת הממשלה. את/ה ממשיך/ה כח"כ.` };
+}
+
+export function dissolveBlocked(s: GameState): string | null {
+  if (s.coalition.pmId !== 'player') return 'רק לראש הממשלה';
+  if (s.rules.presidential) return 'בשיטה הנשיאותית אין פיזור';
+  if ((s.transforms ?? []).some((t) => t.id === 'emergency')) return 'שעת חירום: הבחירות נדחו';
+  if (s.electionWeek - s.week <= 14) return 'הבחירות כבר קרובות';
+  return null;
+}
+
+/** פיזור הכנסת ובחירות מוקדמות, בראשות ראש הממשלה המכהן/ת */
+export function dissolveKnesset(s: GameState): { ok: boolean; text: string } {
+  const blocked = dissolveBlocked(s);
+  if (blocked) return { ok: false, text: blocked };
+  callEarlyElections(s, `${s.player.name} פיזר/ה את הכנסת`);
+  addStat(s, 'fame', 3);
+  return { ok: true, text: 'הכנסת התפזרה. הבחירות בעוד כ-90 יום, ואת/ה ממשיך/ה כראש ממשלת מעבר.' };
+}
+
+registerSpecial('fg_dissolve', (s) => dissolveKnesset(s).text);
+registerSpecial('fg_resign_pm', (s) => resignPremiership(s).text);

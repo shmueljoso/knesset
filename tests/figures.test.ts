@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createGame, endWeek, type NewGameOptions } from '../src/engine';
 import { eventById } from '../src/engine/data/events';
 import { resolveEvent } from '../src/engine/systems/events';
-import { announceRetirement, foundByNpc, foundForecast, installLeader, quitForecast, tickFigures } from '../src/engine/systems/figures';
+import { announceRetirement, dissolveKnesset, foundByNpc, foundForecast, installLeader, quitForecast, repairLeadership, resignBlocked, resignPremiership, stepDownBlocked, stepDownLeader, tickFigures } from '../src/engine/systems/figures';
 import { makeSurvey, publishSurvey } from '../src/engine/systems/surveys';
 
 const base: NewGameOptions = {
@@ -130,5 +130,95 @@ describe('leaders, retirement and new parties', () => {
       if (w % 100 === 99 && !s.negotiation) seatsOk(s);
     }
     expect(s.news.some((n) => /פרישה|פרש|הדחה|הקים\/ה מפלגה/.test(n.headline))).toBe(true);
+  });
+});
+
+describe('a prime minister who splits from their own party', () => {
+  const setup = (seed: number) => {
+    const s = createGame({ ...base, seed });
+    // השחקן: ח"כ ויו"ר מפלגתו (מרכז), וראש ממשלה
+    const pmParty = s.parties[s.player.partyId!];
+    pmParty.leaderId = 'player';
+    pmParty.list = ['player', ...pmParty.list.filter((x) => x !== 'player')];
+    const oldPm = s.npcs[s.coalition.pmId];
+    if (oldPm) {
+      oldPm.ministry = undefined;
+      oldPm.title = undefined;
+    }
+    if (!s.coalition.parties.includes(pmParty.id)) {
+      s.coalition.parties.push(pmParty.id);
+      s.coalition.satisfaction[pmParty.id] = 70;
+    }
+    s.coalition.pmId = 'player';
+    s.ministers.pm = 'player';
+    s.player.rank = 'minister';
+    s.player.isMK = true;
+    for (const n of Object.values(s.npcs)) if (n.partyId === pmParty.id) { n.attitude = 80; n.trust = 80; }
+    return { s, pmParty };
+  };
+
+  it('can split: the old party gets a new leader, the PM stays PM, both factions sit in the coalition', async () => {
+    const { splitFaction, splitInfo } = await import('../src/engine/systems/parties');
+    const { s, pmParty } = setup(5);
+    const info = splitInfo(s);
+    expect(info.needed).toBeGreaterThan(0);
+    expect(info.followers.length + 1).toBeGreaterThanOrEqual(info.needed);
+    const oldPoll = pmParty.poll;
+    const r = splitFaction(s, 'דרך חדשה', '#22c55e');
+    expect(r.ok).toBe(true);
+    expect(pmParty.leaderId).not.toBe('player');
+    expect(s.npcs[pmParty.leaderId]).toBeTruthy();
+    expect(s.coalition.pmId).toBe('player');
+    expect(s.coalition.parties).toContain(s.player.partyId!);
+    expect(s.coalition.parties).toContain(pmParty.id);
+    expect(s.coalition.satisfaction[pmParty.id]).toBeLessThan(40);
+    expect(pmParty.poll).toBeLessThan(oldPoll);
+    expect(s.parties[s.player.partyId!].poll).toBeGreaterThan(1);
+    expect(s.eventQueue.some((e) => e.eventId === 'fg_pm_split')).toBe(true);
+    seatsOk(s);
+  });
+
+  it('solo defection is not available to a party leader', async () => {
+    const { defect } = await import('../src/engine/systems/parties');
+    const { s } = setup(5);
+    expect(defect(s).ok).toBe(false);
+  });
+
+  it('a save broken by the old bug is repaired on load', () => {
+    const { s, pmParty } = setup(5);
+    // מצב שבור: יו"ר המפלגה הישנה עדיין "player", אבל השחקן כבר במפלגה אחרת
+    const mine = { ...pmParty, id: 'pp_x', name: 'חדשה', short: 'חדשה', leaderId: 'player', list: ['player'], seats: 1, playerFounded: true };
+    s.parties.pp_x = mine as typeof pmParty;
+    pmParty.seats -= 1;
+    s.player.partyId = 'pp_x';
+    expect(repairLeadership(s)).toBe(true);
+    expect(pmParty.leaderId).not.toBe('player');
+    expect(s.coalition.parties).toContain('pp_x');
+    expect(s.coalition.pmId).toBe('player');
+    expect(s.eventQueue.some((e) => e.eventId === 'fg_pm_split')).toBe(true);
+  });
+
+  it('as PM you can resign (successor takes over) or dissolve the Knesset', () => {
+    const { s } = setup(5);
+    expect(resignBlocked(s)).toBeNull();
+    const before = s.electionWeek;
+    s.electionWeek = s.week + 100;
+    expect(dissolveKnesset(s).ok).toBe(true);
+    expect(s.electionWeek).toBeLessThan(s.week + 20);
+    void before;
+    const r = resignPremiership(s);
+    expect(r.ok).toBe(true);
+    expect(s.coalition.pmId).not.toBe('player');
+    expect(s.npcs[s.coalition.pmId].ministry).toBe('pm');
+    expect(s.player.ministry).toBeNull();
+    expect(resignBlocked(s)).toBeTruthy();
+  });
+
+  it('a leader can step down from the party and premiership at once', () => {
+    const { s, pmParty } = setup(6);
+    expect(stepDownBlocked(s)).toBeNull();
+    expect(stepDownLeader(s).ok).toBe(true);
+    expect(pmParty.leaderId).not.toBe('player');
+    expect(s.coalition.pmId).toBe(pmParty.leaderId);
   });
 });

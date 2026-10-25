@@ -53,6 +53,11 @@ function lawTitle(id: string): string {
 const T = (id: string, icon: string, title: string, body: string, choices: GameEvent['choices']): GameEvent => ({ id, queued: true, icon, title, body, choices });
 
 export const CHAIN_EVENTS: GameEvent[] = [
+  T('fg_pm_split', '💥', 'ראש הממשלה עזב/ה את מפלגתו/ה', 'הסיעה שלך התפצלה: {oldName} בחרה ב{heirName} ליו"ר, והיא כועסת – אבל עדיין בקואליציה. את/ה ראש/ת ממשלה בלי המפלגה שהביאה אותך לתפקיד, והשותפות כבר מחשבות מסלול. מה עושים?', [
+    { label: 'לפזר את הכנסת וללכת לבחירות', hint: 'את/ה ראש/ת ממשלת מעבר, והמפלגה החדשה יוצאת בהייפ', ops: [{ op: 'special', id: 'fg_dissolve', label: 'פיזור הכנסת' }] },
+    { label: 'להמשיך לכהן עם שתי הסיעות', hint: 'יציבות נמוכה – הרבה לחץ מהסיעה הוותיקה', ops: [{ op: 'reputation', d: 1 }, { op: 'log', text: 'החלטת להמשיך לכהן כראש ממשלה עם שתי הסיעות.' }] },
+    { label: 'להתפטר ולהעביר את הממשלה', hint: 'ראש הסיעה הגדולה בקואליציה יוביל; את/ה ח"כ', ops: [{ op: 'special', id: 'fg_resign_pm', label: 'התפטרות מראשות הממשלה' }] },
+  ]),
   // ---- דמויות ומפלגות ----
   T('fg_succession', '👑', 'מי ירש את {partyName}?', 'היו"ר הודיע/ה על פרישה. בסיעה שני מועמדים בולטים: {c0Name} ו{c1Name}. מעמדך במפלגה מאפשר לך להיכנס למרוץ – או להשפיע על מי שינצח.', [
     { label: 'להתמודד על ראשות המפלגה', hint: 'הסיכוי תלוי במעמד, במוכרות ובמוניטין · הפסד עולה במעמד', ops: [{ op: 'special', id: 'fg_run', label: 'המאבק על הירושה' }] },

@@ -104,15 +104,22 @@ export function PartySheet() {
               {info.followers.length ? ` (${info.followers.map((f) => f.name).join(', ')})` : ''}.
             </p>
             <p className="tiny muted">ח"כים הולכים אחריך כשהיחס אליך 55+ והאמון 40+.</p>
+            {current.leaderId === 'player' && (
+              <p className="small warn" data-testid="leader-split-warning">
+                ⚠️ את/ה יו"ר {current.short}. אם תפלג/י: המפלגה הישנה תבחר יורש/ת ותכעס, חלק מהסקרים עובר איתך, ו{g.coalition.pmId === 'player' ? 'את/ה ממשיך/ה כראש ממשלה בקואליציה רעועה – ואפשר לפזר את הכנסת, להמשיך או להתפטר.' : 'הסיעה החדשה לא בהכרח בקואליציה.'} אפשר גם לפרוש מההנהגה בלי להתפצל: במטה המפלגה ← "לפרוש מראשות המפלגה".
+              </p>
+            )}
             <input className="text-input" placeholder="שם הסיעה החדשה" value={name} onChange={(e) => setName(e.target.value)} maxLength={20} />
             <ColorPick color={color} setColor={setColor} />
             <div className="col" style={{ marginTop: 10 }}>
               <button className="btn" disabled={info.followers.length + 1 < info.needed || !name.trim()} onClick={() => run((s) => splitFaction(s, name, color))}>
                 ✂️ פילוג חוקי והקמת סיעה
               </button>
-              <button className="btn danger" onClick={() => run((s) => defect(s))}>
-                🚪 לפרוש לבד (להפוך ל"פורש")
-              </button>
+              {current.leaderId !== 'player' && (
+                <button className="btn danger" onClick={() => run((s) => defect(s))}>
+                  🚪 לפרוש לבד (להפוך ל"פורש")
+                </button>
+              )}
             </div>
           </div>
         </>
@@ -380,6 +387,9 @@ export function HelpSheet() {
         </div>
         <div className="card">
           <b>⚖️ חוקי יסוד ובג"ץ</b> – חוק יסוד צריך 61 (או 80 אם שוריין) בקריאה השלישית. חוקים שנויים במחלוקת עלולים להיפסל בבג"ץ; עם פסקת התגברות אפשר לחוקק מחדש.
+        </div>
+        <div className="card">
+          <b>🚪 ראש ממשלה שעוזב</b> – כראש ממשלה אפשר: להתפטר ולהעביר את השרביט (לשכת ראש הממשלה), לפזר את הכנסת ולצאת לבחירות, או לפרוש מראשות המפלגה (מטה המפלגה). יו"ר ששובר מפלגה (פילוג) משאיר אותה ליורש/ת כועס/ת, לוקח חלק מהסקרים, נשאר ראש ממשלה בקואליציה רעועה – ואז בוחרים: לפזר, להמשיך או להתפטר.
         </div>
         <div className="card">
           <b>👥 יו"רים, פרישות ומפלגות חדשות</b> – יו"רים מזדקנים ופורשים (ראש ממשלה בלחץ ציבורי – מהר יותר), ובסיעה מתחיל מאבק על הירושה: אם יש לך מעמד ומוכרות – את/ה יכול/ה להתמודד על הכיסא או לתמוך במועמד/ת. מפלגה שקורסת בסקרים מדיחה יו"ר. בסקר "🔮 ומה אם?" רואים כמה מנדטים יקבל מי שיקים מפלגה (גם את/ה), מה יקרה אם יו"ר יפרוש, ומה שווה איחוד – ודמות שמקבלת הרבה "באז" אולי באמת תעשה את זה. סקר גבוה עליך מביא קריאה להקים מפלגה; ירידה חדה – לחץ לפרוש. בכרטיס "המפלגה שלי" בלוח רואים יו"ר, סיכוי לפרישה ומורדים. בלוח ובסקר מופיע גם איזה מכון ערך אותו (אפשר לעבור בין המכונים).

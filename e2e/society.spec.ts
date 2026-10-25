@@ -118,3 +118,23 @@ test('polls: pollster is visible and what-if polls show', async ({ page }) => {
   await expect(page.getByTestId('resign')).toContainText('לחץ ציבורי');
   await shot(page, '106-polls-whatif');
 });
+
+test('a PM who split from the party gets options: dissolve, continue or resign', async ({ page }) => {
+  const { splitFaction } = await import('../src/engine/systems/parties');
+  const g = game();
+  const mine = g.parties.merkaz;
+  mine.leaderId = 'player';
+  mine.list = ['player', ...mine.list.filter((x) => x !== 'player')];
+  g.coalition.parties.push('merkaz');
+  g.coalition.satisfaction.merkaz = 70;
+  g.coalition.pmId = 'player';
+  g.ministers.pm = 'player';
+  for (const n of Object.values(g.npcs)) if (n.partyId === 'merkaz') { n.attitude = 80; n.trust = 80; }
+  g.eventQueue = [];
+  expect(splitFaction(g, 'דרך חדשה', '#22c55e').ok).toBe(true);
+  await load(page, g);
+  await expect(page.locator('.event-card')).toContainText('עזב/ה את מפלגתו');
+  await shot(page, '107-pm-split');
+  await page.getByRole('button', { name: /להתפטר ולהעביר את הממשלה/ }).click();
+  await page.getByRole('button', { name: /^המשך$/ }).click().catch(() => undefined);
+});

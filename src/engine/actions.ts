@@ -9,6 +9,7 @@ import { takeStance } from './systems/opinion';
 import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
 import { activeRuleNotes, noConfidenceFrozen } from './systems/regime';
+import { dissolveBlocked, dissolveKnesset, resignBlocked, resignPremiership, stepDownBlocked, stepDownLeader } from './systems/figures';
 import { latestSurvey, pmFitOf } from './systems/surveys';
 import { MAX_PROJECTS, PROJECT_INFO, projectBlocked, startProject } from './systems/projects';
 import { askBudget } from './systems/ministry';
@@ -286,6 +287,15 @@ export const ACTIONS: ActionDef[] = [
       return run(s, [{ op: 'fame', d: 1.3 * mediaPower(s) }], 'הפוסט זכה לאלפי שיתופים.');
     },
   },
+  {
+    id: 'leader_step_down', loc: 'partyhq', icon: '🪑', label: 'לפרוש מראשות המפלגה', ap: 1,
+    desc: 'להעביר את ההנהגה ליורש/ת מהרשימה ולהישאר ח"כ. אם המפלגה מובילה את הממשלה – גם ראשות הממשלה עוברת. נחשב לצעד אחראי.',
+    avail: stepDownBlocked,
+    run: (s) => {
+      const r = stepDownLeader(s);
+      return { text: r.text, good: r.ok };
+    },
+  },
   // ---------- מיזמים ארוכי טווח ----------
   ...(['tour', 'branches', 'ads', 'supporters'] as const).map((kind): ActionDef => ({
     id: `project_${kind}`,
@@ -409,6 +419,24 @@ export const ACTIONS: ActionDef[] = [
       s.eventsFired[id] = s.week;
       s.eventQueue.push({ eventId: id, ctx: {} });
       return { text: 'הישיבה נפתחה. על השולחן: החלטה קשה.' };
+    },
+  },
+  {
+    id: 'pm_resign', loc: 'pmo', icon: '🚪', label: 'להתפטר מראשות הממשלה', ap: 1,
+    desc: 'להעביר את השרביט לראש הסיעה הגדולה בקואליציה (או ליורש מסיעתך) ולהישאר ח"כ. הקואליציה ממשיכה, בלי בחירות.',
+    avail: resignBlocked,
+    run: (s) => {
+      const r = resignPremiership(s);
+      return { text: r.text, good: r.ok };
+    },
+  },
+  {
+    id: 'pm_dissolve', loc: 'pmo', icon: '🗳️', label: 'לפזר את הכנסת ולצאת לבחירות', ap: 1,
+    desc: 'בחירות מוקדמות בעוד כ-90 יום, ואת/ה ראש/ת ממשלת מעבר. מתאים כשהסקרים בעדך או כשהקואליציה מתפרקת.',
+    avail: dissolveBlocked,
+    run: (s) => {
+      const r = dissolveKnesset(s);
+      return { text: r.text, good: r.ok };
     },
   },
   {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createGame, endWeek, type GameState, type NewGameOptions } from './engine';
 import type { OpenPanel } from './engine/actions';
 import { migrate } from './engine/migrate';
+import { repairLeadership } from './engine/systems/figures';
 import type { ModFile } from './engine/mods';
 
 export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
@@ -40,7 +41,10 @@ export function loadSaved(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const g = JSON.parse(raw) as GameState;
-    return g.version === 1 ? migrate(g) : null;
+    if (g.version !== 1) return null;
+    const m = migrate(g);
+    repairLeadership(m);
+    return m;
   } catch {
     return null;
   }
