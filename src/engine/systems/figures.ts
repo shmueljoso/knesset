@@ -2,8 +2,8 @@
 // וסקרי "מה אם" שמראים מה היה קורה אם מישהו (גם את/ה) היה פורש, מקים רשימה או חוזר.
 import { registerSpecial } from '../ops';
 import { chance, pick, rand } from '../rng';
-import type { GameState, Hypo, Ideology, Npc, Party, Succession } from '../types';
-import { clamp, ideologyDistance } from '../util';
+import type { GameState, Hypo, Ideology, Npc, Party, Sector, Succession } from '../types';
+import { SECTOR_WEIGHTS as SECTOR_W0, clamp, ideologyDistance } from '../util';
 import { listsOpen, spawnParty } from './mergers';
 import { addNews } from './news';
 import { addMomentum, normalizePolls, playerElectoralAppeal } from './opinion';
@@ -15,6 +15,7 @@ import { log } from './report';
 import { vacateSeat } from './president';
 import { scheduleEvent } from './issues';
 import { latestSurvey } from './surveys';
+import { sectorWeights } from './society';
 import { addStat } from '../stats';
 import { callEarlyElections } from './elections';
 
@@ -554,36 +555,96 @@ registerSpecial('fg_resign_pm', (s) => resignPremiership(s).text);
 
 // ---------------- מפלגות קטנות חדשות כשאחוז החסימה יורד ----------------
 
-const NICHE: { names: string[]; ideology: Ideology; sectors: Party['sectors']; bio: string }[] = [
+interface Niche {
+  names: string[];
+  ideology: Ideology;
+  sectors: Party['sectors'];
+  bio: string;
+  /** מגזר הליבה (למשקל דמוגרפי); בלי – מפלגת נושא כללית */
+  sector?: Sector;
+  /** מה "חסר" בכנסת: הכותרת של הידיעה כשהמפלגה מוקמת */
+  gap?: string;
+}
+
+/** מפלגות נישה: נושאים, וגם שילובים של מגזר ואידיאולוגיה ש"לא מיוצגים" במפלגות הגדולות */
+const NICHE: Niche[] = [
   { names: ['הגמלאים', 'דור הזהב', 'כבוד לגיל השלישי'], ideology: { econ: -45, security: 10, religion: 0, judiciary: 0 }, sectors: { traditional: 1, olim: 0.6, secular: 0.3 }, bio: 'מפלגת הגמלאים: פנסיה וכבוד.' },
   { names: ['הדור הצעיר', 'דור חדש', 'הצעירים'], ideology: { econ: -20, security: -10, religion: -50, judiciary: -20 }, sectors: { secular: 1, olim: 0.3 }, bio: 'מפלגה של זוגות צעירים: דיור, חופש ושוויון.' },
   { names: ['הירוקים', 'אדמה וחברה', 'כוח ירוק'], ideology: { econ: -30, security: -25, religion: -30, judiciary: -30 }, sectors: { secular: 1, arab: 0.2 }, bio: 'מפלגת הסביבה והאקלים.' },
   { names: ['העצמאים', 'חופש כלכלי', 'עסקים קטנים'], ideology: { econ: 55, security: 15, religion: -20, judiciary: 10 }, sectors: { secular: 0.7, traditional: 0.6, olim: 0.3 }, bio: 'מפלגת העצמאים והעסקים הקטנים.' },
   { names: ['הפריפריה', 'הנגב והגליל', 'כוח מקומי'], ideology: { econ: -25, security: 25, religion: 10, judiciary: 5 }, sectors: { traditional: 1, religious: 0.3 }, bio: 'מפלגה מקומית של הפריפריה.' },
   { names: ['חופש הפרט', 'הדרך הליברלית', 'זכויות'], ideology: { econ: 25, security: -15, religion: -60, judiciary: -45 }, sectors: { secular: 1, olim: 0.3 }, bio: 'מפלגה ליברלית: חופש הפרט וזכויות אדם.' },
-  { names: ['עולי המזרח', 'קול העולים', 'ישראל החדשה'], ideology: { econ: 10, security: 30, religion: -35, judiciary: 5 }, sectors: { olim: 1, secular: 0.3 }, bio: 'מפלגת עולים וגמלאי צבא.' },
+  { names: ['עולי המזרח', 'קול העולים', 'ישראל החדשה'], ideology: { econ: 10, security: 30, religion: -35, judiciary: 5 }, sectors: { olim: 1, secular: 0.3 }, bio: 'מפלגת עולים וגמלאי צבא.', sector: 'olim' },
+  // שילובים שחסרים בכנסת
+  { names: ['חרדים עובדים', 'חרדים מודרנים', 'הדור הבא החרדי'], ideology: { econ: 35, security: 5, religion: 40, judiciary: -10 }, sectors: { haredi: 1, religious: 0.3, traditional: 0.2 }, bio: 'מפלגה של חרדים שעובדים, לומדים ומתגייסים – בלי לוותר על המסורת.', sector: 'haredi', gap: 'חרדים מודרניים שלא מוצאים את עצמם במפלגות החרדיות' },
+  { names: ['חרד"לים', 'תורה ועבודה', 'הדתיים-לאומיים החדשים'], ideology: { econ: 10, security: 60, religion: 55, judiciary: 25 }, sectors: { religious: 1, haredi: 0.4 }, bio: 'מפלגה חרדית-לאומית: ביטחון, תורה ושירות.', sector: 'religious', gap: 'ציבור חרדי-לאומי שלא מיוצג' },
+  { names: ['ימין ליברלי', 'ליברלים ימניים', 'חופש וביטחון'], ideology: { econ: 55, security: 45, religion: -55, judiciary: -15 }, sectors: { secular: 1, olim: 0.5, traditional: 0.2 }, bio: 'שוק חופשי, ביטחון חזק, ומדינה בלי כפייה דתית.', sector: 'secular', gap: 'ימנים-ליברלים שלא מוצאים בית בימין ובשמאל' },
+  { names: ['דתיים ליברלים', 'ציונות פתוחה', 'שלום ומסורת'], ideology: { econ: -15, security: -35, religion: 35, judiciary: -25 }, sectors: { religious: 1, traditional: 0.4, secular: 0.2 }, bio: 'דתיים שתומכים בהסדר, בשוויון ובפתיחות.', sector: 'religious', gap: 'דתיים-ליברלים-שמאלניים שלא מיוצגים' },
+  { names: ['ערבים ישראלים', 'שילוב ושוויון', 'שותפות'], ideology: { econ: 10, security: -10, religion: -10, judiciary: -20 }, sectors: { arab: 1, secular: 0.2 }, bio: 'מפלגה ערבית פרגמטית: שילוב, כלכלה ושותפות בממשלה.', sector: 'arab', gap: 'ערבים שמחפשים שילוב בממשלה' },
+  { names: ['מסורתיים חברתיים', 'הלב החם', 'ישראל השנייה'], ideology: { econ: -50, security: 35, religion: 20, judiciary: 5 }, sectors: { traditional: 1, olim: 0.4, religious: 0.2 }, bio: 'מסורתיים עם לב חברתי: ביטחון בשילוב מדינת רווחה.', sector: 'traditional', gap: 'מסורתיים בעלי תפיסה חברתית-ביטחונית' },
+  { names: ['ממשל יעיל', 'טכנוקרטים', 'פתרונות'], ideology: { econ: 5, security: 0, religion: -15, judiciary: 0 }, sectors: { secular: 0.8, traditional: 0.4, olim: 0.3 }, bio: 'בלי אידיאולוגיה: ניהול טוב, מומחים ושירות לאזרח.', gap: 'מצביעי מרכז שאין להם בית' },
+  { names: ['דרוזים וצ\'רקסים', 'ברית המיעוטים', 'שותפי הגורל'], ideology: { econ: -10, security: 30, religion: 0, judiciary: 0 }, sectors: { arab: 0.7, traditional: 0.4 }, bio: 'מיעוטים ששירתו: שוויון זכויות וחובות.', sector: 'arab', gap: 'מיעוטים שמשרתים בצבא' },
 ];
 
+/** כמה "חסר" ייצוג לנישה: מרחק אידיאולוגי לשכנה הקרובה שמכסה גם את המגזר */
+function nicheGap(s: GameState, a: Niche): number {
+  const top = (Object.entries(a.sectors) as [string, number][]).sort((x, y) => y[1] - x[1])[0]?.[0];
+  let best = 1;
+  for (const p of Object.values(s.parties)) {
+    if (p.poll < 1) continue;
+    const covers = (p.sectors[top as keyof typeof p.sectors] ?? 0) >= 0.4;
+    best = Math.min(best, ideologyDistance(a.ideology, p.ideology) + (covers ? 0 : 0.12));
+  }
+  return best;
+}
+
 /**
- * אחוז חסימה נמוך מזמין מפלגות קטנות חדשות ("לפחות יש סיכוי להיכנס"): גל מיד אחרי החוק, וקצב בסיס גבוה יותר כל עוד החסימה נמוכה.
- * מפלגות חדשות מופיעות בסקרים בין החסימה החדשה לישנה – כך שהן באמת נכנסות רק בגלל החוק.
+ * מפלגות קטנות חדשות. שני מקורות:
+ * 1. אחוז חסימה נמוך: גל מיד אחרי החוק וקצב גבוה יותר ("לפחות יש סיכוי להיכנס").
+ * 2. "חור בייצוג": קבוצה גדולה (חרדים מודרניים, ימנים-ליברלים, ערבים פרגמטיים...) שאין מפלגה גדולה שקרובה אליה –
+ *    עם הזמן מישהו יקים לה בית, מהר יותר כשהמגזר גדל.
  */
 export function tickNicheParties(s: GameState) {
   const thrNow = thr(s);
   const wave = Number(s.flags.thrWave ?? 0);
-  const base = thrNow < 3.25 ? (3.25 - thrNow) * 0.012 : 0;
-  if (!wave && !base) return;
+  const lowThr = thrNow < 3.25 ? (3.25 - thrNow) * 0.012 : 0;
+  const organic = s.week - Number(s.flags.nicheWeek ?? -99) >= 30 ? 0.003 : 0;
+  if (!wave && !lowThr && !organic) return;
   if (!listsOpen(s) || s.negotiation || Object.keys(s.parties).length >= 15) return;
-  if (!chance(s, wave ? 0.12 : base)) return;
+  if (!chance(s, wave ? 0.12 : lowThr + organic)) return;
   const used = new Set(Object.values(s.parties).map((p) => p.name));
-  const pool = NICHE.filter((a) => a.names.some((n) => !used.has(n)));
-  if (!pool.length) return;
-  const a = pick(s, pool);
+  const sw = sectorWeights(s);
+  const free = NICHE.filter((a) => a.names.some((n) => !used.has(n)));
+  // משקל: ככל שהחור גדול יותר והמגזר גדול – סיכוי גבוה; מפלגות נושא כלליות מקבלות משקל בסיס
+  const scored = free.map((a) => {
+    const gap = nicheGap(s, a);
+    const grow = a.sector ? sw[a.sector] / SECTOR_W0[a.sector] : 1;
+    return { a, gap, w: gap >= 0.2 || !a.gap ? Math.max(0.05, gap) * (a.gap ? 3 : 1) * grow : 0 };
+  }).filter((x) => x.w > 0);
+  if (!scored.length) return;
+  const total = scored.reduce((x, y) => x + y.w, 0);
+  let r = rand(s) * total;
+  let chosen = scored[0];
+  for (const x of scored) {
+    r -= x.w;
+    if (r <= 0) {
+      chosen = x;
+      break;
+    }
+  }
+  const a = chosen.a;
   const party = spawnParty(s, { names: a.names, ideology: { ...a.ideology }, sectors: { ...a.sectors }, momentum: 0.6, bio: a.bio });
-  // מתחילה סביב אחוז החסימה החדש: מעט מעליו עם הייפ, או קצת מתחתיו
-  party.poll = clamp(thrNow * (0.85 + rand(s) * 0.6), 0.8, 3.4);
+  party.poll = clamp(thrNow * (0.6 + rand(s) * 0.8) + (a.gap ? 0.4 : 0), 0.8, 3.8);
   party.base = party.poll;
   normalizePolls(s);
   if (wave) s.flags.thrWave = wave - 1;
-  addNews(s, `${party.name}: מפלגה חדשה נרשמה אחרי הורדת אחוז החסימה`, 'neutral', false, `בסקרים הראשונים: ${party.poll.toFixed(1)}% – ${party.poll >= thrNow ? 'מעל' : 'מתחת ל'}-${thrNow}%. "עכשיו יש טעם לרוץ", אומרים בתנועה.`, 'ערוץ המשכן');
+  else s.flags.nicheWeek = s.week;
+  addNews(
+    s,
+    `${party.name}: מפלגה חדשה${wave ? ' אחרי הורדת אחוז החסימה' : ''}`,
+    'neutral',
+    false,
+    `${a.gap ? `${a.gap}. ` : ''}בסקרים הראשונים: ${party.poll.toFixed(1)}% – ${party.poll >= thrNow ? 'מעל' : 'מתחת ל'}-${thrNow}%.`,
+    'ערוץ המשכן',
+  );
 }
