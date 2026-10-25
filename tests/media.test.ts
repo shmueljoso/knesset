@@ -8,6 +8,7 @@ import { moodPull } from '../src/engine/systems/opinion';
 import { PAPERS, paperFront } from '../src/engine/systems/papers';
 import { latestSurvey, makeSurvey, moodLines, publishSurvey, tickMood } from '../src/engine/systems/surveys';
 import { applyTransform } from '../src/engine/systems/transforms';
+import { startFormateur, swearIn } from '../src/engine/systems/coalition';
 
 const base: NewGameOptions = {
   name: 'שחקן', gender: 'm', background: 'journalist',
@@ -93,6 +94,32 @@ describe('news and papers', () => {
     for (const p of PAPERS) expect(paperFront(s, p).length).toBeGreaterThan(0);
     const haredi = PAPERS.find((p) => p.id === 'haredi')!;
     expect(paperFront(s, haredi).some((x) => x.text.includes('בשבת'))).toBe(false);
+  });
+
+  it('the same story reads differently in each paper', () => {
+    const s = createGame(base);
+    s.news = [];
+    for (let i = 0; i < 6; i++) s.news.push({ id: `n${i}`, week: s.week, outlet: 'x', headline: `הממשלה העבירה את החוק מספר ${i}`, tone: i % 2 ? 'bad' : 'good', aboutPlayer: false });
+    const fronts = PAPERS.map((p) => paperFront(s, p).filter((x) => !x.own).map((x) => x.text));
+    // אין שני עיתונים עם אותה כותרת
+    const all = fronts.flat();
+    expect(new Set(all).size).toBe(all.length);
+    // וגם סדר ההצגה לא זהה בכולם
+    const orders = new Set(fronts.map((f) => f.map((x) => x.match(/\d/)?.[0]).join('')));
+    expect(orders.size).toBeGreaterThan(2);
+  });
+
+  it('a full unity government (everyone signed) can be sworn in and play on', () => {
+    const s = createGame(base);
+    s.parties.merkaz.leaderId = 'player';
+    startFormateur(s);
+    for (const t of s.negotiation!.talks) t.signed = true;
+    expect(swearIn(s).ok).toBe(true);
+    expect(s.committees.every((c) => !!c.chairId)).toBe(true);
+    for (let i = 0; i < 20; i++) {
+      s.eventQueue = [];
+      endWeek(s);
+    }
   });
 
   it('interview questions follow the situation', () => {

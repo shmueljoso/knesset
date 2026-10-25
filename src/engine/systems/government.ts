@@ -262,7 +262,9 @@ export function assignCommittees(s: GameState, chairs: Record<string, string> = 
       members.push(...chosen);
     }
     // יו"ר
-    const chairPartyPool = def.oppositionChair ? seated.filter((p) => !coalition.includes(p.id)) : seated.filter((p) => coalition.includes(p.id));
+    // ממשלת אחדות מלאה (120): אין אופוזיציה, ויו"ר הוועדה לביקורת המדינה יהיה מהקואליציה
+    const wanted = def.oppositionChair ? seated.filter((p) => !coalition.includes(p.id)) : seated.filter((p) => coalition.includes(p.id));
+    const chairPartyPool = wanted.length ? wanted : seated;
     const agreed = chairs[def.id] ? s.parties[chairs[def.id]] : undefined;
     const chairParty =
       agreed && agreed.seats > 0

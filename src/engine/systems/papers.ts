@@ -19,7 +19,7 @@ export interface Paper {
 
 const ECON = /כלכל|תקציב|בורס|מחיר|שכר|מס |מס\b|מע"מ|דיור|דירות|בנק|הייטק|גז|נמל|גירעון|אבטלה|צמיחה|יוקר|פנסי|קצב/;
 const ARAB = /ערבי|פשיעה|ירי|קרקע|לאום|מואזין|דרוז|נגב|בדואי/;
-const SECULAR = /שבת|פונדקאות|נישואים אזרחיים|קנאביס|ברית הזוגיות|להט"ב|גיור אזרחי/;
+const SECULAR = /שבת|פונדקאות|נישואים אזרחיים|קנאביס|ברית הזוגיות|להט"ב|גיור אזרחי|הפרדת הדת|כשרות|כותל/;
 
 const pm = (s: GameState) => (s.coalition.pmId === 'player' ? s.player.name : s.npcs[s.coalition.pmId]?.name ?? 'ראש הממשלה');
 /** השינוי השבועי האחרון במדד */
@@ -87,23 +87,72 @@ export const PAPERS: Paper[] = [
 /** ההטיה של עיתון כלפי מי שהידיעה עליו */
 function slant(s: GameState, n: NewsItem, paper: Paper): number {
   if (!Object.keys(paper.lean).length) return 0;
-  const subject: Ideology | null = n.aboutPlayer ? s.player.ideology : n.npcId && s.npcs[n.npcId] ? s.npcs[n.npcId].ideology : null;
+  const pmId = s.coalition.pmId;
+  const govNews = /ממשל|קואליצי|ראש הממשלה|השר|שרה|שרים/.test(n.headline);
+  const subject: Ideology | null = n.aboutPlayer ? s.player.ideology : n.npcId && s.npcs[n.npcId] ? s.npcs[n.npcId].ideology : govNews ? (pmId === 'player' ? s.player.ideology : s.npcs[pmId]?.ideology ?? null) : null;
   return subject ? leanAlignment(subject, paper.lean) : 0;
 }
 
-function spin(paper: Paper, headline: string, tone: NewsItem['tone'], sl: number): string {
-  if (paper.id === 'social') return tone === 'bad' ? `🔥 ${headline} 😬` : tone === 'good' ? `👏 ${headline}` : `${headline} 👀`;
-  if (sl > 0.35) return tone === 'bad' ? `${headline} – אבל התמונה מורכבת יותר` : tone === 'good' ? `הישג: ${headline}` : headline;
-  if (sl < -0.2) return tone === 'good' ? `למרות הספין: ${headline}` : tone === 'bad' ? `סקנדל: ${headline}` : `${headline}. שאלות קשות נשארות`;
-  return headline;
+const hash = (str: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return h >>> 0;
+};
+const pickBy = <T,>(arr: T[], key: string) => arr[hash(key) % arr.length];
+
+type Tone = NewsItem['tone'];
+/** הקול של כל עיתון: ניסוח אחר לאותה ידיעה. sl>0 = העיתון אוהד את מי שהידיעה עליו, sl<0 = עוין */
+const VOICE: Record<string, (h: string, tone: Tone, sl: number, key: string) => string> = {
+  popular: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`זעזוע: ${h}`, `${h} – והציבור בהלם`, `מכה: ${h}`], key)
+    : tone === 'good' ? pickBy([`סוף סוף: ${h}`, `וואו: ${h}`, `חדשות טובות: ${h}`], key)
+    : pickBy([`${h}. כל הפרטים`, `ככה זה נראה מבפנים: ${h}`, h], key),
+  liberal: (h, tone, sl, key) =>
+    sl > 0.35 ? (tone === 'bad' ? `${h}. אבל צריך לראות את התמונה המלאה` : `${h} – מהלך מבורך`)
+    : sl < -0.2 ? (tone === 'good' ? `${h}. כדאי לבדוק מה מסתתר מאחורי הספין` : pickBy([`${h}: עוד סימן לשחיקה בדמוקרטיה`, `מי אחראי? ${h}`, `${h}. התגובה: שתיקה רועמת`], key))
+    : pickBy([`ניתוח: ${h}`, `${h}. מה זה אומר על המשילות?`, `${h} – ושאלות קשות נשארות`], key),
+  right: (h, tone, sl, key) =>
+    sl > 0.35 ? (tone === 'bad' ? `${h} – "מסע השיסוי נגדנו נמשך"` : `${h}: ניצחון לשפיות`)
+    : sl < -0.2 ? (tone === 'good' ? `${h}? תלוי את מי שואלים` : pickBy([`${h} – ועוד סקנדל של השמאל`, `שוב אותם אנשים: ${h}`, `${h}. הגיע הזמן להכריע`], key))
+    : pickBy([`בשטח: ${h}`, `${h}. מה אומרים הנבחרים?`, `${h} – והציבור כבר יודע מי אשם`], key),
+  haredi: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`בכאב: ${h}`, `${h} – "זו גזירה"`, `${h}. גדולי ישראל מתכנסים`], key)
+    : tone === 'good' ? pickBy([`בעזרת ה': ${h}`, `${h} – זכות גדולה`, `ברוך ה': ${h}`], key)
+    : pickBy([`${h}. בבית המדרש מגיבים`, `${h}, וגם: הלכה למעשה`, h], key),
+  arab: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`${h}. ושוב – אצלנו זה נראה אחרת`, `${h} – על חשבוננו`, `${h}: ובישובים הערביים כבר לא מופתעים`], key)
+    : tone === 'good' ? pickBy([`${h} – האם זה יגיע גם אלינו?`, `${h}. נבדוק מה זה אומר לנו בפועל`], key)
+    : pickBy([`מהשטח: ${h}`, `${h}. מי מייצג אותנו כאן?`], key),
+  money: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`${h} – ומה זה עושה לכיס שלך`, `${h}: האנליסטים מזהירים`, `${h}. המחיר: מיליארדים`], key)
+    : tone === 'good' ? pickBy([`${h} – הבורסה מגיבה`, `${h}: הזדמנות להשקעה`, `${h}. התוצאה בשורה התחתונה`], key)
+    : pickBy([`${h}: הנתונים מאחורי הכותרת`, `${h} – מה זה אומר לשוק?`], key),
+  social: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`🔥 ${h} 😬`, `😱 ${h}. הרשת רותחת`, `💀 ${h}`], key)
+    : tone === 'good' ? pickBy([`👏 ${h}`, `🙌 ${h} – ויראלי`], key)
+    : pickBy([`👀 ${h}`, `${h} – תגיבו!`, `🤔 ${h}`], key),
+};
+
+/** כמה העיתון מתעניין בידיעה (לסדר ההצגה) */
+function interest(s: GameState, paper: Paper, n: NewsItem): number {
+  let sc = 0;
+  if (paper.focus?.test(n.headline)) sc += 3;
+  if (paper.skip?.test(n.headline)) sc -= 9;
+  sc += Math.abs(slant(s, n, paper)) * 2; // עיתון אוהב לדבר על מי שהוא אוהב או שונא
+  if (n.aboutPlayer) sc += paper.id === 'popular' || paper.id === 'social' ? 2 : 0.5;
+  if (n.tone === 'bad' && (paper.id === 'popular' || paper.id === 'social')) sc += 1.5;
+  if (n.tone !== 'neutral' && paper.id === 'money') sc -= 0.5;
+  // רעש קבוע לכל עיתון וידיעה, כדי שלא כולם יתחילו באותה כותרת
+  return sc + (hash(paper.id + n.id) % 100) / 60;
 }
 
-/** מה מופיע בעיתון השבוע: כותרות משלו, ואחריהן חדשות שמתאימות לו – "מסובבות" לפי הקו שלו */
+/** מה מופיע בעיתון השבוע: כותרות משלו, ואחריהן חדשות שהוא בוחר ומנסח בקול משלו */
 export function paperFront(s: GameState, paper: Paper, max = 5): { text: string; mine: boolean; own?: boolean }[] {
   const own = paper.own(s).map((text) => ({ text, mine: false, own: true }));
-  const recent = s.news.filter((n) => s.week - n.week <= 3 && !(paper.skip && paper.skip.test(n.headline)));
-  const focused = paper.focus ? recent.filter((n) => paper.focus!.test(n.headline) || (paper.id === 'social' && (n.aboutPlayer || !!n.npcId))) : recent;
-  // עיתון ממוקד מעדיף את התחום שלו; הרשתות לא "ממחזרות" את החדשות הכלליות
-  const pool = (focused.length >= 2 || paper.id === 'social' ? focused : recent).slice(0, max);
-  return [...own, ...pool.map((n) => ({ text: spin(paper, n.headline, n.tone, slant(s, n, paper)), mine: n.aboutPlayer }))].slice(0, max);
+  const recent = s.news.filter((n) => s.week - n.week <= 4 && !(paper.skip && paper.skip.test(n.headline)));
+  const base = paper.id === 'social' ? recent.filter((n) => n.aboutPlayer || !!n.npcId || paper.focus?.test(n.headline)) : recent;
+  const ranked = [...base].sort((a, b) => interest(s, paper, b) - interest(s, paper, a)).slice(0, Math.max(0, max - own.length));
+  const voice = VOICE[paper.id] ?? ((h: string) => h);
+  const items = ranked.map((n) => ({ text: voice(n.headline, n.tone, slant(s, n, paper), paper.id + n.id), mine: n.aboutPlayer }));
+  return [...own, ...items].slice(0, max);
 }
