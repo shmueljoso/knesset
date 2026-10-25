@@ -198,6 +198,7 @@ export function endWeek(s: GameState) {
   if (s.playerHistory.length > 260) s.playerHistory.shift();
 
   repairLeadership(s); // רשת ביטחון: יו"ר/שר שנשארו במצב לא תקין מתוקנים
+  normalizePolls(s);
   const after = snapshot(s);
   s.report = {
     week: s.week - 1,
