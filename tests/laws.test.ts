@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, type NewGameOptions } from '../src/engine';
+import { createGame, endWeek, type NewGameOptions } from '../src/engine';
 import { BILL_TEMPLATES, templateById } from '../src/engine/data/bills';
 import { ISSUES } from '../src/engine/data/issues';
 import { coalitionMood, lawEffects, lawSectors, onLawPassed, recentLaw, strikeLaw } from '../src/engine/systems/issues';
@@ -101,5 +101,40 @@ describe('logic of specific laws', () => {
     s.week += 2;
     tickScandal(s);
     expect(s.eventQueue.some((e) => e.eventId === 'scandal_stage')).toBe(true);
+  });
+});
+
+describe('lowering the electoral threshold', () => {
+  it('makes new small parties appear in the polls and lessens the fear of a wasted vote', () => {
+    let waves = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame({ ...base, seed });
+      const before = Object.keys(s.parties).length;
+      onLawPassed(s, { templateId: 'threshold_down', title: 'הורדה', scope: 3, sponsor: 'npc' });
+      expect(s.rules.threshold).toBe(1.5);
+      expect(s.flags.thrWave).toBeGreaterThan(0);
+      for (let i = 0; i < 60; i++) {
+        s.eventQueue = [];
+        endWeek(s);
+      }
+      const fresh = Object.values(s.parties).filter((p) => p.id.startsWith('np'));
+      if (Object.keys(s.parties).length > before || fresh.length) waves++;
+      expect(s.news.some((n) => n.headline.includes('אחרי הורדת אחוז החסימה'))).toBe(true);
+    }
+    expect(waves).toBeGreaterThan(3);
+  });
+
+  it('small parties poll higher the lower the threshold, and lower when it is raised', () => {
+    const mk = (thr: number) => {
+      const s = createGame({ ...base, seed: 8 });
+      s.rules.threshold = thr;
+      for (let i = 0; i < 30; i++) {
+        s.eventQueue = [];
+        endWeek(s);
+      }
+      return Object.values(s.parties).filter((p) => p.base < 6).reduce((a, p) => a + p.poll, 0);
+    };
+    expect(mk(1.5)).toBeGreaterThan(mk(3.25));
+    expect(mk(5)).toBeLessThan(mk(3.25));
   });
 });

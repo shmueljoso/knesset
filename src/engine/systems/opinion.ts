@@ -103,6 +103,8 @@ export function updatePolls(s: GameState) {
     let target = p.base * demoFactor(s, p.sectors);
     const inCoal = s.coalition.parties.includes(p.id);
     target *= 1 + (inCoal ? gov * 0.18 : -gov * 0.1);
+    // "קול אבוד": ככל שאחוז החסימה גבוה יותר, בוחרים נרתעים ממפלגות קטנות; כשהוא יורד – הם מעזים (ביחס ל-3.25%)
+    if (!p.playerFounded && p.base < 6) target *= 1 + 0.25 * (1 - (s.rules.threshold ?? 3.25) / 3.25);
     if (p.playerFounded) target = playerElectoralAppeal(s) + (p.absorbed ?? 0);
     else if (p.id === s.player.partyId) target += playerSeatContribution(s)?.pct ?? 0;
     // מומנטום: הייפ או קריסה זמניים, שדועכים אם לא מתחזקים

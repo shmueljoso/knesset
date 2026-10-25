@@ -138,12 +138,14 @@ function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateByI
     case 'threshold':
       s.flags.thresholdBefore ??= s.rules.threshold;
       s.rules.threshold = [3.5, 4, 5][scope - 1];
+      delete s.flags.thrWave;
       addNews(s, `אחוז החסימה הועלה ל-${s.rules.threshold}%. המפלגות הקטנות בבהלה – ומתחילות לדבר על איחודים`, 'neutral');
       break;
     case 'thresholdDown':
       s.flags.thresholdBefore ??= s.rules.threshold;
       s.rules.threshold = [2.75, 2, 1.5][scope - 1];
-      addNews(s, `אחוז החסימה הורד ל-${s.rules.threshold}%. מפלגות קטנות חדשות כבר מתכוננות לבחירות`, 'neutral');
+      s.flags.thrWave = scope + 1; // גל מפלגות קטנות חדשות בחודשים הקרובים
+      addNews(s, `אחוז החסימה הורד ל-${s.rules.threshold}%. מפלגות קטנות חדשות כבר מתכוננות לבחירות, ובוחרים יפחדו פחות מ"קול אבוד"`, 'neutral');
       break;
     case 'immunity':
       s.rules.immunity = scope;
@@ -181,6 +183,7 @@ function revertRule(s: GameState, rule: NonNullable<ReturnType<typeof templateBy
   switch (rule) {
     case 'threshold':
     case 'thresholdDown':
+      delete s.flags.thrWave;
       s.rules.threshold = Number(s.flags.thresholdBefore ?? 3.25);
       delete s.flags.thresholdBefore;
       break;

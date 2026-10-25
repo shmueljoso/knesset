@@ -321,6 +321,7 @@ export function foundByNpc(s: GameState, id: string): Party | null {
 
 export function tickFigures(s: GameState) {
   repairLeadership(s);
+  tickNicheParties(s);
   const sv = latestSurvey(s);
   // באז: סקר "מה אם" שנותן הרבה מנדטים מדליק את הדמות; בלי חיזוק הוא דועך
   for (const [id, v] of Object.entries(s.buzz)) s.buzz[id] = Math.max(0, v * 0.985 - 0.2);
@@ -550,3 +551,39 @@ export function dissolveKnesset(s: GameState): { ok: boolean; text: string } {
 
 registerSpecial('fg_dissolve', (s) => dissolveKnesset(s).text);
 registerSpecial('fg_resign_pm', (s) => resignPremiership(s).text);
+
+// ---------------- מפלגות קטנות חדשות כשאחוז החסימה יורד ----------------
+
+const NICHE: { names: string[]; ideology: Ideology; sectors: Party['sectors']; bio: string }[] = [
+  { names: ['הגמלאים', 'דור הזהב', 'כבוד לגיל השלישי'], ideology: { econ: -45, security: 10, religion: 0, judiciary: 0 }, sectors: { traditional: 1, olim: 0.6, secular: 0.3 }, bio: 'מפלגת הגמלאים: פנסיה וכבוד.' },
+  { names: ['הדור הצעיר', 'דור חדש', 'הצעירים'], ideology: { econ: -20, security: -10, religion: -50, judiciary: -20 }, sectors: { secular: 1, olim: 0.3 }, bio: 'מפלגה של זוגות צעירים: דיור, חופש ושוויון.' },
+  { names: ['הירוקים', 'אדמה וחברה', 'כוח ירוק'], ideology: { econ: -30, security: -25, religion: -30, judiciary: -30 }, sectors: { secular: 1, arab: 0.2 }, bio: 'מפלגת הסביבה והאקלים.' },
+  { names: ['העצמאים', 'חופש כלכלי', 'עסקים קטנים'], ideology: { econ: 55, security: 15, religion: -20, judiciary: 10 }, sectors: { secular: 0.7, traditional: 0.6, olim: 0.3 }, bio: 'מפלגת העצמאים והעסקים הקטנים.' },
+  { names: ['הפריפריה', 'הנגב והגליל', 'כוח מקומי'], ideology: { econ: -25, security: 25, religion: 10, judiciary: 5 }, sectors: { traditional: 1, religious: 0.3 }, bio: 'מפלגה מקומית של הפריפריה.' },
+  { names: ['חופש הפרט', 'הדרך הליברלית', 'זכויות'], ideology: { econ: 25, security: -15, religion: -60, judiciary: -45 }, sectors: { secular: 1, olim: 0.3 }, bio: 'מפלגה ליברלית: חופש הפרט וזכויות אדם.' },
+  { names: ['עולי המזרח', 'קול העולים', 'ישראל החדשה'], ideology: { econ: 10, security: 30, religion: -35, judiciary: 5 }, sectors: { olim: 1, secular: 0.3 }, bio: 'מפלגת עולים וגמלאי צבא.' },
+];
+
+/**
+ * אחוז חסימה נמוך מזמין מפלגות קטנות חדשות ("לפחות יש סיכוי להיכנס"): גל מיד אחרי החוק, וקצב בסיס גבוה יותר כל עוד החסימה נמוכה.
+ * מפלגות חדשות מופיעות בסקרים בין החסימה החדשה לישנה – כך שהן באמת נכנסות רק בגלל החוק.
+ */
+export function tickNicheParties(s: GameState) {
+  const thrNow = thr(s);
+  const wave = Number(s.flags.thrWave ?? 0);
+  const base = thrNow < 3.25 ? (3.25 - thrNow) * 0.012 : 0;
+  if (!wave && !base) return;
+  if (!listsOpen(s) || s.negotiation || Object.keys(s.parties).length >= 15) return;
+  if (!chance(s, wave ? 0.12 : base)) return;
+  const used = new Set(Object.values(s.parties).map((p) => p.name));
+  const pool = NICHE.filter((a) => a.names.some((n) => !used.has(n)));
+  if (!pool.length) return;
+  const a = pick(s, pool);
+  const party = spawnParty(s, { names: a.names, ideology: { ...a.ideology }, sectors: { ...a.sectors }, momentum: 0.6, bio: a.bio });
+  // מתחילה סביב אחוז החסימה החדש: מעט מעליו עם הייפ, או קצת מתחתיו
+  party.poll = clamp(thrNow * (0.85 + rand(s) * 0.6), 0.8, 3.4);
+  party.base = party.poll;
+  normalizePolls(s);
+  if (wave) s.flags.thrWave = wave - 1;
+  addNews(s, `${party.name}: מפלגה חדשה נרשמה אחרי הורדת אחוז החסימה`, 'neutral', false, `בסקרים הראשונים: ${party.poll.toFixed(1)}% – ${party.poll >= thrNow ? 'מעל' : 'מתחת ל'}-${thrNow}%. "עכשיו יש טעם לרוץ", אומרים בתנועה.`, 'ערוץ המשכן');
+}
