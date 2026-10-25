@@ -9,6 +9,7 @@ import { ideologyDistance } from '../util';
 import { MINISTRIES } from './government';
 import { addNews } from './news';
 import { log } from './report';
+import { latestSurvey, pmFitOf } from './surveys';
 
 // ---------------- החוק הנורבגי ----------------
 
@@ -207,8 +208,11 @@ export const pmRaceLabel = candName;
 
 /** הכוח האישי של מועמד/ת: מוכרות ומוניטין לשחקן, השפעה ל-NPC */
 function appeal(s: GameState, id: string): number {
-  if (id === 'player') return (s.player.fame - 50) / 35 + (s.player.reputation - 50) / 60;
-  return ((s.npcs[id]?.influence ?? 50) - 50) / 40;
+  // מדד ההתאמה לראשות הממשלה בסקרים – בבחירה ישירה הוא כמעט הכול
+  const polled = latestSurvey(s)?.pmFit.some((x) => x.id === id);
+  const fit = !latestSurvey(s) ? 0 : polled ? (pmFitOf(s, id) - 25) / 20 : -0.5;
+  if (id === 'player') return (s.player.fame - 50) / 35 + (s.player.reputation - 50) / 60 + fit;
+  return ((s.npcs[id]?.influence ?? 50) - 50) / 40 + fit;
 }
 
 function shares(s: GameState, cands: string[], parties: Record<string, string>, votes: Record<string, number>, noise: number[]): number[] {

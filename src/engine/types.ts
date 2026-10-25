@@ -306,6 +306,32 @@ export interface ElectionResult {
   pmRace?: PmRace;
 }
 
+/** סקר שפורסם: מנדטים, מדד ההתאמה לראשות הממשלה, ושאלות נוספות */
+export interface Survey {
+  week: number;
+  pollster: string;
+  sample: number;
+  margin: number;
+  pct: Record<string, number>;
+  seats: Record<string, number>;
+  /** מי מתאים/ה יותר לראשות הממשלה (מזהה NPC או 'player') */
+  pmFit: { id: string; pct: number }[];
+  pmNone: number;
+  /** ראש בראש בין שני המובילים במדד ההתאמה */
+  h2h: { a: string; b: string; pa: number; pb: number };
+  rightTrack: number;
+  govApproval: number;
+  topIssues: { id: IssueId; pct: number }[];
+  surprise?: { party: string; d: number };
+  loser?: { party: string; d: number };
+  blocs: { coalition: number; opposition: number };
+  player?: { known: number; favorable: number; unfavorable: number };
+  /** שאלת חוק: האם את/ה תומך/ת ב... */
+  billQ?: { templateId: string; title: string; yes: number; no: number };
+  /** מי ראוי/ה לנשיאות (כשהבחירה בכנסת מתקרבת) */
+  presidentQ?: { id: string; pct: number }[];
+}
+
 export interface PmRace {
   /** סבב ראשון, ואם אף אחד לא עבר 50% – סבב שני בין שני המובילים */
   rounds: { candidates: string[]; pct: number[] }[];
@@ -368,6 +394,10 @@ export interface GameState {
   customEvents: CustomEvent[];
   /** החוק הנורבגי: שר/ה → מי שנכנס/ה לכנסת במקומו/ה */
   norwegianSwaps: Record<string, string>;
+  /** סקרים שפורסמו (האחרון בסוף) */
+  surveys: Survey[];
+  /** רוח הציבור: לאן נוטה הציבור עכשיו בכל ציר (-50..50), לפי מצב המדינה */
+  mood: Ideology;
   /** קדנציות כראש ממשלה (סה"כ ורצופות) – להגבלת כהונה */
   pmTerms: Record<string, { total: number; streak: number }>;
   windows: Partial<Record<TransformId, number>>; // חלונות הזדמנויות למהפכות: עד איזה שבוע

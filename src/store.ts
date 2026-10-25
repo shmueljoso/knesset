@@ -14,6 +14,7 @@ export type Panel =
   | { kind: 'help' }
   | { kind: 'guide' }
   | { kind: 'negotiation' }
+  | { kind: 'polls' }
   | { kind: OpenPanel };
 
 export interface Toast {

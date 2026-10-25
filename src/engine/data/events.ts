@@ -798,6 +798,104 @@ EVENTS.push(
     ],
   },
   {
+    id: 'iv_poll', queued: true, icon: '📊',
+    title: 'שאלה {n}/3: הסקר',
+    body: 'על המסך מופיע הסקר של {pollster}: {partyName} עם {seats} מנדטים. "אז מה קורה לכם? הבוחרים לא מבינים את המסר?"',
+    choices: [
+      { label: '"הסקר האמיתי הוא ביום הבחירות"', ops: [{ op: 'consistency', d: 1 }, ivNext], result: 'קלאסי. אף אחד לא התרגש, אף אחד לא נפגע.' },
+      {
+        label: 'להודות ולהציג תוכנית', hint: 'כנות – סיכוי לפי משפט וחקיקה',
+        chance: { p: (s) => 0.45 + s.player.skills.law / 160, fail: [{ op: 'momentum', party: '@player', d: -0.6 }, ivBad, ivNext], failText: '"אז אתם מודים שאתם בבעיה." זו הכותרת.' },
+        ops: [{ op: 'reputation', d: 2 }, { op: 'momentum', party: '@player', d: 0.8 }, ivGood, ivNext], result: 'נשמע/ת כמו מישהו/י שיודע/ת מה לעשות.',
+      },
+      {
+        label: 'לתקוף את הסוקרים', hint: 'הבסיס אוהב – ואם זה לא עובד, זה נראה רע',
+        chance: { p: (s) => 0.4 + s.player.skills.media / 170, fail: [{ op: 'reputation', d: -2 }, ivBad, ivNext], failText: 'נשמע/ת לחוץ/ה. מאוד.' },
+        ops: [{ op: 'fame', d: 2 }, { op: 'momentum', party: '@player', d: 0.5 }, ivGood, ivNext],
+      },
+    ],
+  },
+  {
+    id: 'iv_pm', queued: true, icon: '👑',
+    title: 'שאלה {n}/3: ראשות הממשלה',
+    body: '"במדד ההתאמה לראשות הממשלה יש לך {pmFit}%. את/ה באמת רואה את עצמך בבלפור?"',
+    choices: [
+      {
+        label: '"כן. ואני מוכן/ה מהיום"', hint: 'מוכרות ומומנטום – אם זה משכנע',
+        chance: { p: (s) => 0.35 + s.player.skills.speech / 160 + s.player.reputation / 400, fail: [{ op: 'reputation', d: -2 }, { op: 'att', who: '@pm', d: -5 }, ivBad, ivNext], failText: '"יומרני", אמרו בפאנל. גם בבית.' },
+        ops: [{ op: 'fame', d: 3 }, { op: 'momentum', party: '@player', d: 1 }, { op: 'att', who: '@pm', d: -8 }, ivGood, ivNext], result: 'הכותרת של מחר: "הכריז/ה על עצמו/ה".',
+      },
+      { label: '"זה לא על הפרק"', ops: [{ op: 'partyStanding', d: 1 }, ivNext], result: 'צנוע. אולי צנוע מדי.' },
+      { label: '"העם יחליט"', ops: [{ op: 'reputation', d: 1 }, ivNext] },
+    ],
+  },
+  {
+    id: 'iv_rule', queued: true, icon: '📜',
+    title: 'שאלה {n}/3: {ruleName}',
+    body: '"{ruleName} כבר בתוקף. היום, כשרואים מה זה עושה בפועל – את/ה בעד או נגד?"',
+    choices: [
+      { label: 'להגן על השינוי', ops: [{ op: 'consistency', d: 2 }, { op: 'stance', lean: { judiciary: 40 }, d: 1 }, ivGood, ivNext], result: 'עמדה ברורה. חצי מהמדינה מסכימה.' },
+      { label: 'להתחייב לבטל', hint: 'כותרת – ויריבים', ops: [{ op: 'fame', d: 2 }, { op: 'stance', lean: { judiciary: -40 }, d: 1 }, { op: 'att', who: '@pm', d: -4 }, ivGood, ivNext] },
+      {
+        label: '"צריך לתקן, לא לבטל"', hint: 'סיכוי לפי משא ומתן',
+        chance: { p: (s) => 0.5 + s.player.skills.negotiation / 200, fail: [{ op: 'consistency', d: -2 }, ivBad, ivNext], failText: '"אז בעד או נגד?" לא ענית.' },
+        ops: [{ op: 'reputation', d: 1.5 }, ivNext],
+      },
+    ],
+  },
+  {
+    id: 'iv_war', queued: true, icon: '🪖',
+    title: 'שאלה {n}/3: המצב הביטחוני',
+    body: '"הדרום בוער, הצפון על הקצה. מה את/ה היית עושה עכשיו – לא בעוד שנה, עכשיו?"',
+    choices: [
+      { label: '"להכות בכל הכוח"', hint: 'ניצי – הציבור כרגע שם', ops: [{ op: 'stance', lean: { security: 80 }, d: 2 }, { op: 'fame', d: 1.5 }, ivGood, ivNext] },
+      { label: '"להכות – וגם לפתוח ערוץ מדיני"', ops: [{ op: 'stance', lean: { security: 20 }, d: 1 }, { op: 'reputation', d: 1.5 }, ivNext] },
+      {
+        label: '"לעצור את המעגל: הסדר"', hint: 'נגד הזרם – אמיץ, ומסוכן',
+        chance: { p: (s) => 0.35 + s.player.skills.speech / 170, fail: [{ op: 'approval', sector: 'traditional', d: -2 }, { op: 'approval', sector: 'religious', d: -2 }, ivBad, ivNext], failText: 'השעה לא נכונה. הטלפונים לא מפסיקים.' },
+        ops: [{ op: 'stance', lean: { security: -70 }, d: 2 }, { op: 'reputation', d: 2 }, ivGood, ivNext],
+      },
+    ],
+  },
+  {
+    id: 'iv_scandal', queued: true, icon: '🚔',
+    title: 'שאלה {n}/3: החקירה',
+    body: '"בוא/י נדבר על החקירה נגדך. הציבור רוצה לשמוע את זה ממך, בלי עורכי דין."',
+    choices: [
+      { label: '"אין לי מה להסתיר"', hint: 'מוניטין – אם זה נשמע אמין', chance: { p: (s) => 0.4 + s.player.reputation / 200, fail: [{ op: 'reputation', d: -3 }, ivBad, ivNext], failText: 'כולם ראו שהזעת.' }, ops: [{ op: 'reputation', d: 2 }, ivGood, ivNext] },
+      { label: '"רדיפה פוליטית"', hint: 'הבסיס מתלכד, השאר נרתעים', ops: [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: -1 }, { op: 'partyStanding', d: 2 }, ivNext] },
+      { label: '"לא אגיב על חקירה פתוחה"', ops: [{ op: 'consistency', d: 1 }, ivNext], result: 'יבש, בטוח, ונשכח עד מחר.' },
+    ],
+  },
+  {
+    id: 'iv_bill', queued: true, icon: '📄',
+    title: 'שאלה {n}/3: "{billTitle}"',
+    body: '"ההצעה שלך – {billTitle}. מבקרים אומרים שהיא תעלה לנו ביוקר. מי משלם על זה?"',
+    choices: [
+      {
+        label: 'להציג את המספרים', hint: 'סיכוי לפי משפט וחקיקה · עוזר להצעה',
+        chance: { p: (s) => 0.45 + s.player.skills.law / 150, fail: [ivBad, ivNext], failText: 'המספרים התבלבלו לך בשידור חי.' },
+        ops: [{ op: 'reputation', d: 2 }, { op: 'capital', d: 1.5 }, ivGood, ivNext], result: 'בוועדה כבר דיברו על הראיון.',
+      },
+      { label: '"מי שמשלם עכשיו – זה מי שאין לו"', hint: 'רגש במקום מספרים', ops: [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: 0.8 }, ivNext] },
+      { label: 'להבטיח לשפר בוועדה', ops: [{ op: 'consistency', d: -1 }, { op: 'capital', d: 1 }, ivNext] },
+    ],
+  },
+  {
+    id: 'iv_rival', queued: true, icon: '⚔️',
+    title: 'שאלה {n}/3: {rivalName}',
+    body: '"{rivalName} אמר/ה עלייך אתמול שאת/ה "חסר/ת עמוד שדרה". מה את/ה עונה?"',
+    choices: [
+      {
+        label: 'להחזיר בחריפות', hint: 'קליפ ויראלי – לכאן או לכאן',
+        chance: { p: (s) => 0.45 + s.player.skills.media / 160, fail: [{ op: 'reputation', d: -2 }, { op: 'att', who: '@ctx2', d: -10 }, ivBad, ivNext], failText: 'זה נראה כמו ריב בחצר בית ספר.' },
+        ops: [{ op: 'fame', d: 3 }, { op: 'att', who: '@ctx2', d: -8 }, ivGood, ivNext], result: 'הקליפ שלך מסתובב. הפעם לטובתך.',
+      },
+      { label: '"אני לא מתעסק/ת בזה"', hint: 'ממלכתי', ops: [{ op: 'reputation', d: 2 }, ivNext] },
+      { label: 'להושיט יד', ops: [{ op: 'att', who: '@ctx2', d: 10 }, { op: 'reputation', d: 1 }, ivNext], result: '"מפתיע", אמרו בפאנל.' },
+    ],
+  },
+  {
     id: 'iv_gotcha', queued: true, icon: '🎞️',
     title: 'שאלה {n}/3: הקלטה מהעבר',
     body: 'על המסך עולה קטע ישן שלך: "לפני כמה חודשים אמרת בדיוק את ההפך. אז מה נכון?" באולפן משתרר שקט.',

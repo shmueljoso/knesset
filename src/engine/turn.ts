@@ -14,6 +14,8 @@ import { tickScandal } from './systems/scandals';
 import { tickCareer } from './systems/legacy';
 import { tickPresident } from './systems/president';
 import { applyNorwegian } from './systems/regime';
+import { SURVEY_EVERY, tickSurveys } from './systems/surveys';
+import { stateHeadlines } from './systems/headlines';
 import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
 import { radicalClimate } from './systems/climate';
 import { BILL_TEMPLATES } from './data/bills';
@@ -51,20 +53,17 @@ function worldNews(s: GameState) {
     const n = pick(s, mks);
     addNews(s, `${npcLabel(s, n.id)}: "${pick(s, QUOTES)}"`, 'neutral');
   }
+  // סקר מלא מתפרסם כל שבועיים; בשבוע שבאמצע – "סקר בזק"
   const prev = s.pollHistory[s.pollHistory.length - 2]?.polls;
-  if (prev && chance(s, 0.5)) {
+  if (prev && s.week % SURVEY_EVERY !== 0 && chance(s, 0.4)) {
     const parties = Object.values(s.parties).filter((p) => prev[p.id] !== undefined);
     const mover = parties.sort((a, b) => Math.abs(b.poll - prev[b.id]) - Math.abs(a.poll - prev[a.id]))[0];
     if (mover) {
       const up = mover.poll > prev[mover.id];
-      addNews(s, `סקר: ${mover.name} ${up ? 'מתחזקת' : 'נחלשת'} – ${pollSeats(mover.poll)} מנדטים`, 'neutral', mover.id === s.player.partyId);
+      addNews(s, `סקר בזק: ${mover.name} ${up ? 'מתחזקת' : 'נחלשת'} – ${pollSeats(mover.poll, s.rules.threshold)} מנדטים`, 'neutral', mover.id === s.player.partyId);
     }
   }
-  const w = s.world;
-  if (w.housing < 28 && chance(s, 0.2)) addNews(s, 'מחירי הדירות שברו שיא חדש; זוגות צעירים מוותרים על החלום', 'bad');
-  if (w.security < 38 && chance(s, 0.25)) addNews(s, 'גורמי ביטחון מזהירים מהסלמה בכמה גזרות', 'bad');
-  if (w.economy > 65 && chance(s, 0.2)) addNews(s, 'הצמיחה הפתיעה לטובה; הבורסה בשיא', 'good');
-  if (s.coalition.stability < 35 && chance(s, 0.35)) addNews(s, 'גורם בכיר בקואליציה: "הממשלה לא תשרוד עד סוף המושב"', 'bad');
+  stateHeadlines(s);
 }
 
 /**
@@ -125,6 +124,7 @@ export function endWeek(s: GameState) {
     });
   tickWorld(s);
   updatePolls(s);
+  tickSurveys(s);
   tickPartyDynamics(s);
   tickLegislation(s);
   tickIssues(s);

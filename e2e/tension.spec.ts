@@ -83,7 +83,7 @@ test('newspapers, gossip and polls', async ({ page }) => {
   await shot(page, '83-papers');
   await page.getByRole('button', { name: /סקרים/ }).click();
   await expect(page.getByTestId('polls-view')).toBeVisible();
-  await expect(page.locator('.page')).toContainText('מי מתאים יותר לראשות הממשלה');
+  await expect(page.locator('.page')).toContainText('מתאים/ה יותר לראשות הממשלה');
   await shot(page, '84-polls');
 });
 

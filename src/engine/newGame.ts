@@ -5,6 +5,7 @@ import { INITIAL_COALITION, PARTY_DEFS, SURPLUS_PAIRS, type NamePoolId } from '.
 import { makeLocalRng } from './rng';
 import { formGovernment, proposeCoalition } from './systems/government';
 import { applyModSettings, modSurplusPairs, modToPartyDefs, type ModFile } from './mods';
+import { makeSurvey } from './systems/surveys';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3, pickAgenda } from './migrate';
@@ -327,6 +328,8 @@ export function createGame(opts: NewGameOptions): GameState {
     tone: 'neutral',
     aboutPlayer: freshman,
   });
+  // הסקר הראשון כבר מחכה בלוח
+  s.surveys = [makeSurvey(s)];
   return s;
 }
 

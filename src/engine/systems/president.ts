@@ -7,6 +7,7 @@ import { clamp, ideologyDistance } from '../util';
 import { addNews } from './news';
 import { changeAttitude } from './relationships';
 import { log } from './report';
+import { latestSurvey } from './surveys';
 
 export const PRESIDENT_TERM = 364; // שבע שנים
 
@@ -16,7 +17,7 @@ export function playerCanRunForPresident(s: GameState): boolean {
   return p.isMK && p.fame >= 55 && p.reputation >= 60 && s.coalition.pmId !== 'player' && !s.scandal;
 }
 
-function pickCandidates(s: GameState): string[] {
+export function pickCandidates(s: GameState): string[] {
   const pmParty = s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId;
   const pool = Object.values(s.npcs).filter((n) => n.isMK && n.notable && !n.ministry && n.id !== s.coalition.pmId && !Object.values(s.parties).some((p) => p.leaderId === n.id));
   const camp = pool.filter((n) => n.partyId === pmParty || (n.partyId && s.coalition.parties.includes(n.partyId)));
@@ -57,6 +58,7 @@ export function runPresidentVote(s: GameState, playerVote: string | null) {
   race.playerVote = playerVote;
   let alive = [...race.candidates];
   const pmParty = s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId;
+  const pubPct = new Map((latestSurvey(s)?.presidentQ ?? []).map((x) => [x.id, x.pct]));
   for (let round = 1; round <= 3; round++) {
     const counts = alive.map(() => 0);
     for (const id of s.seating) {
@@ -72,6 +74,8 @@ export function runPresidentVote(s: GameState, playerVote: string | null) {
         let score = -ideologyDistance(v.ideology, cand.ideology) * 5 + (cand.partyId === v.partyId ? 1.2 : 0);
         if (c === 'player') score += v.attitude / 40;
         else score += (s.npcs[c]?.influence ?? 50) / 80;
+        // דעת הקהל: מי שמוביל/ה בסקרי הנשיאות נהנה/ית מלחץ ציבורי
+        score += (pubPct.get(c) ?? 0) / 40;
         if (cand.partyId && v.partyId && s.coalition.parties.includes(cand.partyId) === s.coalition.parties.includes(v.partyId)) score += 0.5;
         if (cand.partyId === pmParty && v.partyId && s.coalition.parties.includes(v.partyId)) score += 0.3;
         return Math.exp(score);

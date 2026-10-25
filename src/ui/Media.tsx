@@ -1,37 +1,14 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { shortDateLabel } from '../engine/calendar';
-import { isCoalition } from '../engine/systems/government';
-import { pollSeats } from '../engine/systems/opinion';
-import type { GameState, Ideology, NewsItem } from '../engine/types';
-import { SECTORS, SECTOR_NAMES, leanAlignment } from '../engine/util';
+import { ISSUES } from '../engine/data/issues';
+import { PAPERS, paperFront } from '../engine/systems/papers';
+import { directElection } from '../engine/systems/regime';
+import { latestSurvey, moodLines, surveyName } from '../engine/systems/surveys';
+import type { GameState } from '../engine/types';
+import { SECTORS, SECTOR_NAMES } from '../engine/util';
 import { useGame } from '../store';
-import { Meter } from './common';
-
-interface Paper {
-  name: string;
-  icon: string;
-  lean: Partial<Ideology>;
-  blurb: string;
-}
-
-const PAPERS: Paper[] = [
-  { name: 'ידיעות המשכן', icon: '📰', lean: {}, blurb: 'העיתון הנפוץ. כותרות גדולות, הרבה רכילות.' },
-  { name: 'הארץ שלנו', icon: '🗞️', lean: { judiciary: -60, religion: -60, security: -40 }, blurb: 'ליברלי, ביקורתי כלפי הימין.' },
-  { name: 'ישראל בבוקר', icon: '📯', lean: { security: 60, judiciary: 50, religion: 30 }, blurb: 'ימני, ביקורתי כלפי השמאל ובג"ץ.' },
-];
-
-/** ההטיה של עיתון כלפי מי שהידיעה עליו */
-function slant(g: GameState, n: NewsItem, paper: Paper): number {
-  if (!Object.keys(paper.lean).length) return 0;
-  const subject: Ideology | null = n.aboutPlayer ? g.player.ideology : n.npcId && g.npcs[n.npcId] ? g.npcs[n.npcId].ideology : null;
-  return subject ? leanAlignment(subject, paper.lean) : 0;
-}
-
-function spin(headline: string, tone: NewsItem['tone'], s: number): string {
-  if (s > 0.35) return tone === 'bad' ? `${headline} – אבל התמונה מורכבת יותר` : tone === 'good' ? `הישג: ${headline}` : headline;
-  if (s < -0.2) return tone === 'good' ? `למרות הספין: ${headline}` : tone === 'bad' ? `סקנדל: ${headline}` : `${headline}. שאלות קשות נשארות`;
-  return headline;
-}
+import { LineChart } from './Charts';
+import { Meter, Sheet } from './common';
 
 /** טור רכילות שבועי, נבנה ממצב המשחק */
 function gossip(g: GameState): string[] {
@@ -47,12 +24,14 @@ function gossip(g: GameState): string[] {
   if (enemy) out.push(`${enemy.name} סיפר/ה בשיחה סגורה מה הוא/היא באמת חושב/ת על ${p.name}. לא נצטט.`);
   const hype = Object.values(g.parties).filter((x) => (x.momentum ?? 0) >= 4)[0];
   if (hype) out.push(`${hype.name} בגל – אבל ותיקי המערכת זוכרים כמה גלים כאלה נשברו.`);
+  const sv = latestSurvey(g);
+  if (sv?.player && sv.player.favorable < sv.player.unfavorable) out.push(`ביועצים של ${p.name} מודאגים: יותר אנשים לא אוהבים מאשר אוהבים.`);
   return out.slice(0, 4);
 }
 
 export function PapersView() {
   const g = useGame();
-  const recent = g.news.slice(0, 6);
+  const [only, setOnly] = useState<string | null>(null);
   return (
     <>
       <div className="card small" data-testid="gossip">
@@ -63,18 +42,28 @@ export function PapersView() {
           </p>
         ))}
       </div>
-      {PAPERS.map((paper) => (
-        <div key={paper.name} className="card" style={{ marginTop: 10 }}>
+      <div className="filter-row" style={{ marginTop: 10 }}>
+        <button className={only === null ? 'on' : ''} onClick={() => setOnly(null)}>
+          כל העיתונים
+        </button>
+        {PAPERS.map((p) => (
+          <button key={p.id} className={only === p.id ? 'on' : ''} onClick={() => setOnly(p.id)}>
+            {p.icon} {p.name}
+          </button>
+        ))}
+      </div>
+      {PAPERS.filter((p) => !only || p.id === only).map((paper) => (
+        <div key={paper.id} className="card" style={{ marginTop: 10 }} data-testid={`paper-${paper.id}`}>
           <div className="spread">
             <h3>
               {paper.icon} {paper.name}
             </h3>
             <span className="tiny muted">{paper.blurb}</span>
           </div>
-          {recent.slice(0, 4).map((n) => (
-            <div key={n.id} className="small" style={{ padding: '6px 0', borderBottom: '1px solid var(--line)', fontWeight: n.aboutPlayer ? 700 : 400 }}>
-              <span className="tiny faint">{shortDateLabel(g, n.week)} · </span>
-              {spin(n.headline, n.tone, slant(g, n, paper))}
+          {paperFront(g, paper).map((n, i) => (
+            <div key={i} className="small" style={{ padding: '6px 0', borderBottom: '1px solid var(--line)', fontWeight: n.mine || (n.own && i === 0) ? 700 : 400 }}>
+              {n.own && <span className="tiny gold">בלעדי · </span>}
+              {n.text}
             </div>
           ))}
         </div>
@@ -83,59 +72,165 @@ export function PapersView() {
   );
 }
 
+/** הסקר המלא: מנדטים, מדד ההתאמה, ראש בראש, כיוון המדינה, סוגיות, ההפתעה, ואת/ה */
 export function PollsView() {
   const g = useGame();
+  const sv = latestSurvey(g);
   const thr = g.rules.threshold;
-  const hist = g.pollHistory;
-  const back = hist[Math.max(0, hist.length - 5)]?.polls ?? {};
-  const rows = Object.values(g.parties).sort((a, b) => b.poll - a.poll);
-  const coal = rows.filter((p) => isCoalition(g, p.id)).reduce((a, p) => a + pollSeats(p.poll, thr), 0);
-  // מי מתאים לראשות הממשלה: יו"רי ארבע המפלגות הגדולות
-  const pmPoll = useMemo(() => {
-    const leaders = rows.slice(0, 4).map((p) => {
-      const isMe = p.leaderId === 'player';
-      const n = g.npcs[p.leaderId];
-      const score = p.poll * 1.4 + (isMe ? g.player.fame * 0.35 + (g.player.reputation - 50) * 0.2 : (n?.influence ?? 40) * 0.3) + (g.coalition.pmId === p.leaderId ? 6 : 0);
-      return { name: isMe ? `${g.player.name} (את/ה)` : n?.name ?? p.name, party: p.short, score: Math.max(1, score), color: p.color };
-    });
-    const total = leaders.reduce((a, x) => a + x.score, 0) + 15;
-    return leaders.map((x) => ({ ...x, pct: Math.round((x.score / total) * 100) })).sort((a, b) => b.pct - a.pct);
-  }, [g, rows]);
+  if (!sv) return <p className="muted small">הסקר הראשון יתפרסם בשבוע הבא.</p>;
+  const prev = g.surveys.length > 1 ? g.surveys[g.surveys.length - 2] : null;
+  const rows = Object.values(g.parties)
+    .filter((p) => sv.pct[p.id] !== undefined)
+    .sort((a, b) => (sv.seats[b.id] ?? 0) - (sv.seats[a.id] ?? 0) || sv.pct[b.id] - sv.pct[a.id]);
+  const name = (id: string) => (id === 'player' ? `${g.player.name} (את/ה)` : surveyName(g, id));
+  const partyOf = (id: string) => g.parties[(id === 'player' ? g.player.partyId : g.npcs[id]?.partyId) ?? ''];
+  const direct = directElection(g);
+  const fitIds = sv.pmFit.slice(0, 3).map((x) => x.id);
+  const fitSeries = fitIds.map((id) => ({
+    name: (id === 'player' ? g.player.name : surveyName(g, id)).split(' ')[0],
+    color: partyOf(id)?.color ?? '#94a3b8',
+    bold: id === 'player',
+    values: g.surveys.map((x) => x.pmFit.find((f) => f.id === id)?.pct ?? 0),
+  }));
+  const mood = moodLines(g);
   return (
     <>
       <div className="card" data-testid="polls-view">
         <div className="spread">
-          <h3>📊 סקר המנדטים</h3>
-          <span className="small gold">קואליציה {coal} · אופוזיציה {120 - coal}</span>
+          <h3>📊 סקר {sv.pollster}</h3>
+          <span className="tiny muted">
+            {shortDateLabel(g, sv.week)} · {sv.sample} נשאלים · ±{sv.margin}%
+          </span>
+        </div>
+        <div className="spread small" style={{ margin: '4px 0 8px' }}>
+          <span className="gold">קואליציה {sv.blocs.coalition} · אופוזיציה {sv.blocs.opposition}</span>
+          {sv.blocs.coalition >= 61 ? <span className="good">לממשלה יש רוב</span> : <span className="bad">לממשלה אין רוב</span>}
         </div>
         {rows.map((p) => {
-          const seats = pollSeats(p.poll, thr);
-          const was = back[p.id] !== undefined ? pollSeats(back[p.id], thr) : seats;
-          const d = seats - was;
+          const seats = sv.seats[p.id] ?? 0;
+          const was = prev?.seats[p.id];
+          const d = was === undefined ? 0 : seats - was;
           return (
             <div key={p.id} className="row small" style={{ gap: 8, padding: '4px 0', opacity: seats ? 1 : 0.6, fontWeight: p.id === g.player.partyId ? 800 : 400 }}>
               <span className="party-dot" style={{ background: p.color }} />
               <span className="grow">{p.name}</span>
               {d !== 0 && <span className={d > 0 ? 'good' : 'bad'}>{d > 0 ? `▲${d}` : `▼${-d}`}</span>}
-              <b style={{ width: 70, textAlign: 'end' }}>{seats || `${p.poll.toFixed(1)}% ⚠️`}</b>
+              <b style={{ width: 70, textAlign: 'end' }}>{seats || `${sv.pct[p.id].toFixed(1)}% ⚠️`}</b>
             </div>
           );
         })}
-        <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = שינוי בחודש האחרון. ⚠️ = מתחת לאחוז החסימה ({thr}%).</p>
+        <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = מול הסקר הקודם. ⚠️ = מתחת לאחוז החסימה ({thr}%). לכל מכון יש נטייה קטנה משלו.</p>
       </div>
-      <div className="card" style={{ marginTop: 10 }}>
-        <h3>👑 מי מתאים יותר לראשות הממשלה?</h3>
-        {pmPoll.map((x) => (
-          <Meter key={x.name} label={`${x.name} · ${x.party}`} value={x.pct} color={x.color} suffix="%" />
-        ))}
-        <p className="tiny faint" style={{ margin: '6px 0 0' }}>השאר: "אף אחד מהם" / "לא יודע".</p>
+
+      {(sv.surprise || sv.loser) && (
+        <div className="card" style={{ marginTop: 10 }} data-testid="poll-surprise">
+          <h3>🎆 ההפתעה של הבחירות</h3>
+          {sv.surprise && (
+            <p className="small good" style={{ margin: '6px 0 0' }}>
+              ▲ {g.parties[sv.surprise.party]?.name}: +{sv.surprise.d} מנדטים בחודשיים. אפקט העגלה – מי שעולה מושך עוד קולות.
+            </p>
+          )}
+          {sv.loser && (
+            <p className="small bad" style={{ margin: '6px 0 0' }}>
+              ▼ {g.parties[sv.loser.party]?.name}: {sv.loser.d} מנדטים בחודשיים.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="card" style={{ marginTop: 10 }} data-testid="pm-fit">
+        <h3>👑 מי מתאים/ה יותר לראשות הממשלה?</h3>
+        {sv.pmFit.map((x) => {
+          const was = prev?.pmFit.find((f) => f.id === x.id)?.pct;
+          const d = was === undefined ? 0 : x.pct - was;
+          return <Meter key={x.id} label={`${x.id === 'player' ? 'את/ה' : surveyName(g, x.id)}${d ? ` ${d > 0 ? '▲' : '▼'}${Math.abs(d)}` : ''}`} value={x.pct} color={partyOf(x.id)?.color} suffix="%" />;
+        })}
+        <Meter label="אף אחד" value={sv.pmNone} color="#64748b" suffix="%" />
+        {g.surveys.length >= 3 && <LineChart series={fitSeries} xLabels={g.surveys.map((x) => shortDateLabel(g, x.week))} yMax={60} unit="%" height={130} />}
+        <p className="tiny faint" style={{ margin: '6px 0 0' }}>
+          {sv.pmFit.map((x) => `${x.id === 'player' ? 'את/ה' : surveyName(g, x.id)} – ${partyOf(x.id)?.short ?? ''}`).join(' · ')}.{' '}
+          {direct ? 'בבחירה ישירה המדד הזה קובע כמעט הכול במרוץ לראשות הממשלה.' : 'מועמד/ת חזק/ה מהמפלגה שלו/ה מושך/ת אותה למעלה ("אפקט המנהיג").'}
+        </p>
       </div>
+
+      {sv.h2h.b && (
+        <div className="card" style={{ marginTop: 10 }} data-testid="h2h">
+          <h3>{direct ? (g.rules.presidential ? '🏛️ אם הבחירות לראשות המדינה היו היום' : '🗳️ אם הבחירה הישירה לראשות הממשלה הייתה היום') : '🥊 ראש בראש'}</h3>
+          <Meter label={name(sv.h2h.a)} value={sv.h2h.pa} color={partyOf(sv.h2h.a)?.color} suffix="%" />
+          <Meter label={name(sv.h2h.b)} value={sv.h2h.pb} color={partyOf(sv.h2h.b)?.color} suffix="%" />
+          <p className="tiny faint" style={{ margin: '4px 0 0' }}>מתלבטים: {100 - sv.h2h.pa - sv.h2h.pb}%</p>
+        </div>
+      )}
+
       <div className="card" style={{ marginTop: 10 }}>
-        <h3>🧭 איך רואים אותך במגזרים</h3>
+        <h3>🧭 המדינה והממשלה</h3>
+        <Meter label="המדינה בכיוון הנכון" value={sv.rightTrack} color={sv.rightTrack >= 50 ? '#4ade80' : '#f87171'} suffix="%" />
+        <Meter label="מרוצים מהממשלה" value={sv.govApproval} color={sv.govApproval >= 45 ? '#4ade80' : '#f87171'} suffix="%" />
+        <div className="small muted" style={{ margin: '10px 0 4px' }}>מה הכי מטריד אותך?</div>
+        {sv.topIssues.map((x) => {
+          const def = ISSUES.find((i) => i.id === x.id)!;
+          return <Meter key={x.id} label={`${def.icon} ${def.name}`} value={x.pct} color="var(--gold)" suffix="%" />;
+        })}
+        {mood.length > 0 && (
+          <div style={{ marginTop: 8 }} data-testid="mood">
+            <div className="small muted">🌡️ רוח הציבור</div>
+            {mood.map((l) => (
+              <div key={l} className="small">
+                • {l}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="tiny faint" style={{ margin: '6px 0 0' }}>כשהציבור כועס על הממשלה, השותפות לחוצות. רוח הציבור (מלחמה, יוקר, משבר אמון) מזיזה מנדטים בין המחנות.</p>
+      </div>
+
+      {(sv.billQ || sv.presidentQ) && (
+        <div className="card" style={{ marginTop: 10 }}>
+          {sv.billQ && (
+            <>
+              <h3>❓ האם את/ה תומך/ת ב"{sv.billQ.title}"?</h3>
+              <Meter label="בעד" value={sv.billQ.yes} color="#4ade80" suffix="%" />
+              <Meter label="נגד" value={sv.billQ.no} color="#f87171" suffix="%" />
+            </>
+          )}
+          {sv.presidentQ && (
+            <div data-testid="president-q" style={{ marginTop: sv.billQ ? 10 : 0 }}>
+              <h3>🏛️ מי ראוי/ה להיות הנשיא/ה הבא/ה?</h3>
+              {sv.presidentQ.map((x) => (
+                <Meter key={x.id} label={surveyName(g, x.id)} value={x.pct} color={partyOf(x.id)?.color} suffix="%" />
+              ))}
+              <p className="tiny faint" style={{ margin: '4px 0 0' }}>הח"כים בוחרים – אבל הלחץ הציבורי משפיע על ההצבעה.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="card" style={{ marginTop: 10 }}>
+        <h3>🪞 איך רואים אותך</h3>
+        {sv.player ? (
+          <>
+            <Meter label="מכירים אותך" value={sv.player.known} color="#94a3b8" suffix="%" />
+            <Meter label="דעה חיובית" value={sv.player.favorable} color="#4ade80" suffix="%" />
+            <Meter label="דעה שלילית" value={sv.player.unfavorable} color="#f87171" suffix="%" />
+          </>
+        ) : (
+          <p className="small muted">עדיין לא מספיק מכירים אותך כדי לשאול עליך.</p>
+        )}
+        <div className="small muted" style={{ margin: '10px 0 4px' }}>במגזרים</div>
         {SECTORS.map((sec) => (
           <Meter key={sec} label={SECTOR_NAMES[sec]} value={Math.round(g.player.approval[sec])} color={g.player.approval[sec] >= 55 ? '#4ade80' : g.player.approval[sec] <= 40 ? '#f87171' : '#94a3b8'} />
         ))}
       </div>
     </>
+  );
+}
+
+export function PollsSheet() {
+  const g = useGame();
+  const sv = latestSurvey(g);
+  return (
+    <Sheet title="📊 הסקר המלא" sub={sv ? `${sv.pollster} · סקר חדש כל שבועיים` : undefined}>
+      <PollsView />
+    </Sheet>
   );
 }

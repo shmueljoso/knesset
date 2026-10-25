@@ -3,6 +3,7 @@ import { SKILL_NAMES } from '../engine/ops';
 import { TRANSFORM_INFO } from '../engine/data/transforms';
 import { isCoalition } from '../engine/systems/government';
 import { activeRuleNotes } from '../engine/systems/regime';
+import { latestSurvey, surveyName } from '../engine/systems/surveys';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import type { Skill, WorldKey } from '../engine/types';
 import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES } from '../engine/util';
@@ -35,6 +36,7 @@ export function Dashboard() {
   const toElection = g.electionWeek - g.week;
   const toPrimaries = g.primariesWeek - g.week;
   const ruleNotes = activeRuleNotes(g);
+  const sv = latestSurvey(g);
 
   const latest = g.pollHistory[g.pollHistory.length - 1]?.polls ?? {};
   const top = Object.values(g.parties)
@@ -190,6 +192,17 @@ export function Dashboard() {
             <h3>📈 סקרים (מנדטים)</h3>
             {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {pollSeats(g.parties[p.partyId].poll)}</span>}
           </div>
+          {sv && (
+            <div className="small" style={{ marginBottom: 6 }}>
+              <span className="muted">👑 מתאים/ה לראשות הממשלה: </span>
+              {sv.pmFit.slice(0, 3).map((x, i) => (
+                <span key={x.id} style={{ fontWeight: x.id === 'player' ? 800 : 400 }}>
+                  {i > 0 ? ' · ' : ''}
+                  {x.id === 'player' ? p.name : surveyName(g, x.id)} {x.pct}%
+                </span>
+              ))}
+            </div>
+          )}
           <LineChart series={series} xLabels={hist.map((h) => shortDateLabel(g, h.week))} yMax={40} />
           {movers.length > 0 && (
             <div className="chips" style={{ marginTop: 6 }} data-testid="momentum">
@@ -201,6 +214,9 @@ export function Dashboard() {
             </div>
           )}
           <p className="tiny faint" style={{ margin: '6px 0 0' }}>מתחת ל-{g.rules.threshold}% (כ-4 מנדטים) – הרשימה לא נכנסת לכנסת. ▲▼ = מגמה חזקה (הייפ או קריסה).</p>
+          <button className="btn sm block" style={{ marginTop: 8 }} onClick={() => open({ kind: 'polls' })} data-testid="open-polls">
+            📊 לסקר המלא{sv ? ` (${sv.pollster})` : ''}
+          </button>
         </div>
 
         <div className="card">

@@ -6,6 +6,7 @@ import { callEarlyElections, runElection } from '../src/engine/systems/elections
 import { onLawPassed } from '../src/engine/systems/issues';
 import { createBill } from '../src/engine/systems/legislation';
 import { billBlocked, termLimited } from '../src/engine/systems/regime';
+import { publishSurvey } from '../src/engine/systems/surveys';
 import { applyTransform, hasTransform } from '../src/engine/systems/transforms';
 
 const base = (seed = 5): NewGameOptions => ({
@@ -60,6 +61,7 @@ describe('direct election of the prime minister', () => {
       s.player.fame = 95;
       s.player.reputation = 95;
       s.parties.merkaz.poll = 9;
+      publishSurvey(s); // הסקר רואה את השחקן כמועמד/ת
       runElection(s);
       const race = s.lastElection!.pmRace!;
       expect(race.rounds[0].candidates).toContain('player');

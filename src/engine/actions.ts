@@ -8,7 +8,8 @@ import { addNews } from './systems/news';
 import { takeStance } from './systems/opinion';
 import { challengeLeader, leadershipBlocked, recruitCandidate } from './systems/parties';
 import { threatenQuit, tryNoConfidence } from './systems/coalition';
-import { noConfidenceFrozen } from './systems/regime';
+import { activeRuleNotes, noConfidenceFrozen } from './systems/regime';
+import { latestSurvey, pmFitOf } from './systems/surveys';
 import { askBudget } from './systems/ministry';
 import { pressFactor } from './systems/influence';
 import { noConfidenceBill, startVote } from './systems/legislation';
@@ -609,7 +610,37 @@ function interviewCtx(s: GameState, n: number): Record<string, string> {
   const issue = hot[Math.floor(rand(s) * hot.length)];
   const party = s.player.partyId ? s.parties[s.player.partyId] : null;
   const leader = party && party.leaderId !== 'player' ? s.npcs[party.leaderId] : null;
-  return { n: String(n), issue: issue.id, issueName: issue.name, leaderName: leader?.name ?? '', npc: leader?.id ?? '' };
+  const sv = latestSurvey(s);
+  const rule = activeRuleNotes(s)[0];
+  const bill = s.bills.find((b) => b.sponsor === 'player' && b.stage !== 'passed' && b.stage !== 'failed');
+  const rival = Object.values(s.npcs).filter((x) => x.notable && x.attitude <= -30).sort((a, b) => a.attitude - b.attitude)[0];
+  return {
+    n: String(n), issue: issue.id, issueName: issue.name, leaderName: leader?.name ?? '', npc: leader?.id ?? '',
+    partyName: party?.name ?? '', seats: party && sv ? String(sv.seats[party.id] ?? 0) : '', pollster: sv?.pollster ?? '',
+    pmFit: String(pmFitOf(s, 'player')), fav: sv?.player ? String(sv.player.favorable) : '',
+    ruleName: rule?.title ?? '', billTitle: bill?.title ?? '',
+    rival: rival?.id ?? '', npc2: rival?.id ?? '', rivalName: rival?.name ?? '',
+  };
+}
+
+/** השאלה הבאה בראיון: לפי מה שקורה עכשיו (סקרים, כללים חדשים, מלחמה, חקירה, הצעה שלך, יריב) */
+function nextQuestion(s: GameState, n: number): string {
+  const ctx = interviewCtx(s, n);
+  const party = s.player.partyId ? s.parties[s.player.partyId] : null;
+  const pool: string[] = [];
+  if (n === 2) {
+    pool.push(party && party.leaderId !== 'player' ? 'iv_loyalty' : 'iv_coalition');
+    if (ctx.pollster && party) pool.push('iv_poll');
+    if (party?.leaderId === 'player' || Number(ctx.pmFit) > 0) pool.push('iv_pm');
+    if (ctx.ruleName) pool.push('iv_rule');
+    if (s.world.security < 45) pool.push('iv_war');
+  } else {
+    pool.push('iv_gotcha');
+    if (s.scandal) pool.push('iv_scandal', 'iv_scandal');
+    if (ctx.billTitle) pool.push('iv_bill');
+    if (ctx.rival) pool.push('iv_rival');
+  }
+  return pool[Math.floor(rand(s) * pool.length)];
 }
 
 registerSpecial('iv_good', (s) => {
@@ -621,14 +652,8 @@ registerSpecial('iv_bad', (s) => {
 registerSpecial('iv_next', (s) => {
   const n = Number(s.flags.ivStep ?? 1) + 1;
   s.flags.ivStep = n;
-  if (n === 2) {
-    const party = s.player.partyId ? s.parties[s.player.partyId] : null;
-    const loyalty = party && party.leaderId !== 'player';
-    s.eventQueue.unshift({ eventId: loyalty ? 'iv_loyalty' : 'iv_coalition', ctx: interviewCtx(s, 2) });
-    return;
-  }
-  if (n === 3) {
-    s.eventQueue.unshift({ eventId: 'iv_gotcha', ctx: interviewCtx(s, 3) });
+  if (n === 2 || n === 3) {
+    s.eventQueue.unshift({ eventId: nextQuestion(s, n), ctx: interviewCtx(s, n) });
     return;
   }
   // סיכום הראיון

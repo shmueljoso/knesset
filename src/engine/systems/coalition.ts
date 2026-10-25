@@ -430,9 +430,13 @@ export function tryNoConfidence(s: GameState): { passed: boolean; text: string }
   const alt = proposeCoalition(s, [pm]);
   const altSeats = coalitionSeats(s, alt);
   const coalSeats = coalitionSeats(s, s.coalition.parties);
-  if (s.rules.directPM && coalSeats < 61 && chance(s, 0.6)) {
-    callEarlyElections(s, 'אי-אמון בראש הממשלה הנבחר/ת');
-    return { passed: true, text: 'האי-אמון עבר! בבחירה ישירה זה אומר בחירות חדשות.' };
+  // בבחירה ישירה אין ממשלה חלופית: אי-אמון = בחירות
+  if (s.rules.directPM) {
+    if (coalSeats < 61 && chance(s, 0.6)) {
+      callEarlyElections(s, 'אי-אמון בראש הממשלה הנבחר/ת');
+      return { passed: true, text: 'האי-אמון עבר! בבחירה ישירה זה אומר בחירות חדשות.' };
+    }
+    return { passed: false, text: 'ההצעה נדחתה – חלק מהאופוזיציה לא רצה בחירות.' };
   }
   if (coalSeats < 61 && altSeats >= 61 && chance(s, 0.6)) {
     const altPm = s.parties[[...alt].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0]];

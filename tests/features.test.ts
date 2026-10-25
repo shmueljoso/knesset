@@ -31,8 +31,8 @@ describe('interview mini-game', () => {
         last = resolveEvent(s, pick).lines;
       }
       expect(seen[0]).toBe('iv_issue');
-      expect(['iv_loyalty', 'iv_coalition']).toContain(seen[1]);
-      expect(seen[2]).toBe('iv_gotcha');
+      expect(['iv_loyalty', 'iv_coalition', 'iv_poll', 'iv_pm', 'iv_rule', 'iv_war']).toContain(seen[1]);
+      expect(['iv_gotcha', 'iv_scandal', 'iv_bill', 'iv_rival']).toContain(seen[2]);
       expect(s.eventQueue.some((e) => e.eventId.startsWith('iv_'))).toBe(false);
       expect(last.join(' ')).toMatch(/ראיון/);
       expect(s.flags.ivStep).toBeUndefined();

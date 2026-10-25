@@ -3,7 +3,7 @@ import { salienceMultiplier } from './issues';
 import { reactToStance } from './relationships';
 import { playerSeatContribution } from './influence';
 import type { GameState, Ideology, Sector, WorldKey } from '../types';
-import { SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
+import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_WEIGHTS, clamp, leanAlignment } from '../util';
 
 export const WORLD_NAMES: Record<WorldKey, string> = {
   economy: 'כלכלה',
@@ -84,6 +84,15 @@ export function playerElectoralAppeal(s: GameState): number {
   return appeal * fame * 22 + listStrength * 2 + (p.consistency - 50) / 50;
 }
 
+const MOOD_W: Record<keyof Ideology, number> = { security: 3, econ: 2, religion: 1.2, judiciary: 1.2 };
+
+/** כמה רוח הציבור (s.mood) מוסיפה/מורידה למפלגה – בנקודות אחוז */
+export function moodPull(s: GameState, ideology: Ideology): number {
+  const m = s.mood;
+  if (!m) return 0;
+  return AXES.reduce((a, ax) => a + (ideology[ax] / 100) * (m[ax] / 50) * MOOD_W[ax], 0);
+}
+
 /** עדכון סקרים שבועי: חזרה לבסיס, השפעת מצב המדינה, השחקן, ורעש. */
 export function updatePolls(s: GameState) {
   const gov = govSatisfaction(s);
@@ -96,6 +105,8 @@ export function updatePolls(s: GameState) {
     else if (p.id === s.player.partyId) target += playerSeatContribution(s)?.pct ?? 0;
     // מומנטום: הייפ או קריסה זמניים, שדועכים אם לא מתחזקים
     const m = p.momentum ?? 0;
+    // רוח הציבור: מלחמה מושכת ימינה, יוקר מחיה – לרווחה וכו'
+    if (!p.playerFounded) target += moodPull(s, p.ideology) * Math.min(1, p.base / 4);
     target = Math.max(0.2, target + m);
     if (m) p.momentum = Math.abs(m) < 0.05 ? 0 : m * 0.95;
     p.poll = Math.max(0, p.poll + (target - p.poll) * 0.12 + (rand(s) - 0.5) * 0.35);
