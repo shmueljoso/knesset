@@ -18,6 +18,7 @@ import { GovernmentCard } from './Government';
 import { IssuesCard } from './Issues';
 import { SCANDAL_STAGES } from '../engine/systems/scandals';
 import { MissionsCard, PowerCard } from './PowerMap';
+import { PresidentCard } from './President';
 
 const LADDER: { rank: string; label: string }[] = [
   { rank: 'activist', label: 'פעיל' },
@@ -62,7 +63,8 @@ export function Dashboard() {
   const ph = g.playerHistory.slice(-30);
 
   let goal = '';
-  if (!p.partyId && !p.isMK) goal = 'הצטרף/י למפלגה או הקם/י אחת – במטה המפלגה.';
+  if (g.presidency && g.president?.id === 'player') goal = 'לאחד את העם ולהשאיר את המדינה במצב טוב: פעולות שבועיות ויוזמות בלשונית "נשיאות".';
+  else if (!p.partyId && !p.isMK) goal = 'הצטרף/י למפלגה או הקם/י אחת – במטה המפלגה.';
   else if (!p.isMK && !p.wantsList && toPrimaries > 0) goal = `הגש/י מועמדות לרשימה במטה המפלגה (הרשימות נסגרות בעוד ${toPrimaries} שבועות).`;
   else if (!p.isMK && p.wantsList && toPrimaries > 0) goal = 'בנה/י תמיכה לקראת הרכבת הרשימה: כנסי מתפקדים, קמפיין, ותמיכת ח"כים בכירים.';
   else if (!p.isMK) goal = `הבחירות בעוד ${toElection} שבועות. כל נקודת תדמית חשובה.`;
@@ -103,6 +105,8 @@ export function Dashboard() {
             {!inSession(g) && <span className="chip">פגרה – אין הצבעות</span>}
           </div>
         </div>
+
+        <PresidentCard />
 
         <div className="card">
           <div className="card-title">

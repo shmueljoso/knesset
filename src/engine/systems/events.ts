@@ -83,6 +83,8 @@ export function resolveEvent(s: GameState, idx: number): { lines: string[]; succ
 
 /** הגרלת אירועים שבועית. */
 export function rollEvents(s: GameState) {
+  // בבית הנשיא האירועים הם אירועי הנשיאות (tickPresidency); אירועי ח"כים ומפלגות לא רלוונטיים
+  if (s.presidency && s.president?.id === 'player') return;
   const debt = debtCollectCandidate(s);
   if (debt && chance(s, 0.35)) s.eventQueue.push({ eventId: 'debt_collect', ctx: debt });
 

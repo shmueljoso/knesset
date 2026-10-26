@@ -8,6 +8,7 @@ import { LegacyModal } from './Legacy';
 import { LiveVoteModal } from './LiveVote';
 import { PrimariesNight } from './PrimariesNight';
 import { PresidentRace } from './PresidentRace';
+import { PresidencyView, PresidentSheet } from './President';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -57,6 +58,8 @@ function PanelView({ p }: { p: Panel }) {
       return <PollsSheet />;
     case 'tools':
       return <ToolsSheet />;
+    case 'president':
+      return <PresidentSheet />;
   }
 }
 
@@ -92,7 +95,7 @@ export function GameScreen() {
       {tab === 'map' && <MapView />}
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'people' && <PeopleView />}
-      {tab === 'laws' && <LegislationView />}
+      {tab === 'laws' && (g.presidency && g.president?.id === 'player' ? <PresidencyView /> : <LegislationView />)}
       {tab === 'news' && <NewsView />}
       <TabBar />
       {tab === 'map' && !top && <NegotiationBanner />}

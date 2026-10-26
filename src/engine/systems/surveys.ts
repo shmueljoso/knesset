@@ -9,6 +9,7 @@ import { addNews } from './news';
 import { addMomentum, govSatisfaction } from './opinion';
 export { moodPull } from './opinion';
 import { pickCandidates } from './president';
+import { playerPresidentScore } from './presidency';
 import { directElection, termLimited } from './regime';
 import { publicSupport } from './transforms';
 import { makeHypos, resignPressure } from './figures';
@@ -157,7 +158,8 @@ export function makeSurvey(s: GameState): Survey {
   let presidentQ: Survey['presidentQ'];
   if ((s.presidentNextWeek ?? Infinity) - s.week <= 30 && !s.presidentRace) {
     const pc = pickCandidates(s).filter((id) => s.npcs[id]);
-    const ps = pc.map((id) => Math.max(1, s.npcs[id].influence + s.npcs[id].attitude * 0.05 + rand(s) * 15));
+    if (s.presCampaign) pc.push('player');
+    const ps = pc.map((id) => (id === 'player' ? Math.max(1, playerPresidentScore(s) + rand(s) * 8) : Math.max(1, s.npcs[id].influence + s.npcs[id].attitude * 0.05 + rand(s) * 15)));
     const pt = ps.reduce((a, b) => a + b, 0) || 1;
     presidentQ = pc.map((id, i) => ({ id, pct: Math.round((ps[i] / pt) * 80) })).sort((a, b) => b.pct - a.pct);
   }

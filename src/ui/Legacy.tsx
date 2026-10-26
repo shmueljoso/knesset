@@ -1,5 +1,6 @@
 import { templateById } from '../engine/data/bills';
 import { ENDINGS, computeLegacy } from '../engine/systems/legacy';
+import { presidencyScore } from '../engine/systems/presidency';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 
@@ -55,6 +56,22 @@ export function LegacyModal() {
           </div>
         ))}
         {L.coLaws.length > 0 && <div className="small muted" style={{ marginTop: 4 }}>ועוד {L.coLaws.length} חוקים שהיית שותף/ה להם.</div>}
+        {g.presidency && g.presidency.weeks > 0 && (
+          <>
+            <div className="section-label">בית הנשיא</div>
+            <div className="card small" data-testid="pres-legacy">
+              <div>
+                אחדות ממוצעת: <b>{Math.round(g.presidency.unitySum / g.presidency.weeks)}</b> · אמון ממוצע: <b>{Math.round(g.presidency.trustSum / g.presidency.weeks)}</b> · ציון כהונה: <b className="gold">{presidencyScore(g)}</b>
+              </div>
+              <div className="muted">
+                {g.presidency.initiatives.filter((i) => i.done).length} יוזמות הושלמו · {g.presidency.pardons} חנינות · {Math.round(g.presidency.weeks / 52 * 10) / 10} שנים בתפקיד
+              </div>
+              {g.presidency.deeds.slice(-6).map((d, i) => (
+                <div key={i}>• {d}</div>
+              ))}
+            </div>
+          </>
+        )}
         <div className="section-label">המדינה והאנשים</div>
         <div className="small">
           מצב המדינה מאז שהתחלת: <b className={L.worldDelta >= 0 ? 'good' : 'bad'}>{L.worldDelta >= 0 ? '+' : ''}{L.worldDelta.toFixed(1)}</b> · בעלי ברית: {L.allies} · אויבים: {L.enemies} · שיא מנדטים למפלגה: {g.career.peakSeats}

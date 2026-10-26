@@ -54,6 +54,8 @@ export function ensurePhase3(g: GameState) {
   if (g.rules.norwegian && g.rules.norwegianLimit === undefined) g.rules.norwegianLimit = 5;
   if (g.rules.termLimit && g.rules.termLimitScope === undefined) g.rules.termLimitScope = 2;
   g.president ??= null;
+  g.presCampaign ??= null;
+  g.presidency ??= null;
   g.presidentRace ??= null;
   g.presidentNextWeek ??= g.week + 40 + (g.seed % 250);
   g.lastPrimaries ??= null;

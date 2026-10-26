@@ -3,12 +3,13 @@ import { registerSpecial } from '../ops';
 import { spawnCandidate } from '../newGame';
 import { pick, rand } from '../rng';
 import type { GameState } from '../types';
-import { clamp, ideologyDistance } from '../util';
+import { clamp } from '../util';
 import { addNews } from './news';
 import { changeAttitude } from './relationships';
 import { releaseReplacement } from './regime';
 import { log } from './report';
 import { latestSurvey } from './surveys';
+import { becomePresident, campaignLost, endPresidency, isPresident, voterWeights } from './presidency';
 
 export const PRESIDENT_TERM = 364; // שבע שנים
 
@@ -34,13 +35,16 @@ export function pickCandidates(s: GameState): string[] {
 
 /** פתיחת מרוץ לנשיאות: ח"כ מקבל/ת פתק; אחרת ההצבעה מתקיימת ברקע */
 export function startPresidentRace(s: GameState) {
-  const candidates = pickCandidates(s);
+  // מי שהכריז/ה על מועמדות ועדיין עומד/ת בתנאים – מתמודד/ת אוטומטית, בלי לחכות לפתק
+  const runs = !!s.presCampaign && playerCanRunForPresident(s);
+  const candidates = runs ? [...pickCandidates(s).slice(0, 2), 'player'] : pickCandidates(s);
   if (candidates.length < 2) {
     s.presidentNextWeek = s.week + 26;
     return;
   }
   s.presidentRace = { candidates, rounds: [], winner: null, playerVote: null };
-  if (s.player.isMK)
+  if (runs) runPresidentVote(s, 'player');
+  else if (s.player.isMK)
     s.eventQueue.push({
       eventId: 'president_ballot',
       ctx: { c0: candidates[0], c1: candidates[1], c2: candidates[2] ?? '', c0Name: candName(s, candidates[0]), c1Name: candName(s, candidates[1]), c2Name: candidates[2] ? candName(s, candidates[2]) : '', c2Sep: candidates[2] ? `, ${candName(s, candidates[2])}` : '' },
@@ -70,17 +74,7 @@ export function runPresidentVote(s: GameState, playerVote: string | null) {
       }
       const v = s.npcs[id];
       if (!v) continue;
-      const w = alive.map((c) => {
-        const cand = c === 'player' ? { ideology: s.player.ideology, partyId: s.player.partyId } : s.npcs[c];
-        let score = -ideologyDistance(v.ideology, cand.ideology) * 5 + (cand.partyId === v.partyId ? 1.2 : 0);
-        if (c === 'player') score += v.attitude / 40;
-        else score += (s.npcs[c]?.influence ?? 50) / 80;
-        // דעת הקהל: מי שמוביל/ה בסקרי הנשיאות נהנה/ית מלחץ ציבורי
-        score += (pubPct.get(c) ?? 0) / 40;
-        if (cand.partyId && v.partyId && s.coalition.parties.includes(cand.partyId) === s.coalition.parties.includes(v.partyId)) score += 0.5;
-        if (cand.partyId === pmParty && v.partyId && s.coalition.parties.includes(v.partyId)) score += 0.3;
-        return Math.exp(score);
-      });
+      const w = voterWeights(s, v.id, alive, pmParty, pubPct);
       const total = w.reduce((a, b) => a + b, 0);
       let r = rand(s) * total;
       let k = 0;
@@ -110,9 +104,10 @@ function applyPresidentResult(s: GameState) {
     s.president = { id: 'player', name: s.player.name, sinceWeek: s.week };
     addNews(s, `${s.player.name} נבחר/ה לנשיא/ת המדינה (${votes} קולות)`, 'good', true, undefined, 'ערוץ המשכן');
     log(s, 'נבחרת לנשיאות המדינה!', 'career');
-    s.gameOver = 'president';
+    becomePresident(s, votes);
     return;
   }
+  if (race.candidates.includes('player')) campaignLost(s, s.npcs[w]?.name ?? '?');
   const n = s.npcs[w];
   s.president = { id: w, name: n?.name ?? '?', sinceWeek: s.week };
   if (n) {
@@ -165,7 +160,9 @@ export function pardonBonus(s: GameState): number {
 
 export function tickPresident(s: GameState) {
   if (s.presidentRace?.winner && !s.flags.showPresident) s.presidentRace = null;
-  if (s.week >= (s.presidentNextWeek ?? Infinity) && !s.presidentRace && !s.negotiation) startPresidentRace(s);
+  if (s.week < (s.presidentNextWeek ?? Infinity)) return;
+  if (isPresident(s)) endPresidency(s);
+  else if (!s.presidentRace && !s.negotiation) startPresidentRace(s);
 }
 
 for (const i of [0, 1, 2]) registerSpecial(`president_vote_${i}`, (s, ctx) => {

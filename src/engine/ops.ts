@@ -23,6 +23,8 @@ export type Op =
   | { op: 'momentum'; party: string; d: number }
   | { op: 'swing'; lean: Partial<Ideology>; d: number; label?: string }
   | { op: 'stability'; d: number }
+  | { op: 'punity'; d: number }
+  | { op: 'ptrust'; d: number }
   | { op: 'news'; headline: string; tone: NewsItem['tone']; about?: boolean }
   | { op: 'debt'; who: string; dir: Debt['dir']; reason: string }
   | { op: 'clearDebt'; who: string; dir: Debt['dir'] }
@@ -192,6 +194,12 @@ export function applyOps(s: GameState, ops: Op[], ctx: Ctx = {}): string[] {
         }
         s.coalition.stability = clamp(s.coalition.stability + o.d, 0, 100);
         break;
+      case 'punity':
+        if (s.presidency) s.presidency.unity = clamp(s.presidency.unity + o.d, 0, 100);
+        break;
+      case 'ptrust':
+        if (s.presidency) s.presidency.trust = clamp(s.presidency.trust + o.d, 0, 100);
+        break;
       case 'news':
         addNews(s, fill(s, o.headline, ctx), o.tone, o.about ?? true);
         break;
@@ -281,6 +289,12 @@ export function describeOps(s: GameState, ops: Op[], ctx: Ctx = {}): OpChip[] {
       }
       case 'stability':
         chips.push({ label: `יציבות קואליציה ${fmtDelta(o.d)}`, tone: 'neutral' });
+        break;
+      case 'punity':
+        chips.push({ label: `אחדות העם ${fmtDelta(o.d)}`, tone: tone(o.d) });
+        break;
+      case 'ptrust':
+        chips.push({ label: `אמון הציבור בך ${fmtDelta(o.d)}`, tone: tone(o.d) });
         break;
       case 'debt':
         chips.push({ label: o.dir === 'owes_player' ? 'חוב לטובתך' : 'אתה חייב טובה', tone: o.dir === 'owes_player' ? 'good' : 'bad' });

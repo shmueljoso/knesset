@@ -11,6 +11,7 @@ import { addNews } from './news';
 import { directElection, electedLead, enforceTermLimit, recordPmTerm, restoreNorwegian, runPmRace, termLimited } from './regime';
 import { log } from './report';
 import { afterElection } from './society';
+import { afterMandate, mandatePlan } from './presidency';
 
 export const THRESHOLD = 0.0325;
 
@@ -248,7 +249,7 @@ export function runElection(s: GameState) {
   if (s.player.isMK) {
     s.career.mkTerms += 1;
     s.career.electionsOutside = 0;
-  } else if (ranForKnesset || s.career.mkTerms > 0) {
+  } else if ((ranForKnesset || s.career.mkTerms > 0) && s.president?.id !== 'player') {
     s.career.electionsOutside += 1;
     if (s.career.electionsOutside >= 2 && !s.gameOver) s.gameOver = 'outside';
   }
@@ -281,7 +282,13 @@ export function runElection(s: GameState) {
   if (pmRace?.winner === 'player') startFormateur(s);
   else if (playerLeads && !pmRace && lead === playerParty.id && !termLimited(s, 'player')) startFormateur(s);
   else if (playerLeads && lead !== playerParty.id && plan.includes(playerParty.id)) startPartner(s, lead);
-  else completeCoalition(s, plan, lead);
+  else {
+    // נשיא/ה שהוא/היא השחקן: מדיניות המנדט משפיעה על מי מרכיב/ה את הממשלה (לא בבחירה ישירה לראשות הממשלה)
+    const bySeats = Object.values(s.parties).filter((p) => p.seats > 0).sort((a, b) => b.seats - a.seats).map((p) => p.id);
+    const m = forced ? null : mandatePlan(s, lead, bySeats);
+    completeCoalition(s, m?.plan ?? plan, m?.lead ?? lead);
+    if (m) afterMandate(s, m.note, String(s.flags.mandateDoctrine ?? 'largest'));
+  }
 
   s.electionWeek = s.week + 208;
   s.primariesWeek = s.electionWeek - 12;

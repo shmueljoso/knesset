@@ -455,6 +455,55 @@ export interface GameState {
   presidentNextWeek: number;
   presidentRace: { candidates: string[]; rounds: { candidates: string[]; counts: number[] }[]; winner: string | null; playerVote: string | null } | null;
   lastPrimaries: { partyId: string; primaries: boolean; list: string[]; playerPos: number; realistic: number; week: number } | null;
+  /** מועמדות השחקן לנשיאות: הכרזה מוקדמת וקמפיין (null = לא הכריז/ה) */
+  presCampaign?: PresCampaign | null;
+  /** כהונת השחקן כנשיא/ת המדינה (null = לא נשיא/ה) */
+  presidency?: Presidency | null;
+}
+
+export interface PresCampaign {
+  sinceWeek: number;
+  /** כוח הקמפיין 0-100, דועך עם הזמן */
+  momentum: number;
+  /** ח"כים שהתחייבו להצביע לשחקן */
+  pledges: string[];
+  /** שבוע הפעולה האחרונה לכל פעולה (לקירור) */
+  cd: Record<string, number>;
+  /** נושא הקמפיין (מועבר לכהונה כבונוס פתיחה) */
+  theme: string | null;
+  /** מפלגות שהובטח להן משהו */
+  deals: string[];
+}
+
+export interface PresInitiative {
+  id: string;
+  progress: number;
+  startWeek: number;
+  lastWeek: number;
+  done: boolean;
+}
+
+export interface Presidency {
+  sinceWeek: number;
+  /** אחדות העם 0-100 */
+  unity: number;
+  /** אמון הציבור בנשיא/ה 0-100 */
+  trust: number;
+  weeks: number;
+  unitySum: number;
+  trustSum: number;
+  /** שבועות בלי אף פעולה נשיאותית */
+  idle: number;
+  /** שבועות רצופים באמון נמוך מאוד */
+  lowTrust: number;
+  actedWeek: number;
+  cd: Record<string, number>;
+  initiatives: PresInitiative[];
+  /** מעשים בולטים, לסיכום הכהונה */
+  deeds: string[];
+  theme: string | null;
+  pardons: number;
+  refused: number;
 }
 
 export type IssueId = 'housing' | 'cost' | 'draft' | 'religion' | 'judiciary' | 'security' | 'crime' | 'education' | 'wages';

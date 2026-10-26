@@ -7,6 +7,7 @@ export function g2(g: GameState, m: string, f: string) {
 
 export function careerTitle(g: GameState): string {
   const p = g.player;
+  if (g.presidency && g.president?.id === 'player') return `${g2(g, 'נשיא המדינה', 'נשיאת המדינה')} · שנה ${Math.floor(g.presidency.weeks / 52) + 1}`;
   const party = p.partyId ? g.parties[p.partyId] : null;
   const leads = party?.leaderId === 'player' && g.coalition.pmId !== 'player';
   if (leads && p.rank === 'mk') return `${g2(g, 'ח"כ', 'ח"כ')} · יו"ר ${party!.name}`;

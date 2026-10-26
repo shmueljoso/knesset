@@ -2,6 +2,7 @@
 import { templateById } from '../data/bills';
 import { TRANSFORM_INFO } from '../data/transforms';
 import type { GameState, LawRecord } from '../types';
+import { presidencyScore } from './presidency';
 
 export const ENDINGS: Record<string, { title: string; text: string; canContinue: boolean }> = {
   retired: { title: 'פרישה מהחיים הפוליטיים', text: 'החלטת שהגיע הזמן. מסיבת פרידה במזנון, נאום אחרון במליאה.', canContinue: true },
@@ -9,6 +10,8 @@ export const ENDINGS: Record<string, { title: string; text: string; canContinue:
   outside: { title: 'מחוץ למשחק', text: 'פעמיים ברצף לא נבחרת לכנסת. הקהל עבר הלאה.', canContinue: true },
   pm_term: { title: 'קדנציה מלאה כראש ממשלה', text: 'השלמת קדנציה שלמה בראשות הממשלה. מעטים הגיעו לכאן.', canContinue: true },
   president: { title: 'נשיא/ת המדינה', text: 'הכנסת בחרה בך לנשיאות. שבע שנים בבית הנשיא – מעל הפוליטיקה, ולתמיד בספרי ההיסטוריה.', canContinue: false },
+  president_term: { title: 'סיום כהונה כנשיא/ת המדינה', text: 'שבע שנים בבית הנשיא הסתיימו. השאלה היא מה השארת אחריך: עם מאוחד יותר, ומדינה במצב טוב יותר.', canContinue: false },
+  president_removed: { title: 'הדחה מהנשיאות', text: 'האמון הציבורי קרס והכנסת הדיחה אותך מהנשיאות. זה סוף הדרך.', canContinue: false },
 };
 
 export interface Legacy {
@@ -34,6 +37,7 @@ export function computeLegacy(s: GameState): Legacy {
   if (a.includes('minister')) roles.push('שר/ה');
   if (a.includes('leader')) roles.push('יו"ר מפלגה');
   if (a.includes('pm')) roles.push(`ראש/ת ממשלה (${s.career.pmWeeks} שבועות)`);
+  if (s.president?.id === 'player') roles.push(`נשיא/ת המדינה (${Math.round((s.presidency?.weeks ?? 0) / 52 * 10) / 10} שנים)`);
   const allies = Object.values(s.npcs).filter((n) => n.attitude >= 40).length;
   const enemies = Object.values(s.npcs).filter((n) => n.attitude <= -40).length;
   const worldNow = Object.values(s.world).reduce((x, y) => x + y, 0) / 6;
@@ -47,7 +51,7 @@ export function computeLegacy(s: GameState): Legacy {
     (a.includes('minister') ? 20 : 0) +
     (a.includes('leader') ? 15 : 0) +
     (a.includes('pm') ? 40 : 0) +
-    (s.president?.id === 'player' ? 60 : 0) +
+    (s.president?.id === 'player' ? 60 + presidencyScore(s) : 0) +
     s.career.mkTerms * 8 +
     s.career.peakSeats * 0.5 +
     allies +
@@ -75,6 +79,12 @@ export function computeLegacy(s: GameState): Legacy {
   if (enemies >= 8) tags.push('הרבה אויבים');
   if (allies >= 15) tags.push('אמן/ית הקשרים');
   if (worldDelta >= 5) tags.push('השאיר/ה את המדינה במצב טוב יותר');
+  if (s.presidency && s.presidency.weeks >= 26) {
+    const avg = s.presidency.unitySum / s.presidency.weeks;
+    if (avg >= 62) tags.push(f ? 'נשיאה מאחדת' : 'נשיא מאחד');
+    else if (avg <= 38) tags.push(f ? 'נשיאה שנויה במחלוקת' : 'נשיא שנוי במחלוקת');
+    if (s.presidency.initiatives.filter((i) => i.done).length >= 3) tags.push('יוזם/ת גדול/ה');
+  }
   for (const x of s.transforms ?? []) if (x.sponsor === 'player') tags.push(`שינה/תה את פני המדינה: ${TRANSFORM_INFO[x.id].name}`);
   return { score, title, laws, coLaws, roles, allies, enemies, worldDelta, tags };
 }

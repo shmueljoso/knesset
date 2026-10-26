@@ -63,11 +63,12 @@ export function TabBar() {
   const g = useGame();
   const votable = g.bills.filter((b) => (b.sponsor === 'player' || b.sponsor === g.player.employerId) && ['preliminary', 'first', 'final'].includes(b.stage)).length;
   const freshNews = g.news.filter((n) => n.week >= g.week - 1 && n.aboutPlayer).length;
+  const pres = !!g.presidency && g.president?.id === 'player';
   const tabs = [
     { id: 'map', ico: '🗺️', label: 'מפה' },
     { id: 'dashboard', ico: '📊', label: 'לוח' },
     { id: 'people', ico: '👥', label: 'אנשים' },
-    { id: 'laws', ico: '📜', label: 'חקיקה', badge: votable },
+    pres ? ({ id: 'laws', ico: '🏛️', label: 'נשיאות', badge: g.player.ap } as const) : ({ id: 'laws', ico: '📜', label: 'חקיקה', badge: votable } as const),
     { id: 'news', ico: '📰', label: 'חדשות', badge: freshNews },
   ] as const;
   return (

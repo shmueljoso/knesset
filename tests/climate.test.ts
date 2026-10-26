@@ -93,7 +93,7 @@ describe('president', () => {
     expect(Object.values(s.parties).reduce((a, p) => a + p.seats, 0)).toBe(120);
   });
 
-  it('the player can run, and winning ends the career at the top', () => {
+  it('the player can run, and winning moves them into the presidency', () => {
     let won = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const s: GameState = createGame({ ...base(), seed });
@@ -105,7 +105,10 @@ describe('president', () => {
       runPresidentVote(s, 'player');
       if (s.presidentRace!.winner === 'player') {
         won++;
-        expect(s.gameOver).toBe('president');
+        // הכהונה ממשיכה כמשחקון: השחקן עוזב את הכנסת ונכנס לבית הנשיא
+        expect(s.gameOver).toBeNull();
+        expect(s.presidency).toBeTruthy();
+        expect(s.player.isMK).toBe(false);
       }
     }
     expect(won).toBeGreaterThan(0);
