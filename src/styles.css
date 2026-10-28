@@ -1122,3 +1122,31 @@ table.results td {
   margin-inline: -20px;
   padding-inline: 20px;
 }
+.title-settings {
+  position: absolute;
+  top: calc(var(--sat) + 12px);
+  inset-inline-end: 16px;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(12, 22, 38, 0.6);
+  font-size: 18px;
+  color: inherit;
+}
+.open-in-app {
+  position: fixed;
+  bottom: calc(var(--sab) + 16px);
+  inset-inline: 16px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--card, #13233b);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}

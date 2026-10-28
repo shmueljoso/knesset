@@ -13,8 +13,9 @@ import { friendlyError, type BoardKind, type BoardRow, type CloudSaveMeta, type 
 export * from './types';
 export { weeklyChallenge, type Challenge } from './challenge';
 
-/** כתובת האתר ב-Cloudflare. בדפדפן ריק = אותו אתר; באפליקציה חייבים כתובת מלאה (VITE_API_URL בבנייה) */
-const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+/** כתובת האתר ב-Cloudflare שנקבעה בבנייה (VITE_API_URL). אפשר גם להזין אותה במסך ההגדרות */
+const BUILD_API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+const SERVER_KEY = 'hamishkan.apiUrl';
 const PENDING_SCORES = 'hamishkan.pendingScores';
 const PENDING_SAVE = 'hamishkan.cloudPending';
 const LOCAL_RECORDS = 'hamishkan.myRecords';
@@ -45,10 +46,34 @@ const safeLS = {
 
 export const serverConfigured = () => useOnline.getState().status !== 'unconfigured';
 
+/** כתובת השרת: מה שהוזן בהגדרות, אחרת מהבנייה. בדפדפן ריק = אותו אתר */
+export function apiUrl(): string {
+  return (safeLS.get(SERVER_KEY) ?? BUILD_API_URL).trim().replace(/\/$/, '');
+}
+
+/** כתובת האתר לקישורי שיתוף (באפליקציה – כתובת השרת) */
+export function siteUrl(): string | null {
+  const u = apiUrl();
+  if (u) return u;
+  if (Capacitor.isNativePlatform() || typeof location === 'undefined') return null;
+  return location.origin + location.pathname.replace(/[^/]*$/, '');
+}
+
+/** שינוי כתובת השרת מתוך האפליקציה (בלי לבנות APK מחדש). ריק = ברירת המחדל */
+export async function setServerUrl(url: string): Promise<boolean> {
+  const t = url.trim().replace(/\/$/, '');
+  if (t && !/^https?:\/\/[^\s/]+/.test(t)) throw new Error('כתובת לא תקינה – צריכה להתחיל ב-https://');
+  if (t) safeLS.set(SERVER_KEY, t.startsWith('http') ? t : `https://${t}`);
+  else safeLS.del(SERVER_KEY);
+  await useOnline.getState().init();
+  return useOnline.getState().status !== 'unconfigured';
+}
+
 function pickBackend(): OnlineBackend | null {
   if (typeof localStorage !== 'undefined' && safeLS.get('hamishkan.onlineMock') === '1') return new MockBackend();
-  if (Capacitor.isNativePlatform() && !API_URL) return null;
-  return new CloudflareBackend(API_URL);
+  const url = apiUrl();
+  if (Capacitor.isNativePlatform() && !url) return null;
+  return new CloudflareBackend(url);
 }
 
 export type OnlineStatus = 'unconfigured' | 'loading' | 'signedOut' | 'signedIn';
@@ -65,6 +90,8 @@ interface OnlineStore {
   init: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
+
+let unsubscribe: (() => void) | undefined;
 
 export const useOnline = create<OnlineStore>((set, get) => ({
   backend: null,
@@ -87,7 +114,8 @@ export const useOnline = create<OnlineStore>((set, get) => ({
       return;
     }
     set({ backend });
-    backend.onAuthChange((user) => {
+    unsubscribe?.();
+    unsubscribe = backend.onAuthChange((user) => {
       set({ user, status: user ? 'signedIn' : 'signedOut', profile: user ? get().profile : null });
       if (user) void get().refreshProfile().then(flushPending);
     });
@@ -309,3 +337,30 @@ export async function flushPending() {
 }
 
 export const fetchBoard = (kind: BoardKind, opts: { challenge?: string; limit?: number } = {}): Promise<BoardRow[]> => wrap(() => backend().board(kind, opts));
+
+// ---------------- קישורי שיתוף ----------------
+
+/** שיתוף כנסת מהעורך: מעלה לשרת ומחזיר קישור קצר. בלי שרת – null */
+export async function shareMod(mod: unknown, title: string): Promise<string | null> {
+  const site = siteUrl();
+  if (!site || useOnline.getState().status === 'unconfigured') return null;
+  const r = await wrap(() => fetchJson<{ code: string }>(`${apiUrl()}/api/share`, { method: 'POST', body: JSON.stringify({ kind: 'mod', title: title.slice(0, 80), data: JSON.stringify(mod) }) }));
+  return `${site.replace(/\/$/, '')}/#s=${r.code}`;
+}
+
+export async function fetchShared(code: string): Promise<{ kind: string; title: string; data: unknown }> {
+  const r = await wrap(() => fetchJson<{ kind: string; title: string; data: string }>(`${apiUrl()}/api/share/${encodeURIComponent(code)}`));
+  return { kind: r.kind, title: r.title, data: JSON.parse(r.data) };
+}
+
+async function fetchJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
+  } catch {
+    throw new Error('אין חיבור לאינטרנט');
+  }
+  const body = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw new Error(res.status === 404 ? 'הקישור לא נמצא (אולי נמחק)' : (body.error ?? `שגיאה ${res.status}`));
+  return body;
+}

@@ -5,6 +5,7 @@ import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Share } from '@capacitor/share';
 import type { GameState } from './engine';
+import { pref } from './prefs';
 import { IdbBackend, MemoryBackend, SaveManager, fromBase64, toBase64, type SaveBackend, type SaveMeta } from './saves';
 
 export const isNative = () => Capacitor.isNativePlatform();
@@ -20,9 +21,22 @@ export interface DeviceInfo {
   freeMb: number;
 }
 
+/** מה שמוצג בווידג'ט במסך הבית */
+export interface WidgetData {
+  title: string;
+  line1: string;
+  line2: string;
+  line3: string;
+}
+
 interface HamishkanNativePlugin {
   getInfo(): Promise<DeviceInfo>;
+  setKeepAwake(o: { on: boolean }): Promise<void>;
+  setImmersive(o: { on: boolean }): Promise<void>;
+  updateWidget(o: WidgetData): Promise<void>;
 }
+
+let wakeLock: { release(): Promise<void> } | null = null;
 
 const HamishkanNative = registerPlugin<HamishkanNativePlugin>('HamishkanNative', {
   // בדפדפן אין קוד ג'אווה – מחזירים את מה שאפשר לדעת מכאן
@@ -37,6 +51,17 @@ const HamishkanNative = registerPlugin<HamishkanNativePlugin>('HamishkanNative',
         freeMb: est?.quota && est.usage !== undefined ? Math.round((est.quota - est.usage) / 1048576) : 0,
       };
     },
+    // בדפדפן: Screen Wake Lock, אם יש
+    async setKeepAwake({ on }: { on: boolean }) {
+      const wl = (navigator as Navigator & { wakeLock?: { request(t: 'screen'): Promise<{ release(): Promise<void> }> } }).wakeLock;
+      if (on && wl && !wakeLock) wakeLock = await wl.request('screen').catch(() => null);
+      if (!on && wakeLock) {
+        await wakeLock.release().catch(() => undefined);
+        wakeLock = null;
+      }
+    },
+    async setImmersive() {},
+    async updateWidget() {},
   },
 });
 
@@ -46,6 +71,28 @@ export async function deviceInfo(): Promise<DeviceInfo | null> {
   } catch {
     return null;
   }
+}
+
+/** המסך לא נכבה (הצבעה חיה, ליל בחירות) */
+export function keepAwake(on: boolean) {
+  if (on && !pref('keepAwake')) return;
+  void HamishkanNative.setKeepAwake({ on }).catch(() => undefined);
+}
+
+/** מסך מלא באנדרואיד: מסתיר את שורת המצב ואת סרגל הניווט (מחווה מהקצה מחזירה אותם לרגע) */
+export function applyImmersive(on = pref('immersive')) {
+  if (!isNative()) return;
+  void HamishkanNative.setImmersive({ on }).catch(() => undefined);
+}
+
+let lastWidget = '';
+/** עדכון הווידג'ט במסך הבית (רק כשמשהו השתנה) */
+export function updateWidget(d: WidgetData) {
+  if (!isNative()) return;
+  const key = JSON.stringify(d);
+  if (key === lastWidget) return;
+  lastWidget = key;
+  void HamishkanNative.updateWidget(d).catch(() => undefined);
 }
 
 // ---------------- אחסון שמירות בקבצים (אנדרואיד) ----------------
@@ -163,8 +210,9 @@ export function pickFile(accept = '.json,application/json'): Promise<string | nu
 
 // ---------------- רטט ----------------
 
-export function haptic(kind: 'tap' | 'good' | 'bad' = 'tap') {
-  if (!isNative()) return;
-  if (kind === 'tap') void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+export function haptic(kind: 'tap' | 'heavy' | 'good' | 'bad' = 'tap') {
+  if (!isNative() || !pref('haptics')) return;
+  if (kind === 'heavy') void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => undefined);
+  else if (kind === 'tap') void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
   else void Haptics.notification({ type: kind === 'good' ? NotificationType.Success : NotificationType.Error }).catch(() => undefined);
 }

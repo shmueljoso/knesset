@@ -8,6 +8,7 @@ import { SavesSheet } from './Saves';
 import { AccountSheet, LeaderboardSheet, OnlineBadge } from './Online';
 import { CURRENT_SLOT, downloadGame, listCloud, useOnline, weeklyChallenge, type CloudSaveMeta } from '../online';
 import { careerId } from '../engine/systems/score';
+import { AppSettingsSheet } from './AppSettings';
 
 export function TitleScreen() {
   const setScreen = useStore((s) => s.setScreen);
@@ -16,9 +17,14 @@ export function TitleScreen() {
   const setPendingMod = useStore((s) => s.setPendingMod);
   const toast = useStore((s) => s.toast);
   const saved = useMemo(() => loadSaved(), []);
-  const [showSaves, setShowSaves] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
-  const [showBoard, setShowBoard] = useState(false);
+  // שיאים / שמירות / הגדרות – גם מקיצורי דרך והתראות (store.titleSheet)
+  const sheet = useStore((s) => s.titleSheet);
+  const setSheet = useStore((s) => s.setTitleSheet);
+  const showSaves = sheet === 'saves';
+  const showBoard = sheet === 'board';
+  const setShowSaves = (v: boolean) => setSheet(v ? 'saves' : null);
+  const setShowBoard = (v: boolean) => setSheet(v ? 'board' : null);
   const setPendingChallenge = useStore((s) => s.setPendingChallenge);
   const { status, online } = useOnline();
   const ch = weeklyChallenge();
@@ -56,6 +62,9 @@ export function TitleScreen() {
       <div style={{ position: 'absolute', inset: '0 0 40% 0', opacity: 0.9 }}>
         <IsoSkyline />
       </div>
+      <button className="title-settings" onClick={() => setSheet('settings')} aria-label="הגדרות" data-testid="title-settings">
+        ⚙️
+      </button>
       {status !== 'unconfigured' && (
         <button className="title-account" onClick={() => setShowAccount(true)} aria-label="חשבון">
           <OnlineBadge />
@@ -116,6 +125,7 @@ export function TitleScreen() {
       {showSaves && <SavesSheet onClose={() => setShowSaves(false)} />}
       {showAccount && <AccountSheet onClose={() => setShowAccount(false)} />}
       {showBoard && <LeaderboardSheet onClose={() => setShowBoard(false)} />}
+      {sheet === 'settings' && <AppSettingsSheet onClose={() => setSheet(null)} />}
     </div>
   );
 }

@@ -4,4 +4,13 @@
     <string name="title_activity_main">המשכן</string>
     <string name="package_name">com.shmueljoso.hamishkan</string>
     <string name="custom_url_scheme">com.shmueljoso.hamishkan</string>
+    <string name="widget_description">המפלגה שלך, הסקר האחרון והבחירות הבאות</string>
+    <string name="widget_empty_title">המשכן</string>
+    <string name="widget_empty_line">פתח/י את המשחק כדי להתחיל</string>
+    <string name="shortcut_continue">המשך משחק</string>
+    <string name="shortcut_continue_long">המשך את המשחק האחרון</string>
+    <string name="shortcut_challenge">אתגר השבוע</string>
+    <string name="shortcut_challenge_long">התחל את אתגר השבוע</string>
+    <string name="shortcut_board">שיאים</string>
+    <string name="shortcut_board_long">טבלת השיאים</string>
 </resources>

@@ -3,6 +3,8 @@ import { templateById } from '../engine/data/bills';
 import { RESCUE_COST, STAGE_NAMES, finishVote, rescueInfo, rescueVote } from '../engine/systems/legislation';
 import { useGame, useStore } from '../store';
 import { Hemicycle, VOTE_NAMES } from './Charts';
+import { haptic, keepAwake } from '../platform';
+import { play } from '../sound';
 
 const KIND_LABEL = { own: 'ההצעה שלך', other: 'הצבעה במליאה', budget: 'חוק התקציב – אם ייפול: בחירות', noconf: 'אי-אמון – 61 קולות מפילים את הממשלה' } as const;
 const ICON = { for: '✅', against: '❌', abstain: '✋', absent: '🚪' } as const;
@@ -33,6 +35,27 @@ export function LiveVoteModal() {
     const id = setTimeout(() => setN((x) => x + 1), delay);
     return () => clearTimeout(id);
   }, [n, total, close, paused]);
+  // פעמון המליאה, המסך לא נכבה, ורטט בקולות האחרונים כשזה צמוד
+  useEffect(() => {
+    keepAwake(true);
+    play('bell');
+    return () => keepAwake(false);
+  }, []);
+  useEffect(() => {
+    if (n === 0 || n > total) return;
+    if (n === total) {
+      const mine = lv.playerVote === 'for' || lv.playerVote === 'against' ? (lv.playerVote === 'for') === res.passed : null;
+      play(mine === null ? 'chime' : mine ? 'win' : 'lose');
+      haptic(mine === false ? 'bad' : 'good');
+      return;
+    }
+    const v = res.seats[lv.order[n - 1]];
+    if (close && total - n < 12) {
+      haptic('heavy');
+      play(v === 'for' ? 'yes' : v === 'against' ? 'no' : 'tick');
+    } else if (n % 5 === 0) play('tick');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n]);
   const secondsLeft = Math.ceil(60 * (1 - n / total));
   const urgent = n < total && secondsLeft <= 12;
 

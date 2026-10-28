@@ -57,7 +57,9 @@
 | `android/variables.gradle` | גרסאות ה-SDK: `minSdk 24` (אנדרואיד 7), `targetSdk 36` |
 | `android/app/src/main/AndroidManifest.xml` | ה"תעודת זהות": הרשאות, מסכים (Activities), אייקון |
 | `android/app/src/main/java/com/shmueljoso/hamishkan/MainActivity.java` | המסך הראשי; כאן נרשם הפלאגין שלנו |
-| `.../HamishkanNativePlugin.java` | הפלאגין שלנו: גרסה, דגם ומקום פנוי – מוצג במסך השמירות |
+| `.../HamishkanNativePlugin.java` | הפלאגין שלנו: `getInfo` (גרסה, דגם, מקום פנוי), `setKeepAwake` (המסך לא נכבה), `setImmersive` (מסך מלא), `updateWidget` |
+| `.../HamishkanWidget.java` | הווידג'ט במסך הבית (`AppWidgetProvider` + `RemoteViews`). העיצוב ב-`res/layout/widget_hamishkan.xml`, ההגדרות ב-`res/xml/widget_info.xml` |
+| `res/xml/shortcuts.xml` | קיצורי הדרך בלחיצה ארוכה על האייקון. כל אחד פותח קישור `hamishkan://...` |
 | `android/app/src/main/res/` | משאבים: `values/strings.xml` (שם), `values/colors.xml`, `values/styles.xml` (ערכת נושא ומסך פתיחה), `drawable/` (אייקון וקטורי), `mipmap-*/` (אייקונים לגרסאות ישנות) |
 | `android/app/src/test/...` | בדיקות יחידה שרצות על המחשב |
 | `android/app/src/androidTest/...` | בדיקות שרצות על מכשיר או אמולטור |
@@ -168,19 +170,32 @@ npx cap run android -l --external               # מריץ את האפליקצי
 
 ---
 
+## מה האפליקציה עושה שהאתר לא
+
+| פיצ'ר | איפה בקוד |
+| --- | --- |
+| 🔔 התראות: אתגר שבועי חדש (יום שני 18:00), ותזכורת אחרי יומיים לפי מה שמחכה במשחק | `src/notify.ts`, הטקסטים ב-`src/appInfo.ts` (`reminderText`). נקבעות ביציאה לרקע (`nativeShell.ts`) |
+| 🏠 ווידג'ט: המפלגה, הסקר והבחירות הבאות | `widgetData` ב-`src/appInfo.ts` ← `updateWidget` ← `HamishkanWidget.java` |
+| ⚡ קיצורי דרך: המשך, אתגר, שיאים | `res/xml/shortcuts.xml` ← `appUrlOpen` ← `openRoute` ב-`src/routes.ts` |
+| 🔗 קישורים: `hamishkan://s/<קוד>`, ובאתר כפתור "פתיחה באפליקציה" (`intent://`) | `intent-filter` ב-Manifest, `src/routes.ts` |
+| 📤 שיתוף תמונה של ליל הבחירות וסוף הקריירה | `src/shareCard.ts` (ציור ב-canvas ← קובץ ב-Cache ← חלון השיתוף) |
+| 📳🔊 רטט וצלילים בהצבעה חיה ובליל הבחירות, והמסך לא נכבה | `LiveVote.tsx`, `ElectionModal` ב-`ReportModal.tsx`, `src/sound.ts` (צלילים מסונתזים, בלי קבצים) |
+| ⛶ מסך מלא | `setImmersive` בפלאגין. מופעל ב-⚙️ הגדרות |
+
+כל אלה ניתנים לכיבוי במסך ⚙️ הגדרות (`src/ui/AppSettings.tsx`, נשמר ב-`src/prefs.ts`).
+
+---
+
 ## 7. תרגילים (מהקל לקשה)
 
 1. **שם ואייקון:** שנו את `app_name` ב-`res/values/strings.xml` והריצו. אחר כך פתחו את **File ← New ← Image Asset** ונסו ליצור אייקון חדש.
 2. **צבע מסך הפתיחה:** שנו את `hamishkan_bg` ב-`res/values/colors.xml`. מה קורה בטעינה?
 3. **פלאגין – שדה חדש:** הוסיפו ל-`getInfo()` ב-`HamishkanNativePlugin.java` את השדה `ret.put("lang", java.util.Locale.getDefault().toString());`. הוסיפו `lang` גם לממשק `DeviceInfo` ב-`src/platform.ts` והציגו אותו ב-`src/ui/Saves.tsx`.
-4. **פלאגין – מתודה חדשה:** כתבו `@PluginMethod public void keepAwake(PluginCall call)` שמשאירה את המסך דולק בזמן הצבעה חיה:
-   ```java
-   getActivity().runOnUiThread(() -> getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
-   ```
-   קראו לה מ-`LiveVote.tsx`.
-5. **בדיקות:** הריצו את `VersionTest` (קליק ימני ← Run) ואת `AppContextTest` על אמולטור. שברו בכוונה את אחת הבדיקות וראו איך נראה כישלון.
-6. **הרשאה:** הוסיפו התראה מקומית שמזכירה לחזור למשחק. זה דורש את `@capacitor/local-notifications` ואת ההרשאה `POST_NOTIFICATIONS` ב-Manifest, כולל בקשה בזמן ריצה.
-7. **Kotlin:** כתבו מחדש את `HamishkanNativePlugin` ב-Kotlin. Android Studio יודע להמיר אוטומטית ב-**Code ← Convert Java File to Kotlin File**, אבל צריך להוסיף את הפלאגין `kotlin-android` ל-Gradle.
+4. **קיצור דרך חדש:** הוסיפו ל-`res/xml/shortcuts.xml` קיצור "שמירות" עם `hamishkan://saves` (הנתיב כבר קיים ב-`src/routes.ts`). צריך גם מחרוזת ב-`strings.xml` ואייקון ב-`drawable/`.
+5. **ווידג'ט – כפתור:** הוסיפו לווידג'ט כפתור "אתגר השבוע" (`TextView` נוסף ב-`widget_hamishkan.xml`), ובניית `PendingIntent` נפרד ב-`HamishkanWidget.build` עם `hamishkan://challenge`. שימו לב: לכל `PendingIntent` צריך `requestCode` שונה.
+6. **בדיקות:** הריצו את `VersionTest` (קליק ימני ← Run) ואת `AppContextTest` על אמולטור. שברו בכוונה את אחת הבדיקות וראו איך נראה כישלון.
+7. **התראה חדשה:** ב-`src/notify.ts`, הוסיפו התראה שבוע לפני הבחירות במשחק. זה דורש מזהה חדש, טקסט ב-`appInfo.ts` ובדיקה ב-`tests/app.test.ts`.
+8. **Kotlin:** כתבו מחדש את `HamishkanNativePlugin` ב-Kotlin. Android Studio יודע להמיר אוטומטית ב-**Code ← Convert Java File to Kotlin File**, אבל צריך להוסיף את הפלאגין `kotlin-android` ל-Gradle.
 
 ---
 

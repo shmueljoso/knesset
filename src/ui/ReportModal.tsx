@@ -9,6 +9,9 @@ import { useGame, useStore } from '../store';
 import { Delta } from './common';
 import { Hemicycle } from './Charts';
 import { g2 } from './labels';
+import { haptic, keepAwake } from '../platform';
+import { play } from '../sound';
+import { ShareButton } from './ShareButton';
 
 export function ReportModal() {
   const g = useGame();
@@ -187,6 +190,26 @@ export function ElectionModal() {
   const [phase, setPhase] = useState(-1);
   const [countdown, setCountdown] = useState(5);
   useEffect(() => {
+    keepAwake(true);
+    return () => keepAwake(false);
+  }, []);
+  // צלילים ורטט: תקתוק בספירה לאחור, צליל בכל עדכון, ובסוף – לפי מה שקרה לך
+  useEffect(() => {
+    if (phase === -1) {
+      play('tick');
+      return;
+    }
+    if (phase < COUNT_PHASES.length - 1) {
+      play(phase === 0 ? 'bell' : 'chime');
+      haptic('tap');
+      return;
+    }
+    const e = g.lastElection;
+    play(e?.playerElected ? 'win' : e?.playerPosition ? 'lose' : 'chime');
+    haptic(e?.playerPosition && !e.playerElected ? 'bad' : 'good');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, countdown]);
+  useEffect(() => {
     if (phase >= COUNT_PHASES.length - 1) return;
     if (phase === -1) {
       const id = setTimeout(() => (countdown > 1 ? setCountdown((c) => c - 1) : setPhase(0)), 900);
@@ -290,6 +313,11 @@ export function ElectionModal() {
           <p className="small" style={{ marginTop: 10 }}>
             הממשלה החדשה: <b>{pm}</b> עם {g.coalition.parties.map((c) => g.parties[c].short).join(', ')}.
           </p>
+        )}
+        {final && (
+          <div style={{ marginTop: 10 }}>
+            <ShareButton g={g} kind="election" />
+          </div>
         )}
         <button className="btn primary block" style={{ marginTop: 12 }} disabled={!final} onClick={close}>
           {!final ? 'סופרים קולות…' : g.negotiation ? 'למשא ומתן הקואליציוני ←' : 'המשך'}

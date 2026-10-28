@@ -20,42 +20,41 @@ APK   ──▶ │   /           → האתר (התיקייה dist/)    │
 - **שמירות בענן:** עד 12, עוברות בין טלפון, טאבלט ומחשב.
 - **טבלת שיאים:** כללית, אתגר השבוע, הכי מהר לראשות הממשלה, ושלי.
 - **מחיקת חשבון:** כל הנתונים נמחקים.
+- **קישורי שיתוף:** כנסת מהעורך נשמרת בטבלה `shares`, ומקבלים קישור קצר (`/#s=קוד`). מי שפותח אותו משחק בה מיד, באתר או באפליקציה.
 
-## הקמה – פעם אחת (כ-10 דקות)
+## הקמה – פעם אחת, הכול בממשק של Cloudflare (בלי פקודות)
 
-כל הפקודות רצות מתיקיית הפרויקט במחשב שלך.
+1. **מסד הנתונים:** כבר נוצר (D1 בשם `hamishkan`), וה-ID שלו כבר כתוב ב-`wrangler.jsonc`.
+   את הטבלאות לא צריך ליצור: ה-Worker יוצר אותן לבד בבקשה הראשונה (`worker/schema.ts`).
+2. **חיבור הריפו:** ב-Cloudflare נכנסים ל-**Workers & Pages ← Create application ← Import a repository**, ומחברים את GitHub. אחר כך:
+   - **Repository:** בוחרים את `shmueljoso/knesset`.
+   - **Project name:** `hamishkan`. חייב להיות זהה לשם ב-`wrangler.jsonc`.
+   - **Production branch:** `ccr-b895278b-7u0siq`.
+   - **Build command:** `npm run build`
+   - **Deploy command:** `npx wrangler deploy`
+   - לוחצים **Deploy**. החיבור למסד הנתונים מגיע לבד מ-`wrangler.jsonc`.
+3. **הכתובת:** בסוף מופיעה כתובת כמו `https://hamishkan.<השם-שלך>.workers.dev`. זה האתר, עם חשבונות, שיאים וקישורי שיתוף.
+   מעכשיו כל push לענף מעדכן את האתר לבד.
+   אפשר לחבר דומיין משלך: **Workers & Pages ← hamishkan ← Settings ← Domains & Routes**.
+
+### לחבר את האפליקציה (APK)
+
+יש שתי דרכים, ואפשר גם את שתיהן:
+
+- **מיד, בלי לבנות מחדש:** באפליקציה נכנסים ל-⚙️ (במסך הפתיחה) ← **שרת**, מדביקים את הכתובת ולוחצים "שמירה".
+- **לכל ה-APK-ים הבאים:** בגיטהאב נכנסים ל-**Settings ← Secrets and variables ← Actions ← Variables ← New repository variable**.
+  - **Name:** `API_URL`
+  - **Value:** הכתובת מסעיף 3.
+
+בלי כתובת, האפליקציה עובדת מלא, רק בלי החלק המקוון.
+
+### דרך הפקודות (למי שרוצה)
 
 ```bash
 npm install
-npx wrangler login                     # נפתח דפדפן – מאשרים את Cloudflare
-npx wrangler d1 create hamishkan       # יוצר את מסד הנתונים ומדפיס database_id
+npx wrangler login
+npm run cf:deploy    # בונה, מכין את הטבלאות ומעלה
 ```
-
-1. **מסד הנתונים:** מעתיקים את ה-`database_id` שהודפס לקובץ `wrangler.jsonc`, במקום האפסים.
-2. **העלאה:**
-   ```bash
-   npm run cf:deploy    # בונה את האתר, מכין את הטבלאות ב-D1, ומעלה
-   ```
-3. **הכתובת:** בסוף מודפסת כתובת, למשל `https://hamishkan.<השם-שלך>.workers.dev`. זה האתר, עם חשבונות ושיאים.
-   אפשר לחבר דומיין משלך ב-Cloudflare: **Workers & Pages ← hamishkan ← Settings ← Domains & Routes**.
-
-### עדכון אוטומטי מ-GitHub (לא חובה)
-
-ב-Cloudflare: **Workers & Pages ← hamishkan ← Settings ← Build ← Connect** ← בוחרים את הריפו והענף.
-
-- **Build command:** `npm run build`
-- **Deploy command:** `npx wrangler deploy`
-
-מעכשיו, כל push מעדכן את האתר.
-
-### שיהיה גם באפליקציה (APK)
-
-האפליקציה צריכה לדעת לאיזו כתובת לפנות. בגיטהאב: **Settings ← Secrets and variables ← Actions ← Variables ← New repository variable**:
-
-- **Name:** `API_URL`
-- **Value:** הכתובת מסעיף 3 (למשל `https://hamishkan.שם.workers.dev`)
-
-ה-APK הבא שייבנה כבר יתחבר לשרת. בלי המשתנה, האפליקציה עובדת מלא אבל בלי החלק המקוון.
 
 ## לנסות במחשב בלי להעלות
 

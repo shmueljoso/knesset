@@ -75,6 +75,9 @@ interface Store {
   screen: 'title' | 'create' | 'game' | 'editor';
   pendingMod: ModFile | null;
   setPendingMod: (m: ModFile | null) => void;
+  /** חלון שנפתח במסך הפתיחה מבחוץ (קיצור דרך, התראה, קישור) */
+  titleSheet: 'board' | 'saves' | 'settings' | null;
+  setTitleSheet: (t: Store['titleSheet']) => void;
   /** אתגר השבוע שנבחר במסך הפתיחה – מסך היצירה נועל את התרחיש וה-seed */
   pendingChallenge: { id: string; seed: number; scenario: 'grassroots' | 'freshman'; title: string } | null;
   setPendingChallenge: (c: Store['pendingChallenge']) => void;
@@ -109,6 +112,8 @@ export const useStore = create<Store>((set, get) => ({
   screen: 'title',
   pendingMod: null,
   setPendingMod: (pendingMod) => set({ pendingMod }),
+  titleSheet: null,
+  setTitleSheet: (titleSheet) => set({ titleSheet }),
   pendingChallenge: null,
   setPendingChallenge: (pendingChallenge) => set({ pendingChallenge }),
   eventResult: null,

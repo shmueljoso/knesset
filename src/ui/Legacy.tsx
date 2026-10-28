@@ -6,6 +6,8 @@ import { Avatar } from './Avatar';
 import { useEffect, useState } from 'react';
 import { recordLocal } from '../online';
 import { AccountSheet, PublishScore, ScoreCard } from './Online';
+import { ShareButton } from './ShareButton';
+import { play } from '../sound';
 
 export function LegacyModal() {
   const g = useGame();
@@ -15,6 +17,7 @@ export function LegacyModal() {
   const L = computeLegacy(g);
   // השיא נשמר במכשיר מיד – גם בלי חשבון ובלי אינטרנט
   useEffect(() => recordLocal(g), [g]);
+  useEffect(() => play('bell'), []);
   const [login, setLogin] = useState(false);
   const keepPlaying = () =>
     act((s) => {
@@ -55,6 +58,9 @@ export function LegacyModal() {
         <div style={{ marginTop: 12 }}>
           <ScoreCard g={g} />
           <PublishScore g={g} onLogin={() => setLogin(true)} />
+          <div style={{ marginTop: 8 }}>
+            <ShareButton g={g} kind="legacy" />
+          </div>
         </div>
         <div className="section-label">תפקידים</div>
         <div className="small">{L.roles.length ? L.roles.join(' · ') : 'לא הגעת לכנסת.'}</div>

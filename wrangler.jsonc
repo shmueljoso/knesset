@@ -1,5 +1,5 @@
 // Cloudflare: Worker אחד שמגיש את האתר (dist/) ואת ה-API (/api/*), עם מסד נתונים D1.
-// לפני העלאה ראשונה: npx wrangler d1 create hamishkan  ← להעתיק את ה-database_id לכאן (ראו docs/CLOUDFLARE.md)
+// מסד הנתונים "hamishkan" נוצר בממשק של Cloudflare; הטבלאות נוצרות לבד בבקשה הראשונה (worker/schema.ts)
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "hamishkan",
@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "hamishkan",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "c22588fb-c075-4f21-b5a7-d982d6411d49",
       "migrations_dir": "worker/migrations"
     }
   ],

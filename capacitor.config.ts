@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
       insetsHandling: 'css',
       style: 'DARK',
     },
+    LocalNotifications: {
+      // אייקון לבן לשורת ההתראות (android/app/src/main/res/drawable/ic_stat_hamishkan.xml)
+      smallIcon: 'ic_stat_hamishkan',
+      iconColor: '#E8C37A',
+    },
   },
 };
 

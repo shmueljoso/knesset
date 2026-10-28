@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- קיצורי דרך: לחיצה ארוכה על האייקון. כל קיצור פותח את MainActivity עם קישור hamishkan://...
+     שהמשחק מטפל בו ב-src/nativeShell.ts (openRoute) -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_continue"
+        android:shortcutId="continue"
+        android:shortcutLongLabel="@string/shortcut_continue_long"
+        android:shortcutShortLabel="@string/shortcut_continue">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="hamishkan://continue"
+            android:targetClass="com.shmueljoso.hamishkan.MainActivity"
+            android:targetPackage="com.shmueljoso.hamishkan" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_challenge"
+        android:shortcutId="challenge"
+        android:shortcutLongLabel="@string/shortcut_challenge_long"
+        android:shortcutShortLabel="@string/shortcut_challenge">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="hamishkan://challenge"
+            android:targetClass="com.shmueljoso.hamishkan.MainActivity"
+            android:targetPackage="com.shmueljoso.hamishkan" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_board"
+        android:shortcutId="board"
+        android:shortcutLongLabel="@string/shortcut_board_long"
+        android:shortcutShortLabel="@string/shortcut_board">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="hamishkan://board"
+            android:targetClass="com.shmueljoso.hamishkan.MainActivity"
+            android:targetPackage="com.shmueljoso.hamishkan" />
+    </shortcut>
+</shortcuts>

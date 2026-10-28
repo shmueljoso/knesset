@@ -3,6 +3,9 @@ import { SCENARIOS } from '../engine/data/scenarios';
 import { emptyMod, validateMod, type ModFile, type ModParty } from '../engine/mods';
 import { AXES, AXIS_NAMES } from '../engine/util';
 import { useStore } from '../store';
+import { shareMod, useOnline } from '../online';
+import { isNative } from '../platform';
+import { Share } from '@capacitor/share';
 
 const DRAFT_KEY = 'hamishkan.modDraft';
 
@@ -92,6 +95,22 @@ export function ModEditor() {
       setOpen(null);
     } catch {
       setLoadErr('הקובץ אינו JSON תקין');
+    }
+  };
+  const online = useOnline((s) => s.status !== 'unconfigured');
+  const [shareMsg, setShareMsg] = useState('');
+  const shareLink = async () => {
+    setShareMsg('מעלה…');
+    try {
+      const link = await shareMod(mod, mod.name);
+      if (!link) return setShareMsg('אין חיבור לשרת');
+      const text = `🏛️ בניתי כנסת במשכן: "${mod.name}". בואו לשחק בה:\n${link}`;
+      if (isNative()) await Share.share({ title: mod.name, text, dialogTitle: 'שיתוף הכנסת' });
+      else if (navigator.share) await navigator.share({ title: mod.name, text }).catch(() => undefined);
+      else await navigator.clipboard?.writeText(link).catch(() => undefined);
+      setShareMsg(`הקישור: ${link}`);
+    } catch (e) {
+      setShareMsg((e as Error).message);
     }
   };
   const play = () => {
@@ -299,6 +318,12 @@ export function ModEditor() {
               💾 הורדת JSON
             </button>
           </div>
+          {online && (
+            <button className="btn block" disabled={errors.length > 0} onClick={() => void shareLink()} data-testid="share-mod">
+              🔗 שיתוף בקישור – חברים פותחים ומשחקים
+            </button>
+          )}
+          {shareMsg && <div className="tiny muted" style={{ wordBreak: 'break-all' }} data-testid="share-msg">{shareMsg}</div>}
           {loadErr && <div className="tiny bad">{loadErr}</div>}
         </div>
 

@@ -4,6 +4,7 @@ import { KIND_LABEL, looksLikeSave, type SaveKind, type SaveMeta } from '../save
 import { deviceInfo, exportGame, isNative, pickFile, saves, type DeviceInfo } from '../platform';
 import { useStore } from '../store';
 import { Sheet } from './common';
+import { AppSettingsSheet } from './AppSettings';
 import { CloudSaves } from './Online';
 
 function ago(ms: number): string {
@@ -33,6 +34,7 @@ export function SavesSheet({ onClose }: { onClose?: () => void }) {
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [info, setInfo] = useState<DeviceInfo | null>(null);
   const [filter, setFilter] = useState<SaveKind | 'all'>('all');
+  const [settings, setSettings] = useState(false);
 
   const refresh = useCallback(() => {
     void saves.list().then(setList);
@@ -192,6 +194,12 @@ export function SavesSheet({ onClose }: { onClose?: () => void }) {
           </div>
         ))}
       </div>
+      {inGame && (
+        <button className="btn ghost block" style={{ marginTop: 12 }} onClick={() => setSettings(true)} data-testid="open-settings">
+          ⚙️ הגדרות האפליקציה – צלילים, רטט, התראות
+        </button>
+      )}
+      {settings && <AppSettingsSheet onClose={() => setSettings(false)} />}
     </Sheet>
   );
 }

@@ -74,7 +74,7 @@ function PanelView({ p }: { p: Panel }) {
   }
 }
 
-function Toasts() {
+export function Toasts() {
   const toasts = useStore((s) => s.toasts);
   const dismiss = useStore((s) => s.dismissToast);
   return (

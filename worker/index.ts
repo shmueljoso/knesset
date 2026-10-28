@@ -1,6 +1,7 @@
 // השרת של המשכן ב-Cloudflare: Worker אחד שמגיש את האתר (dist/) ואת ה-API (/api/*),
 // ומסד נתונים D1. בלי שירותים חיצוניים.
 // הרצה מקומית: npm run cf:dev · העלאה: npm run cf:deploy (ראו docs/CLOUDFLARE.md)
+import { SCHEMA } from './schema';
 
 /** הממשק המינימלי של D1 שאנחנו צריכים (כך גם אפשר לבדוק עם SQLite רגיל) */
 export interface D1Stmt {
@@ -24,6 +25,20 @@ export interface Env {
 const SESSION_DAYS = 180;
 const MAX_SAVES = 12;
 const MAX_SAVE_CHARS = 4_000_000;
+const MAX_SHARE_CHARS = 600_000;
+
+/** הטבלאות נוצרות לבד בבקשה הראשונה לכל מסד נתונים (פעם אחת לכל מופע של ה-Worker) */
+const ready = new WeakMap<D1Like, Promise<unknown>>();
+function ensureSchema(db: D1Like) {
+  let p = ready.get(db);
+  if (!p) {
+    const stmts = SCHEMA.split(';').map((x) => x.trim()).filter(Boolean);
+    p = db.batch(stmts.map((x) => db.prepare(x)));
+    p.catch(() => ready.delete(db));
+    ready.set(db, p);
+  }
+  return p;
+}
 
 // ---------------- עזרים ----------------
 
@@ -221,6 +236,30 @@ async function board(req: Request, env: Env) {
   return json(results.map((r) => ({ ...r, edited: !!r.edited })));
 }
 
+// ---------------- קישורי שיתוף ----------------
+
+const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+/** שיתוף כנסת מהעורך: שומרים את הקובץ ומחזירים קוד קצר. לא צריך חשבון (אבל אם יש – נרשם) */
+async function share(req: Request, env: Env) {
+  const b = await body<Record<string, unknown>>(req);
+  const kind = str(b.kind, 20, 'kind', 1);
+  if (kind !== 'mod') throw new HttpError(400, 'bad kind');
+  const data = str(b.data, MAX_SHARE_CHARS, 'data', 2);
+  try {
+    JSON.parse(data);
+  } catch {
+    throw new HttpError(400, 'bad data');
+  }
+  const user = await currentUser(req, env).catch(() => null);
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const code = [...bytes].map((x) => CODE_CHARS[x % CODE_CHARS.length]).join('');
+  await env.DB.prepare('INSERT INTO shares (code, kind, title, data, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(code, kind, str(b.title ?? '', 80, 'title'), data, user?.id ?? null, Date.now())
+    .run();
+  return json({ code });
+}
+
 // ---------------- ניתוב ----------------
 
 async function api(req: Request, env: Env, path: string): Promise<Response> {
@@ -230,6 +269,13 @@ async function api(req: Request, env: Env, path: string): Promise<Response> {
   if (path === '/api/auth/login' && m === 'POST') return login(req, env);
   if (path === '/api/auth/guest' && m === 'POST') return guest(env);
   if (path === '/api/board' && m === 'GET') return board(req, env);
+  const shared = /^\/api\/share\/([A-Za-z0-9]{4,16})$/.exec(path);
+  if (shared && m === 'GET') {
+    const r = await env.DB.prepare('SELECT code, kind, title, data, created_at FROM shares WHERE code = ?').bind(shared[1]).first();
+    if (!r) throw new HttpError(404, 'not found');
+    return json(r);
+  }
+  if (path === '/api/share' && m === 'POST') return share(req, env);
 
   const u = await currentUser(req, env);
   if (path === '/api/auth/logout' && m === 'POST') {
@@ -273,6 +319,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     let res: Response;
     try {
+      await ensureSchema(env.DB);
       res = await api(req, env, path);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;

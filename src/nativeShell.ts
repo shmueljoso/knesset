@@ -1,7 +1,10 @@
 // חיבור לאירועי המערכת של אנדרואיד: כפתור "חזור" ויציאה לרקע.
 import { App } from '@capacitor/app';
-import { autoBackup, isNative } from './platform';
+import { applyImmersive, autoBackup, isNative, updateWidget } from './platform';
 import { cloudAutoSync, flushPending } from './online';
+import { askNotifyPermission, cancelComeback, onNotificationTap, scheduleReminders } from './notify';
+import { openRoute, parseRoute } from './routes';
+import { widgetData } from './appInfo';
 import { useStore } from './store';
 
 /** כפתור החזור של אנדרואיד: סוגר חלון → חוזר למפה → למסך הפתיחה → יוצא מהאפליקציה */
@@ -39,11 +42,36 @@ export function initNativeShell() {
   void App.addListener('backButton', () => {
     if (handleBack() === 'exit') void App.minimizeApp();
   });
-  // יציאה לרקע: גיבוי (לכל היותר פעם ב-3 דקות), כי מערכת ההפעלה עלולה לסגור את האפליקציה
+  // יציאה לרקע: גיבוי (לכל היותר פעם ב-3 דקות), כי מערכת ההפעלה עלולה לסגור את האפליקציה; ותזכורות
   void App.addListener('pause', () => {
-    autoBackup(useStore.getState().game, { minGapMs: 3 * 60_000 });
-    cloudAutoSync(useStore.getState().game);
+    const g = useStore.getState().game ?? null;
+    autoBackup(g, { minGapMs: 3 * 60_000 });
+    cloudAutoSync(g);
+    void scheduleReminders(g);
   });
-  // חזרה לאפליקציה: שולחים מה שחיכה לחיבור
-  void App.addListener('resume', () => void flushPending());
+  // חזרה לאפליקציה: שולחים מה שחיכה לחיבור, והתזכורת כבר לא נחוצה
+  void App.addListener('resume', () => {
+    void flushPending();
+    cancelComeback();
+    applyImmersive();
+  });
+
+  // קישורים: קיצורי דרך, הווידג'ט, "פתח באפליקציה" מהאתר
+  void App.addListener('appUrlOpen', ({ url }) => {
+    const r = parseRoute(url);
+    if (r) void openRoute(r);
+  });
+  void App.getLaunchUrl().then((l) => {
+    const r = l?.url ? parseRoute(l.url) : null;
+    if (r) void openRoute(r);
+  });
+  onNotificationTap((route) => void openRoute(route));
+  applyImmersive();
+  cancelComeback();
+
+  // הווידג'ט מתעדכן בכל שבוע במשחק; בכניסה הראשונה למשחק – בקשת הרשאה להתראות
+  useStore.subscribe((st, prev) => {
+    if (st.game && (st.game.week !== prev.game?.week || st.game.player.name !== prev.game?.player.name)) updateWidget(widgetData(st.game));
+    if (st.screen === 'game' && prev.screen !== 'game') void askNotifyPermission();
+  });
 }
