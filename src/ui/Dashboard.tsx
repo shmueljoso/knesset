@@ -1,3 +1,5 @@
+import { STAFF_ROLES, staffAdvice } from '../engine/systems/staff';
+import { pollsterName } from '../engine/systems/media';
 import { inSession, SESSION_NAMES, sessionOf, shortDateLabel } from '../engine/calendar';
 import { SKILL_NAMES } from '../engine/ops';
 import { TRANSFORM_INFO } from '../engine/data/transforms';
@@ -105,6 +107,8 @@ export function Dashboard() {
             {!inSession(g) && <span className="chip">פגרה – אין הצבעות</span>}
           </div>
         </div>
+
+        <StaffAdviceCard />
 
         <PresidentCard />
 
@@ -242,7 +246,7 @@ export function Dashboard() {
           </div>
           {sv && (
             <div className="tiny muted" style={{ marginBottom: 4 }} data-testid="dash-pollster">
-              📊 סקר <b>{sv.pollster}</b> · {g.week - sv.week <= 0 ? 'השבוע' : `לפני ${g.week - sv.week} שבועות`}
+              📊 סקר <b>{pollsterName(g, sv.pollster)}</b> · {g.week - sv.week <= 0 ? 'השבוע' : `לפני ${g.week - sv.week} שבועות`}
             </div>
           )}
           {sv && (
@@ -414,6 +418,29 @@ function PartyStatusCard() {
         </div>
       )}
       {buzz >= 30 && <Meter label="קריאות להקים מפלגה" value={buzz} color="var(--gold)" suffix="%" />}
+    </div>
+  );
+}
+
+/** "הצוות ממליץ": מה כל איש/אשת צוות חושב/ת שצריך לעשות השבוע */
+function StaffAdviceCard() {
+  const g = useGame();
+  const open = useStore((s) => s.open);
+  const tips = staffAdvice(g);
+  if (!g.player.staff.length) return null;
+  return (
+    <div className="card" data-testid="staff-advice">
+      <div className="card-title">
+        <h3>🧠 הצוות ממליץ</h3>
+        <button className="btn sm ghost" onClick={() => open({ kind: 'staff' })}>
+          לצוות
+        </button>
+      </div>
+      {tips.map((t) => (
+        <div key={t.role} className="small" style={{ marginTop: 6 }}>
+          {STAFF_ROLES[t.role].icon} <b>{t.name}:</b> <span className="muted">{t.text}</span>
+        </div>
+      ))}
     </div>
   );
 }

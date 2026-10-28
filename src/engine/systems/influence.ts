@@ -1,5 +1,6 @@
 // השפעה שקופה: כמה השחקן שווה למפלגה, איפה הוא ברשימה, ומה כל דמות יכולה לתת לו.
 import { addStat } from '../stats';
+import { activeJournalists } from './media';
 import { BILL_TEMPLATES } from '../data/bills';
 import { ISSUES } from '../data/issues';
 import type { Caucus, GameState, Ideology, IssueId, Npc, Sector } from '../types';
@@ -208,9 +209,11 @@ export function caucusBonus(s: GameState, npcId: string, templateId: string): nu
 
 /** כוח התקשורת: עיתונאים ידידותיים מגבירים, עוינים מחלישים */
 export function pressFactor(s: GameState): number {
-  const js = Object.values(s.npcs).filter((n) => n.role === 'journalist');
+  const js = activeJournalists(s);
   const friendly = js.filter((n) => n.attitude >= 40).length;
   const hostile = js.filter((n) => n.attitude <= -30).length;
-  return 1 + friendly * 0.08 - hostile * 0.06;
+  // יחסי: עם 4 עיתונאים או עם 20 – אותו משקל לכל "אחוז" ידידותיים
+  const k = 4 / Math.max(4, js.length);
+  return 1 + friendly * 0.08 * k - hostile * 0.06 * k;
 }
 

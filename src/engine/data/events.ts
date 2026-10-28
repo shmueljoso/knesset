@@ -12,6 +12,7 @@ import { playerCanRunForPresident } from '../systems/president';
 import { SHOCK_EVENTS } from './shocks';
 import { TRANSFORM_EVENTS } from './transforms';
 import { CHAIN_EVENTS } from './chains';
+import { activeJournalists } from '../systems/media';
 import { PRES_EVENTS } from './presidency';
 
 export interface EventChoice {
@@ -173,7 +174,7 @@ export const EVENTS: GameEvent[] = [
     title: 'הצעה מכתב/ת פוליטי/ת',
     body: '{npc} פונה אליך: "שמעתי שבסיעה שלכם יש מאבקי כוח. תן לי משהו – ואני אדאג לך לכותרות טובות."',
     when: (s) => hasParty(s),
-    ctx: (s) => pickNpc(s, Object.values(s.npcs).filter((n) => n.role === 'journalist')),
+    ctx: (s) => pickNpc(s, activeJournalists(s)),
     choices: [
       { label: 'להדליף', hint: 'בסיעה עלולים לגלות', ops: [{ op: 'fame', d: 3 }, { op: 'att', who: '@ctx', d: 15 }, { op: 'partyStanding', d: -7 }, { op: 'att', who: '@leader', d: -8 }] },
       { label: 'לתת מידע כללי בלבד', ops: [{ op: 'att', who: '@ctx', d: 5 }] },
@@ -635,7 +636,7 @@ const NPC_EVENTS: GameEvent[] = [
     body: '{npc} עובד/ת כבר שנים על "{agendaTitle}". "תחתום/י איתי על ההצעה – ביחד יש לנו סיכוי להעביר אותה. וכשתעבור, גם את/ה תקבל/י קרדיט."',
     when: (s) => s.player.isMK,
     ctx: (s) => {
-      const cands = Object.values(s.npcs).filter((n) => n.isMK && n.notable && n.attitude >= 0 && !s.flags[`cosp_${n.id}`] && !s.lawsPassed.some((l) => l.templateId === n.agenda));
+      const cands = Object.values(s.npcs).filter((n) => n.isMK && n.notable && n.attitude >= 0 && !s.flags[`cosp_${n.id}`] && !s.lawsPassed.some((l) => l.templateId === n.agenda) && BILL_TEMPLATES.some((t) => t.id === n.agenda));
       if (!cands.length) return null;
       const n = pick(s, cands);
       return { npc: n.id, agenda: n.agenda, agendaTitle: BILL_TEMPLATES.find((t) => t.id === n.agenda)!.title };
@@ -752,7 +753,7 @@ EVENTS.push(
   {
     id: 'iv_issue', queued: true, icon: '📺',
     title: 'שאלה {n}/3: {issueName}',
-    body: 'המגיש/ה רוכן/ת קדימה, והמצלמה מתקרבת: "בוא/י נדבר על {issueName}. אנשים בבית רוצים לדעת – מה בדיוק את/ה תעשה/י?"',
+    body: '{host} רוכן/ת קדימה, והמצלמה מתקרבת: "בוא/י נדבר על {issueName}. אנשים בבית רוצים לדעת – מה בדיוק את/ה תעשה/י?"',
     choices: [
       {
         label: 'תשובה חדה ונחרצת', hint: 'סיכוי לפי מיומנות תקשורת · עמדה חזקה שמזיזה מגזרים',

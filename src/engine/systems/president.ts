@@ -19,9 +19,15 @@ export function playerCanRunForPresident(s: GameState): boolean {
   return p.isMK && p.fame >= 55 && p.reputation >= 60 && s.coalition.pmId !== 'player' && !s.scandal;
 }
 
+/** מי יכול/ה להיות מועמד/ת: ח"כ בולט/ת, לא שר/ה, לא ראש/ת ממשלה ולא יו"ר מפלגה */
+const eligible = (s: GameState, id: string) => {
+  const n = s.npcs[id];
+  return !!n && n.isMK && n.notable && !n.ministry && n.id !== s.coalition.pmId && !Object.values(s.parties).some((p) => p.leaderId === n.id);
+};
+
 export function pickCandidates(s: GameState): string[] {
   const pmParty = s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId;
-  const pool = Object.values(s.npcs).filter((n) => n.isMK && n.notable && !n.ministry && n.id !== s.coalition.pmId && !Object.values(s.parties).some((p) => p.leaderId === n.id));
+  const pool = Object.values(s.npcs).filter((n) => eligible(s, n.id));
   const camp = pool.filter((n) => n.partyId === pmParty || (n.partyId && s.coalition.parties.includes(n.partyId)));
   const opp = pool.filter((n) => n.partyId && !s.coalition.parties.includes(n.partyId));
   const center = [...pool].sort((a, b) => Math.abs(a.ideology.security) + Math.abs(a.ideology.religion) - (Math.abs(b.ideology.security) + Math.abs(b.ideology.religion)));
@@ -61,6 +67,18 @@ export function runPresidentVote(s: GameState, playerVote: string | null) {
   const race = s.presidentRace;
   if (!race) return;
   race.playerVote = playerVote;
+  // בין פתיחת המרוץ להצבעה מישהו/י מהמועמדים אולי מונה/תה לשר/ה, לראשות הממשלה או המפלגה – יוצא/ת מהמרוץ
+  const valid = race.candidates.filter((c) => c === 'player' || eligible(s, c));
+  if (valid.length < race.candidates.length) {
+    for (const c of pickCandidates(s)) if (valid.length < race.candidates.length && !valid.includes(c)) valid.push(c);
+    race.candidates = valid;
+    if (playerVote && !valid.includes(playerVote)) race.playerVote = playerVote = null;
+  }
+  if (race.candidates.length < 2) {
+    s.presidentRace = null;
+    s.presidentNextWeek = s.week + 26;
+    return;
+  }
   let alive = [...race.candidates];
   const pmParty = s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId;
   const pubPct = new Map((latestSurvey(s)?.presidentQ ?? []).map((x) => [x.id, x.pct]));

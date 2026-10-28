@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { BACKGROUNDS } from '../engine/data/backgrounds';
 import { PARTY_DEFS, INITIAL_COALITION } from '../engine/data/parties';
 import { SKILL_NAMES } from '../engine/ops';
 import { earlyStart, modToPartyDefs, validateMod, type ModFile } from '../engine/mods';
 import { SCENARIOS } from '../engine/data/scenarios';
+import { figurePool } from '../engine/newGame';
+import { MEDIA_PACK } from '../engine/systems/media';
 import type { AvatarSpec, BackgroundId, Drama, Gender, Ideology, ScenarioId } from '../engine/types';
 import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
@@ -40,7 +42,15 @@ export function CreateScreen() {
   const [early, setEarly] = useState(false);
   const [drama, setDrama] = useState<Drama>('normal');
   const [asLeader, setAsLeader] = useState(false);
+  // לשחק כדמות קיימת: אותו seed בתצוגה ובמשחק, כדי שהשמות והמקומות ברשימה יהיו זהים
+  const [figSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
+  const [figureId, setFigureId] = useState<string | null>(null);
+  const [journalistId, setJournalistId] = useState<string | null>(null);
+  const [showFigures, setShowFigures] = useState(false);
 
+  const seedFor = challenge?.seed ?? figSeed;
+  const pool = useMemo(() => (step === 4 && showFigures ? figurePool({ mod: challenge ? null : mod, seed: seedFor, scenario: challenge?.scenario ?? scenario }) : null), [step, showFigures, mod, seedFor, scenario, challenge]);
+  const figure = figureId && partyId ? pool?.[partyId]?.find((f) => f.id === figureId) ?? null : null;
   const parties = useMemo(
     () => [...(mod ? modToPartyDefs(mod) : PARTY_DEFS)].sort((a, b) => ideologyDistance(a.ideology, ideology) - ideologyDistance(b.ideology, ideology)),
     [ideology, mod],
@@ -64,12 +74,16 @@ export function CreateScreen() {
 
   const start = () => {
     // אתגר השבוע: אותו עולם לכולם – seed ותרחיש קבועים, בלי מוד, דרמה רגילה
+    const asFigure = figure ? { npcId: figure.id } : journalistId ? { journalist: journalistId } : undefined;
+    const who = figure ? { name: figure.name, gender: figure.gender } : { name: name.trim(), gender };
     if (challenge) {
-      newGame({ name: name.trim(), gender, background, ideology, partyId, scenario: challenge.scenario, avatar, mod: null, drama: 'normal', seed: challenge.seed, challenge: challenge.id });
+      newGame({ ...who, background, ideology, partyId, scenario: challenge.scenario, avatar, mod: null, drama: 'normal', seed: challenge.seed, challenge: challenge.id, asFigure });
       setPendingChallenge(null);
       return;
     }
-    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod: mod && early && mod.listsClosed ? earlyStart(mod) : mod, drama, asLeader: scenario === 'freshman' && asLeader });
+    const m = mod && early && mod.listsClosed ? earlyStart(mod) : mod;
+    // דמות קיימת: אותו עולם בדיוק כמו בתצוגה (בלי "4 חודשים קודם", שמשנה את הרשימות)
+    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure });
   };
 
   return (
@@ -145,6 +159,34 @@ export function CreateScreen() {
         {step === 2 && (
           <>
             <h2>מי את/ה?</h2>
+            <div className="card small" style={{ marginTop: 10 }} data-testid="journalist-pick">
+              <div className="spread">
+                <b>🎤 עיתונאי/ת מוכר/ת שנכנס/ת לפוליטיקה</b>
+                {journalistId && (
+                  <button className="btn sm ghost" onClick={() => setJournalistId(null)}>
+                    ביטול
+                  </button>
+                )}
+              </div>
+              <div className="muted tiny">כמו יאיר לפיד, מרב מיכאלי או ינון מגל: מגיעים עם מוכרות גבוהה וקהל – ומתחילים מבחוץ.</div>
+              <div className="filter-row" style={{ marginTop: 6, flexWrap: 'wrap' }}>
+                {MEDIA_PACK.journalists.map((j) => (
+                  <button
+                    key={j.id}
+                    className={journalistId === j.id ? 'on' : ''}
+                    onClick={() => {
+                      setJournalistId(j.id);
+                      setName(j.name);
+                      setGender(j.gender);
+                      setBackground('journalist');
+                      setFigureId(null);
+                    }}
+                  >
+                    {j.name} · {j.outlet}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="row" style={{ margin: '14px 0' }}>
               <Avatar spec={{ ...avatar, gender }} size={96} ring="var(--gold)" />
               <div className="col grow">
@@ -287,7 +329,8 @@ export function CreateScreen() {
             {parties.map((p) => {
               const fit = Math.round((1 - ideologyDistance(p.ideology, ideology)) * 100);
               return (
-                <button key={p.id} className={`pick ${partyId === p.id ? 'on' : ''}`} onClick={() => setPartyId(p.id)}>
+                <Fragment key={p.id}>
+                <button className={`pick ${partyId === p.id ? 'on' : ''}`} onClick={() => { setPartyId(p.id); setFigureId(null); }}>
                   <div className="spread">
                     <h3 className="row" style={{ gap: 8 }}>
                       <span className="party-dot" style={{ background: p.color }} />
@@ -307,6 +350,30 @@ export function CreateScreen() {
                     <span className="chip">{p.primaries ? 'פריימריז' : 'רשימה ממונה'}</span>
                   </div>
                 </button>
+                {partyId === p.id && !journalistId && (
+                  <div className="card small" style={{ marginTop: 6, marginBottom: 12, borderColor: figure ? 'var(--gold)' : undefined }} data-testid="figure-pick">
+                    <div className="spread">
+                      <b>👤 לשחק כדמות מהרשימה?</b>
+                      <button className="btn sm ghost" onClick={() => { setShowFigures(!showFigures); if (showFigures) setFigureId(null); }} data-testid="figure-toggle">
+                        {showFigures ? 'דמות חדשה' : 'בחירת דמות'}
+                      </button>
+                    </div>
+                    {!showFigures && <div className="tiny muted">אפשר להיכנס לנעליים של כל ח"כ או מועמד/ת – גם היו"ר.</div>}
+                    {showFigures && pool?.[p.id] && (
+                      <div className="filter-row" style={{ marginTop: 6, flexWrap: 'wrap' }}>
+                        {pool[p.id].map((f) => (
+                          <button key={f.id} className={figureId === f.id ? 'on' : ''} onClick={() => setFigureId(f.id)} data-testid="figure-option">
+                            {f.leader ? '👑 ' : ''}
+                            {f.pos}. {f.name}
+                            {f.isMK ? '' : ' (מועמד/ת)'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {figure && <div className="tiny gold" style={{ marginTop: 6 }}>תשחק/י בתור {figure.name} – עם המקום ברשימה, המושב והעמדות שלו/ה.{figure.leader ? ' כולל ראשות המפלגה.' : ''}</div>}
+                  </div>
+                )}
+                </Fragment>
               );
             })}
           </>

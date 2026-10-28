@@ -60,7 +60,7 @@ export function checkInvariants(s: GameState): string[] {
     if (who === 'player') {
       if (mid !== 'pm' && s.player.ministry !== mid) v.push(`תיק ${mid}: השחקן אבל player.ministry=${s.player.ministry}`);
     } else if (!s.npcs[who]) v.push(`תיק ${mid}: ${who} לא קיים`);
-    else if (!s.npcs[who].isMK && mid !== 'pm' && !s.norwegianSwaps?.[who]) v.push(`שר/ה ${s.npcs[who].name} (${mid}) אינו ח"כ`);
+    // שר/ה שאינו/ה ח"כ – חוקי בישראל (רק ראש הממשלה חייב/ת להיות ח"כ; נבדק למעלה)
   }
   if (s.player.rank === 'minister' && !s.player.ministry && c.pmId !== 'player') v.push('דרגת שר בלי תיק');
 

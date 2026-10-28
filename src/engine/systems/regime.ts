@@ -63,12 +63,22 @@ function swapBack(s: GameState, ministerId: string) {
     return;
   }
   const back = !!n && !!n.partyId && s.parties[n.partyId]?.seats > 0;
+  // המחליף/ה יוצא/ת מהכנסת גם אם בינתיים מונה/תה לשר/ה – בישראל שר/ה לא חייב/ת להיות ח"כ.
+  // אבל ראש/ת ממשלה חייב/ת להיות ח"כ (וגם יו"ר מפלגה במשחק): אז יוצא/ת ח"כ אחר/ת מהסיעה
+  let out = repl;
+  const r0 = s.npcs[repl];
+  const senior = (id: string) => id === s.coalition.pmId || s.npcs[id]?.ministry === 'pm' || Object.values(s.parties).some((p) => p.leaderId === id);
+  if (back && r0 && senior(repl) && n?.partyId) {
+    const swapped = new Set([...Object.keys(s.norwegianSwaps), ...Object.values(s.norwegianSwaps)]);
+    const alt = [...s.parties[n.partyId].list].reverse().find((id) => id !== 'player' && id !== ministerId && s.seating.includes(id) && s.npcs[id]?.partyId === n.partyId && !senior(id) && !swapped.has(id));
+    if (alt) out = alt;
+  }
   if (back) n.isMK = true;
   const into = back ? ministerId : repl;
-  s.seating = s.seating.map((x) => (x === repl ? into : x));
+  s.seating = s.seating.map((x) => (x === out ? into : x));
   for (const c of s.committees) {
-    c.members = c.members.map((m) => (m === repl ? into : m));
-    if (c.chairId === repl) c.chairId = into;
+    c.members = c.members.map((m) => (m === out ? into : m));
+    if (c.chairId === out) c.chairId = into;
   }
   if (!back) {
     if (n) vacateMinistry(s, ministerId);
@@ -80,9 +90,9 @@ function swapBack(s: GameState, ministerId: string) {
     if (!s.player.ministry) s.player.rank = s.player.partyId ? 'activist' : 'citizen';
     addNews(s, `${n.name} חוזר/ת לכנסת – ו${s.player.name} מאבד/ת את המושב הנורבגי`, 'bad', true);
     log(s, `${n.name} סיים/ה את התפקיד בממשלה וחזר/ה לכנסת. איבדת את המושב.`, 'career');
-  } else if (s.npcs[repl]) {
-    s.npcs[repl].isMK = false;
-    s.npcs[repl].role = 'candidate';
+  } else if (s.npcs[out]) {
+    s.npcs[out].isMK = false;
+    s.npcs[out].role = 'candidate';
   }
 }
 

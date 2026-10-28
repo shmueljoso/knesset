@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { isActiveJournalist } from '../engine/systems/media';
 import { INTERACTIONS, interact, interactionBlocked } from '../engine';
 import { LOCATIONS } from '../engine/data/locations';
 import { isCoalition, ministryTitle } from '../engine/systems/government';
@@ -40,7 +41,7 @@ export function PeopleView() {
   const [limit, setLimit] = useState(40);
 
   const list = useMemo(() => {
-    let arr = Object.values(g.npcs).filter((n) => n.isMK || n.role === 'journalist' || n.role === 'lobbyist' || (n.role === 'candidate' && n.partyId === g.player.partyId));
+    let arr = Object.values(g.npcs).filter((n) => n.isMK || isActiveJournalist(g, n) || n.role === 'lobbyist' || (n.role === 'candidate' && n.partyId === g.player.partyId));
     const f: Record<Filter, (n: Npc) => boolean> = {
       notable: (n) => n.notable || !!n.title || n.id === g.player.employerId,
       mine: (n) => !!g.player.partyId && n.partyId === g.player.partyId,
@@ -49,7 +50,7 @@ export function PeopleView() {
       gov: (n) => !!n.ministry && n.ministry !== 'speaker',
       coalition: (n) => n.isMK && isCoalition(g, n.partyId),
       opposition: (n) => n.isMK && !isCoalition(g, n.partyId),
-      media: (n) => n.role === 'journalist' || n.role === 'lobbyist',
+      media: (n) => isActiveJournalist(g, n) || n.role === 'lobbyist',
       all: () => true,
     };
     arr = arr.filter(f[filter]);

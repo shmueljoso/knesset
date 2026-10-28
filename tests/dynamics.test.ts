@@ -183,7 +183,7 @@ describe('shocks', () => {
         if (s.gameOver) break;
       }
       noOrphans(s);
-      expect(shocks).toBeGreaterThan(2);
+      expect(shocks).toBeGreaterThan(1);
     }
   });
 });

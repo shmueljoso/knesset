@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { shortDateLabel } from '../engine/calendar';
 import { ISSUES } from '../engine/data/issues';
 import { PAPERS, paperFront } from '../engine/systems/papers';
+import { outletName, paperName, pollsterName } from '../engine/systems/media';
 import { directElection } from '../engine/systems/regime';
 import { latestSurvey, moodLines, surveyName } from '../engine/systems/surveys';
 import type { GameState } from '../engine/types';
@@ -42,13 +43,14 @@ export function PapersView() {
           </p>
         ))}
       </div>
+      <ColumnsCard />
       <div className="filter-row" style={{ marginTop: 10 }}>
         <button className={only === null ? 'on' : ''} onClick={() => setOnly(null)}>
           כל העיתונים
         </button>
         {PAPERS.map((p) => (
           <button key={p.id} className={only === p.id ? 'on' : ''} onClick={() => setOnly(p.id)}>
-            {p.icon} {p.name}
+            {p.icon} {paperName(g, p.id, p.name)}
           </button>
         ))}
       </div>
@@ -56,7 +58,7 @@ export function PapersView() {
         <div key={paper.id} className="card" style={{ marginTop: 10 }} data-testid={`paper-${paper.id}`}>
           <div className="spread">
             <h3>
-              {paper.icon} {paper.name}
+              {paper.icon} {paperName(g, paper.id, paper.name)}
             </h3>
             <span className="tiny muted">{paper.blurb}</span>
           </div>
@@ -104,14 +106,14 @@ export function PollsView() {
         <div className="filter-row" style={{ marginBottom: 8 }} data-testid="pollster-tabs">
           {byPollster.map((x) => (
             <button key={x.pollster} className={x.pollster === sv.pollster ? 'on' : ''} onClick={() => setPick(x.pollster)}>
-              {x.pollster}
+              {pollsterName(g, x.pollster)}
             </button>
           ))}
         </div>
       )}
       <div className="card" data-testid="polls-view">
         <div className="spread">
-          <h3>📊 סקר {sv.pollster}</h3>
+          <h3>📊 סקר {pollsterName(g, sv.pollster)}</h3>
           <span className="chip gold">{ago <= 0 ? 'פורסם השבוע' : `לפני ${ago} שבועות`}</span>
         </div>
         <div className="tiny muted" style={{ margin: '2px 0 6px' }}>
@@ -268,8 +270,28 @@ export function PollsSheet() {
   const g = useGame();
   const sv = latestSurvey(g);
   return (
-    <Sheet title="📊 הסקר המלא" sub={sv ? `${sv.pollster} · סקר חדש כל שבועיים` : undefined}>
+    <Sheet title="📊 הסקר המלא" sub={sv ? `${pollsterName(g, sv.pollster)} · סקר חדש כל שבועיים` : undefined}>
       <PollsView />
     </Sheet>
+  );
+}
+
+/** הפרשנים: הטורים האחרונים, בחתימה */
+function ColumnsCard() {
+  const g = useGame();
+  const cols = g.news.filter((n) => n.byline && g.week - n.week <= 6).slice(0, 6);
+  if (!cols.length) return null;
+  return (
+    <div className="card small" style={{ marginTop: 10 }} data-testid="columns">
+      <b>✍️ הפרשנים</b>
+      {cols.map((n) => (
+        <div key={n.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--line)', fontWeight: n.aboutPlayer ? 700 : 400 }}>
+          <span className="tiny gold">
+            {n.byline} · {outletName(g, n.outlet)}
+          </span>
+          <div>{n.headline}</div>
+        </div>
+      ))}
+    </div>
   );
 }

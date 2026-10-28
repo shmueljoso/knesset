@@ -4,6 +4,7 @@ import { addNews } from './systems/news';
 import { WORLD_NAMES, addMomentum, addWorldEffect, changeApproval, dramaScale, takeStance } from './systems/opinion';
 import { addDebt, addMemory, changeAttitude, changeTrust, clearDebt, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
+import { activeJournalists } from './systems/media';
 import { gainFactor } from './stats';
 import type { Debt, GameState, Ideology, NewsItem, Sector, Skill, WorldKey } from './types';
 import { SECTOR_NAMES, clamp, fmtDelta, leanAlignment } from './util';
@@ -99,7 +100,7 @@ export function resolveWho(s: GameState, who: string, ctx: Ctx): string[] {
       return s.npcs[base]?.friends ?? [];
     }
     case 'journalists':
-      return Object.values(s.npcs).filter((n) => n.role === 'journalist').map((n) => n.id);
+      return activeJournalists(s).map((n) => n.id);
     default:
       return [];
   }

@@ -1,3 +1,4 @@
+import { outletName } from '../engine/systems/media';
 import { dateLabel } from '../engine/calendar';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
 import { useEffect, useState } from 'react';
@@ -85,7 +86,7 @@ export function ReportModal() {
             ))}
             {myNews.map((n) => (
               <p key={n.id} className="small" style={{ margin: '0 0 6px' }}>
-                📰 <span className="gold">{n.outlet}:</span> {n.headline}
+                📰 <span className="gold">{outletName(g, n.outlet)}{n.byline ? ` · ${n.byline}` : ''}:</span> {n.headline}
               </p>
             ))}
           </>

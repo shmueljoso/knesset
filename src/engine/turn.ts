@@ -17,6 +17,7 @@ import { tickCampaign, tickPresidency } from './systems/presidency';
 import { applyNorwegian } from './systems/regime';
 import { SURVEY_EVERY, tickSurveys } from './systems/surveys';
 import { stateHeadlines } from './systems/headlines';
+import { tickMedia } from './systems/media';
 import { tickSociety } from './systems/society';
 import { repairLeadership, tickFigures } from './systems/figures';
 import { supportersIncome, tickProjects } from './systems/projects';
@@ -68,6 +69,7 @@ function worldNews(s: GameState) {
     }
   }
   stateHeadlines(s);
+  tickMedia(s);
 }
 
 /**

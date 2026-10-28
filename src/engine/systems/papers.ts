@@ -67,6 +67,20 @@ export const PAPERS: Paper[] = [
     },
   },
   {
+    id: 'tv14', name: 'ערוץ הלאום', icon: '📡', lean: { security: 75, judiciary: 75, religion: 35 }, blurb: 'ערוץ ימני: "האמת שלא מראים לכם".',
+    own: (s) => [
+      s.issues.judiciary > 55 ? 'הפאנל הלוהט: "הדיפ סטייט לא יוותר בלי מלחמה"' : 'הערב באולפן: מה שהתקשורת המיינסטרימית מסתירה',
+      ...(s.world.security < 45 ? ['"להכריע – עכשיו": הפרשנים קוראים לממשלה לפעול'] : []),
+    ],
+  },
+  {
+    id: 'public', name: 'השידור הציבורי', icon: '📻', lean: {}, blurb: 'שידור ציבורי: מאוזן, יבש, ונגד כל הממשלות.',
+    own: (s) => [
+      `${s.coalition.stability < 45 ? 'ניתוח: מה יקרה אם הממשלה תיפול' : 'מבט שבועי: מה הממשלה הספיקה'} – ומה זה אומר לכם`,
+      ...(s.world.trust < 40 ? ['ועדת חוקה דנה בעתיד השידור הציבורי; עובדים מזהירים מסגירה'] : []),
+    ],
+  },
+  {
     id: 'social', name: '#טרנדינג', icon: '📱', lean: {}, blurb: 'מה שמסתובב ברשתות: קליפים, טוויטים, מימים.',
     focus: /"|סקנדל|ויראלי|קליפ|הפגנ|מחאה/,
     own: (s) => {
@@ -127,6 +141,13 @@ const VOICE: Record<string, (h: string, tone: Tone, sl: number, key: string) => 
     tone === 'bad' ? pickBy([`${h} – ומה זה עושה לכיס שלך`, `${h}: האנליסטים מזהירים`, `${h}. המחיר: מיליארדים`], key)
     : tone === 'good' ? pickBy([`${h} – הבורסה מגיבה`, `${h}: הזדמנות להשקעה`, `${h}. התוצאה בשורה התחתונה`], key)
     : pickBy([`${h}: הנתונים מאחורי הכותרת`, `${h} – מה זה אומר לשוק?`], key),
+  tv14: (h, tone, sl, key) =>
+    sl > 0.3 ? (tone === 'bad' ? `${h} – "רדיפה פוליטית"` : pickBy([`ניצחון: ${h}`, `${h} – והשמאל בהיסטריה`], key))
+    : sl < -0.15 ? pickBy([`השערורייה: ${h}`, `${h}. ואף אחד לא נותן על זה את הדין`, `תשמעו את זה: ${h}`], key)
+    : pickBy([`${h} – הפאנל מגיב`, `${h}. הצופים בבית כבר יודעים`], key),
+  public: (h, tone, _sl, key) =>
+    tone === 'bad' ? pickBy([`${h}. הרקע וההשלכות`, `${h}: הגורמים המעורבים מגיבים`], key)
+    : pickBy([`${h}`, `${h}. התגובות`, `בדיקה: ${h}`], key),
   social: (h, tone, _sl, key) =>
     tone === 'bad' ? pickBy([`🔥 ${h} 😬`, `😱 ${h}. הרשת רותחת`, `💀 ${h}`], key)
     : tone === 'good' ? pickBy([`👏 ${h}`, `🙌 ${h} – ויראלי`], key)
@@ -139,7 +160,8 @@ function interest(s: GameState, paper: Paper, n: NewsItem): number {
   if (paper.focus?.test(n.headline)) sc += 3;
   if (paper.skip?.test(n.headline)) sc -= 9;
   sc += Math.abs(slant(s, n, paper)) * 2; // עיתון אוהב לדבר על מי שהוא אוהב או שונא
-  if (n.aboutPlayer) sc += paper.id === 'popular' || paper.id === 'social' ? 2 : 0.5;
+  if (n.aboutPlayer) sc += paper.id === 'popular' || paper.id === 'social' || paper.id === 'tv14' ? 2 : 0.5;
+  if (n.byline && (paper.id === 'public' || paper.id === 'liberal')) sc += 1;
   if (n.tone === 'bad' && (paper.id === 'popular' || paper.id === 'social')) sc += 1.5;
   if (n.tone !== 'neutral' && paper.id === 'money') sc -= 0.5;
   // רעש קבוע לכל עיתון וידיעה, כדי שלא כולם יתחילו באותה כותרת

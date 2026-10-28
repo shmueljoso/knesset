@@ -1,3 +1,4 @@
+import { outletName, setMediaMode } from '../engine/systems/media';
 import { useState } from 'react';
 import { dateLabel, shortDateLabel } from '../engine/calendar';
 import { BACKGROUNDS } from '../engine/data/backgrounds';
@@ -5,7 +6,7 @@ import { NEW_PARTY_COLORS } from '../engine/data/parties';
 import { isCoalition } from '../engine/systems/government';
 import { pollSeats } from '../engine/systems/opinion';
 import { FOUND_COST, defect, foundParty, joinParty, leaveParty, splitFaction, splitInfo } from '../engine/systems/parties';
-import { STAFF_ROLES, fireStaff, hireStaff, maxStaff, staffCandidates, staffCost } from '../engine/systems/staff';
+import { ABILITIES, STAFF_ROLES, abilityBlocked, fireStaff, hireStaff, maxStaff, staffAbility, staffCandidates, staffCost } from '../engine/systems/staff';
 import { ideologyDistance } from '../engine/util';
 import { retire } from '../engine/systems/legacy';
 import { modFromGame } from '../engine/mods';
@@ -36,7 +37,10 @@ export function NewsView() {
         {(view === 'all' || view === 'mine') && items.map((n) => (
           <article key={n.id} className={`news-item ${n.aboutPlayer ? 'about' : ''}`}>
             <div className="spread">
-              <span className="outlet">{n.outlet}</span>
+              <span className="outlet">
+                {outletName(g, n.outlet)}
+                {n.byline ? ` · ✍️ ${n.byline}` : ''}
+              </span>
               <span className="tiny faint">{shortDateLabel(g, n.week)}</span>
             </div>
             <h4 className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
@@ -201,8 +205,24 @@ export function StaffSheet() {
           <div className="grow">
             <b className="small">{st.name}</b>
             <div className="tiny muted">
-              {STAFF_ROLES[st.role][st.gender]} · רמה {st.level} · נאמנות {Math.round(st.loyalty)}
+              {STAFF_ROLES[st.role].icon} {STAFF_ROLES[st.role][st.gender]} · רמה {st.level} · נאמנות {Math.round(st.loyalty)}
+              {st.loyalty < 30 ? ' · ⚠️ ממורמר/ת – עלול/ה להדליף' : ''}
             </div>
+            {ABILITIES[st.role] && (
+              <button
+                className="btn sm"
+                style={{ marginTop: 6 }}
+                disabled={!!abilityBlocked(g, st.role)}
+                data-testid={`ability-${st.role}`}
+                onClick={() => {
+                  const r = act((s) => staffAbility(s, st.role));
+                  toast(r.text, r.ok ? 'good' : 'bad', r.lines);
+                }}
+              >
+                ⏱{ABILITIES[st.role]!.ap} · {ABILITIES[st.role]!.label}
+                {abilityBlocked(g, st.role) ? ` (${abilityBlocked(g, st.role)})` : ''}
+              </button>
+            )}
           </div>
           <button className="btn sm danger" onClick={() => toast(act((s) => fireStaff(s, st.id)), 'neutral')}>
             פיטורים
@@ -215,7 +235,7 @@ export function StaffSheet() {
           <Avatar spec={c.avatar} size={42} />
           <div className="grow">
             <b className="small">
-              {c.name} · {STAFF_ROLES[c.role][c.gender]}
+              {STAFF_ROLES[c.role].icon} {c.name} · {STAFF_ROLES[c.role][c.gender]}
             </b>
             <div className="tiny muted">
               רמה {c.level} · {STAFF_ROLES[c.role].desc}
@@ -270,6 +290,17 @@ export function SettingsSheet() {
         <div className="filter-row" style={{ marginTop: 6 }}>
           {DYN_OPTS.map(([id, label]) => (
             <button key={id} data-testid={`dyn-${id}`} className={(g.settings?.dynamics ?? 'normal') === id ? 'on' : ''} onClick={() => act((s) => void (s.settings = { ...s.settings, dynamics: id }))}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="card small" style={{ marginTop: 10 }}>
+        <b>📺 תקשורת</b>
+        <div className="tiny muted">בדיונית ("ערוץ המשכן"), או אמיתית: חדשות 12, ערוץ 14, הארץ, ישראל היום – ועיתונאים כמו עמית סגל, יונית לוי, רביב דרוקר וינון מגל.</div>
+        <div className="filter-row" style={{ marginTop: 6 }}>
+          {([['fictional', '🎭 בדיונית'], ['real', '📺 אמיתית']] as const).map(([id, label]) => (
+            <button key={id} data-testid={`media-${id}`} className={(g.settings?.media ?? 'fictional') === id ? 'on' : ''} onClick={() => act((s) => setMediaMode(s, id))}>
               {label}
             </button>
           ))}

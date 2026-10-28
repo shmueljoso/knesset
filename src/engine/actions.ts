@@ -1,3 +1,4 @@
+import { activeJournalists, pollsterName } from './systems/media';
 import { addStat } from './stats';
 import { inSession } from './calendar';
 import { COMMITTEE_DEFS } from './data/committees';
@@ -266,6 +267,11 @@ export const ACTIONS: ActionDef[] = [
       s.player.skills.media = clamp(s.player.skills.media + 1.5, 0, 100);
       s.flags.ivScore = 0;
       s.flags.ivStep = 1;
+      // מי מראיין/ת: מגיש/ה או כתב/ת פוליטי/ת מהתקשורת הפעילה
+      const js = activeJournalists(s);
+      const hosts = js.filter((n) => n.beat === 'anchor' || n.beat === 'politics');
+      const pool = hosts.length ? hosts : js;
+      if (pool.length) s.flags.ivHost = pool[Math.floor(rand(s) * pool.length)].id;
       s.eventQueue.push({ eventId: 'iv_issue', ctx: interviewCtx(s, 1) });
       return { text: 'האור האדום נדלק. אתם בשידור.' };
     },
@@ -556,7 +562,7 @@ export const ACTIONS: ActionDef[] = [
     id: 'press_dinner', loc: 'cafeteria', icon: '🍷', label: 'ארוחת שישי עם עיתונאים', ap: 1, money: 5,
     desc: 'שיחות רקע. עיתונאים ידידותיים מגבירים כל הופעה שלך בתקשורת.',
     run: (s) => {
-      for (const n of Object.values(s.npcs)) if (n.role === 'journalist') changeAttitude(s, n.id, 5, { spread: false });
+      for (const n of activeJournalists(s)) changeAttitude(s, n.id, 5, { spread: false });
       return { text: 'הכתבים הפוליטיים יצאו עם "חומר רקע" – ויחס חם יותר.', good: true };
     },
   },
@@ -657,8 +663,9 @@ function interviewCtx(s: GameState, n: number): Record<string, string> {
   const rival = Object.values(s.npcs).filter((x) => x.notable && x.attitude <= -30).sort((a, b) => a.attitude - b.attitude)[0];
   return {
     n: String(n), issue: issue.id, issueName: issue.name, leaderName: leader?.name ?? '', npc: leader?.id ?? '',
-    partyName: party?.name ?? '', seats: party && sv ? String(sv.seats[party.id] ?? 0) : '', pollster: sv?.pollster ?? '',
+    partyName: party?.name ?? '', seats: party && sv ? String(sv.seats[party.id] ?? 0) : '', pollster: sv ? pollsterName(s, sv.pollster) : '',
     pmFit: String(pmFitOf(s, 'player')), fav: sv?.player ? String(sv.player.favorable) : '',
+    host: s.npcs[String(s.flags.ivHost ?? '')]?.name ?? 'המגיש/ה',
     ruleName: rule?.title ?? '', billTitle: bill?.title ?? '',
     rival: rival?.id ?? '', npc2: rival?.id ?? '', rivalName: rival?.name ?? '',
   };
@@ -699,16 +706,20 @@ registerSpecial('iv_next', (s) => {
   }
   // סיכום הראיון
   const score = Number(s.flags.ivScore ?? 0);
+  const host = s.npcs[String(s.flags.ivHost ?? '')];
   delete s.flags.ivScore;
   delete s.flags.ivStep;
+  delete s.flags.ivHost;
+  if (host) changeAttitude(s, host.id, score >= 2 ? 6 : score <= -2 ? -4 : 2, { spread: false });
+  const at = host ? ` אצל ${host.name}` : '';
   if (score >= 2) {
     addStat(s, 'fame', 4 * mediaPower(s));
-    addNews(s, `${s.player.name} בראיון: "הגיע הזמן לשינוי אמיתי"`, 'good', true);
+    addNews(s, `${s.player.name} בראיון${at}: "הגיע הזמן לשינוי אמיתי"`, 'good', true, undefined, host?.outlet);
     return `ראיון מצוין (${score >= 3 ? '3/3' : '2/3'})! הקליפ מסתובב ברשתות. מוכרות עולה.`;
   }
   if (score <= -2) {
     addStat(s, 'fame', 1.5);
-    addNews(s, `פדיחה באולפן: ${s.player.name} הסתבך/ה בשידור חי`, 'bad', true);
+    addNews(s, `פדיחה באולפן${at}: ${s.player.name} הסתבך/ה בשידור חי`, 'bad', true, undefined, host?.outlet);
     return 'ראיון קשה. מחר בבוקר כולם ידברו על זה – וזה לא טוב.';
   }
   addStat(s, 'fame', 2);

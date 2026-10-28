@@ -13,6 +13,7 @@ import { playerPresidentScore } from './presidency';
 import { directElection, termLimited } from './regime';
 import { publicSupport } from './transforms';
 import { makeHypos, resignPressure } from './figures';
+import { pollsterName, pollsterOutlet } from './media';
 
 export const POLLSTERS: { name: string; lean: Partial<Ideology>; sample: number; outlet: string }[] = [
   { name: 'מכון מדגמים', lean: {}, sample: 700, outlet: 'חדשות 13+' },
@@ -196,14 +197,15 @@ export function publishSurvey(s: GameState) {
   const sv = makeSurvey(s);
   sv.resign = resignPressure(s, sv.govApproval);
   s.surveys = [...(s.surveys ?? []), sv].slice(-12);
-  const P = POLLSTERS.find((p) => p.name === sv.pollster)!;
+  const P0 = POLLSTERS.find((p) => p.name === sv.pollster)!;
+  const P = { ...P0, name: pollsterName(s, P0.name), outlet: pollsterOutlet(s, P0.name, P0.outlet) };
   const top = Object.entries(sv.seats).sort((a, b) => b[1] - a[1])[0];
   const name = (id: string) => s.parties[id]?.name ?? '?';
   const lines: string[] = [];
   if (top) lines.push(`${name(top[0])} הגדולה עם ${top[1]} מנדטים`);
   lines.push(`הקואליציה: ${sv.blocs.coalition}`);
   const fit = sv.pmFit[0];
-  addNews(s, `סקר ${sv.pollster}: ${lines.join(' · ')}`, 'neutral', false, `מתאים/ה לראשות הממשלה: ${sv.pmFit.slice(0, 3).map((x) => `${surveyName(s, x.id)} ${x.pct}%`).join(', ')}. ${sv.rightTrack}% חושבים שהמדינה בכיוון הנכון. טעות דגימה ${sv.margin}%.`, P.outlet);
+  addNews(s, `סקר ${P.name}: ${lines.join(' · ')}`, 'neutral', false, `מתאים/ה לראשות הממשלה: ${sv.pmFit.slice(0, 3).map((x) => `${surveyName(s, x.id)} ${x.pct}%`).join(', ')}. ${sv.rightTrack}% חושבים שהמדינה בכיוון הנכון. טעות דגימה ${sv.margin}%.`, P.outlet);
 
   // ההפתעה של הסקר: אפקט העגלה – מי שעולה מושך עוד קולות
   if (sv.surprise && chance(s, 0.7)) {
@@ -236,10 +238,10 @@ export function publishSurvey(s: GameState) {
   // המפלגה שלך מתחת לחסימה – רגע לפני הבחירות זה כבר אומר משהו
   const mine = s.player.partyId;
   if (mine && sv.seats[mine] === 0 && s.parties[mine]?.leaderId === 'player' && s.electionWeek - s.week <= 20)
-    addNews(s, `סקר ${sv.pollster}: ${name(mine)} מתחת לאחוז החסימה`, 'bad', true, 'הבוחרים מתחילים לחשוב על "קול אבוד". אולי הגיע הזמן לאיחוד?');
+    addNews(s, `סקר ${P.name}: ${name(mine)} מתחת לאחוז החסימה`, 'bad', true, 'הבוחרים מתחילים לחשוב על "קול אבוד". אולי הגיע הזמן לאיחוד?');
   // סקר "מה אם": אחד מהם מגיע לכותרות
   const hy = sv.hypos?.[Math.floor(rand(s) * (sv.hypos?.length ?? 0))];
-  if (hy && chance(s, 0.6)) addNews(s, `סקר ${sv.pollster}: ${hy.text} – ${hy.seats ? `${hy.seats} מנדטים` : 'מתחת לאחוז החסימה'}`, 'neutral', hy.who === 'player', hy.detail, P.outlet);
+  if (hy && chance(s, 0.6)) addNews(s, `סקר ${P.name}: ${hy.text} – ${hy.seats ? `${hy.seats} מנדטים` : 'מתחת לאחוז החסימה'}`, 'neutral', hy.who === 'player', hy.detail, P.outlet);
   if (sv.resign && sv.resign >= 55 && s.coalition.pmId && chance(s, 0.5)) addNews(s, `${sv.resign}% סבורים שראש הממשלה צריך/ה לפרוש`, 'bad', s.coalition.pmId === 'player', undefined, P.outlet);
   if (sv.billQ && chance(s, 0.35)) addNews(s, `${sv.billQ.yes}% תומכים ב"${sv.billQ.title}", ${sv.billQ.no}% מתנגדים`, 'neutral', s.bills.some((b) => b.templateId === sv.billQ!.templateId && b.sponsor === 'player'), undefined, P.outlet);
 }

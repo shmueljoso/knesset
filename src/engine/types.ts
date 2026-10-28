@@ -64,6 +64,13 @@ export interface Npc {
   agenda: string; // תבנית החוק שהיא "הנושא שלו"
   ambition: number; // 0-100
   memory: { week: number; text: string; d: number }[];
+  /** עיתונאים: מאיזו "תקשורת" – בדיונית או אמיתית (mods/media-israel.json) */
+  media?: 'fictional' | 'real';
+  /** מזהה העיתונאי/ת בחבילת התקשורת האמיתית */
+  realId?: string;
+  /** עיתונאים: כלי התקשורת והתחום */
+  outlet?: string;
+  beat?: string;
 }
 
 export interface Party {
@@ -120,6 +127,8 @@ export interface Settings {
   drama: Drama;
   /** קצב השינוי בחברה: הרכב האוכלוסייה והדעות של המפלגות והציבור */
   dynamics?: Dynamics;
+  /** שמות כלי התקשורת והעיתונאים: בדיוניים, או אמיתיים (חדשות 12, עמית סגל...) */
+  media?: 'fictional' | 'real';
 }
 
 export type ProjectKind = 'tour' | 'branches' | 'ads' | 'supporters';
@@ -214,11 +223,13 @@ export interface Debt {
   week: number;
 }
 
+export type StaffRole = 'aide' | 'spokesperson' | 'advisor' | 'pollster' | 'campaign' | 'legal';
+
 export interface Staff {
   id: string;
   name: string;
   gender: Gender;
-  role: 'aide' | 'spokesperson' | 'advisor';
+  role: StaffRole;
   level: number; // 1-5
   loyalty: number; // 0-100
   avatar: AvatarSpec;
@@ -268,6 +279,8 @@ export interface NewsItem {
   tone: 'good' | 'bad' | 'neutral';
   aboutPlayer: boolean;
   npcId?: string;
+  /** טור/פרשנות: שם הכותב/ת */
+  byline?: string;
 }
 
 export interface PendingEvent {

@@ -12,6 +12,7 @@ import { ensurePhase3, pickAgenda } from './migrate';
 import { checkMissions } from './systems/missions';
 import { formAfterElection } from './systems/elections';
 import { addNews } from './systems/news';
+import { MEDIA_PACK, setMediaMode } from './systems/media';
 import type {
   AvatarSpec,
   BackgroundId,
@@ -44,6 +45,11 @@ export interface NewGameOptions {
   challenge?: string;
   /** ח"כ טרי/ה שמתחיל/ה כיו"ר המפלגה (במקום היו"ר הנוכחי/ת) */
   asLeader?: boolean;
+  /**
+   * לשחק כדמות קיימת: npcId = ח"כ/מועמד/ת מהרשימות (אותו seed ואותו מוד כמו ב-figurePool),
+   * journalist = עיתונאי/ת מחבילת התקשורת האמיתית שנכנס/ת לפוליטיקה
+   */
+  asFigure?: { npcId?: string; journalist?: string };
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -115,7 +121,7 @@ export function makeNpc(
 export function createGame(opts: NewGameOptions): GameState {
   const seed = opts.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rnd = makeLocalRng(seed);
-  const used = new Set<string>([opts.name]);
+  const used = new Set<string>(opts.asFigure ? [] : [opts.name]);
   const npcs: Record<string, Npc> = {};
   const parties: Record<string, Party> = {};
   let n = 0;
@@ -278,12 +284,46 @@ export function createGame(opts: NewGameOptions): GameState {
     gameOver: null,
   } as Partial<GameState> as GameState;
   ensurePhase3(s);
-  s.settings = { drama: opts.drama ?? 'normal', dynamics: 'normal' };
+  s.settings = { drama: opts.drama ?? 'normal', dynamics: 'normal', media: opts.mod?.realPeople ? 'real' : 'fictional' };
 
   if (opts.partyId) {
     const party = parties[opts.partyId];
     for (const npc of Object.values(npcs)) if (npc.partyId === party.id) npc.attitude += 10;
-    if (freshman && party.seats > 0 && opts.asLeader) {
+    const fig = opts.asFigure?.npcId ? npcs[opts.asFigure.npcId] : undefined;
+    if (fig && fig.partyId === party.id) {
+      // השחקן נכנס לנעליים של דמות קיימת: אותו מקום ברשימה, אותו מושב, אותו שם ועמדות
+      const idx = party.list.indexOf(fig.id);
+      party.list[idx] = 'player';
+      const leader = party.leaderId === fig.id;
+      if (leader) party.leaderId = 'player';
+      const si = seating.indexOf(fig.id);
+      if (si >= 0) seating[si] = 'player';
+      player.name = fig.name;
+      player.gender = fig.gender;
+      player.avatar = { ...fig.avatar };
+      player.ideology = { ...fig.ideology };
+      player.isMK = fig.isMK;
+      player.rank = fig.isMK ? 'mk' : 'candidate';
+      player.listPosition = idx + 1;
+      player.partyStanding = clamp(Math.round(fig.primaryStrength * 0.8), 20, 95);
+      player.fame = Math.max(player.fame, Math.round(fig.influence * 0.8));
+      player.reputation += 5;
+      player.memberSince = -150;
+      if (fig.isMK) {
+        player.committees = [bg.committee];
+        player.achievements.push('elected');
+        player.money += 40;
+      }
+      if (leader) {
+        player.partyStanding = 90;
+        player.capital += 20;
+        player.money += 100;
+        player.committees = [];
+        player.achievements.push('leader');
+      }
+      delete npcs[fig.id];
+      for (const n of Object.values(npcs)) n.friends = n.friends.filter((f) => f !== fig.id);
+    } else if (freshman && party.seats > 0 && opts.asLeader) {
       // השחקן במקום היו"ר: ראש הרשימה, ומי שהיה יו"ר יוצא/ת מהכנסת
       const old = npcs[party.list[0]];
       old.isMK = false;
@@ -330,6 +370,19 @@ export function createGame(opts: NewGameOptions): GameState {
       player.memberSince = -100;
     }
   }
+  const jr = opts.asFigure?.journalist ? MEDIA_PACK.journalists.find((x) => x.id === opts.asFigure!.journalist) : undefined;
+  if (jr) {
+    // עיתונאי/ת מוכר/ת שעוזב/ת את האולפן לטובת הפוליטיקה
+    player.name = jr.name;
+    player.gender = jr.gender;
+    player.avatar = { ...player.avatar, gender: jr.gender };
+    player.fame = Math.max(player.fame, jr.star ? 78 : 65);
+    player.reputation = Math.max(player.reputation, 55);
+    player.money += 120;
+    player.skills.media = Math.max(player.skills.media, 75);
+    s.flags.playsJournalist = jr.id;
+    s.settings.media = 'real';
+  }
   if (opts.background === 'journalist') {
     for (const npc of Object.values(npcs)) if (npc.role === 'journalist') npc.attitude += 25;
   }
@@ -339,6 +392,8 @@ export function createGame(opts: NewGameOptions): GameState {
   s.mod = opts.mod?.name ?? null;
   if (opts.mod) applyModSettings(s, opts.mod);
   if (opts.mod?.afterElection) startAfterElection(s);
+  setMediaMode(s, s.settings.media ?? 'fictional');
+  if (jr) addNews(s, `${jr.name} עוזב/ת את ${jr.outlet} ונכנס/ת לפוליטיקה`, 'neutral', true, 'באולפן כבר מחפשים מחליף/ה. ברשתות – סערה.', jr.outlet);
   refreshPresence(s);
   s.pollHistory.push({ week: 0, polls: Object.fromEntries(Object.values(parties).map((p) => [p.id, p.poll])) });
   s.weekStart = snapshot(s);
@@ -385,4 +440,30 @@ function startAfterElection(s: GameState) {
   s.primariesWeek = 196;
   formAfterElection(s, undefined, { preferPlayer: true });
   if (s.negotiation) addNews(s, s.negotiation.mode === 'formateur' ? `הנשיא/ה הטיל/ה על ${s.player.name} להרכיב את הממשלה` : `${s.parties[s.negotiation.formateurParty]?.name ?? 'המפלגה הגדולה'} מקבלת את המנדט – ופונה אליך`, 'neutral', true, undefined, 'ערוץ המשכן');
+}
+
+export interface FigureOption {
+  id: string;
+  name: string;
+  gender: Gender;
+  pos: number;
+  isMK: boolean;
+  leader: boolean;
+}
+
+/**
+ * הדמויות שאפשר לשחק בהן, לפי אותו מוד ואותו seed: מי יושב/ת בכל רשימה.
+ * createGame עם אותו seed ו-asFigure מייצר בדיוק את אותן דמויות (העולם לא תלוי בשם השחקן).
+ */
+export function figurePool(opts: Pick<NewGameOptions, 'mod' | 'seed' | 'scenario'>): Record<string, FigureOption[]> {
+  const g = createGame({
+    name: '', gender: 'm', background: 'aide', ideology: { econ: 0, security: 0, religion: 0, judiciary: 0 }, partyId: null,
+    scenario: opts.scenario, avatar: { seed: 1, cover: 'none', beard: false, glasses: false, age: 40 }, seed: opts.seed, mod: opts.mod, asFigure: {},
+  });
+  return Object.fromEntries(
+    Object.values(g.parties).map((p) => [
+      p.id,
+      p.list.slice(0, Math.max(6, p.seats + 4)).filter((id) => g.npcs[id]).map((id, i) => ({ id, name: g.npcs[id].name, gender: g.npcs[id].gender, pos: i + 1, isMK: g.npcs[id].isMK, leader: p.leaderId === id })),
+    ]),
+  );
 }

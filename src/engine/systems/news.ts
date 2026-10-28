@@ -14,7 +14,7 @@ export function addNews(
   npcId?: string,
 ) {
   s.news.unshift({ id: newId(s, 'news'), week: s.week, outlet: outlet ?? pick(s, OUTLETS), headline, body, tone, aboutPlayer, npcId });
-  if (s.news.length > 150) s.news.length = 150;
+  if (s.news.length > 220) s.news.length = 220;
 }
 
 export function npcLabel(s: GameState, id: string): string {
