@@ -39,6 +39,7 @@ export function CreateScreen() {
   const [modErr, setModErr] = useState<string[]>([]);
   const [early, setEarly] = useState(false);
   const [drama, setDrama] = useState<Drama>('normal');
+  const [asLeader, setAsLeader] = useState(false);
 
   const parties = useMemo(
     () => [...(mod ? modToPartyDefs(mod) : PARTY_DEFS)].sort((a, b) => ideologyDistance(a.ideology, ideology) - ideologyDistance(b.ideology, ideology)),
@@ -68,7 +69,7 @@ export function CreateScreen() {
       setPendingChallenge(null);
       return;
     }
-    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod: mod && early && mod.listsClosed ? earlyStart(mod) : mod, drama });
+    newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod: mod && early && mod.listsClosed ? earlyStart(mod) : mod, drama, asLeader: scenario === 'freshman' && asLeader });
   };
 
   return (
@@ -245,6 +246,7 @@ export function CreateScreen() {
                     {mod.startDate && `מתחיל ב-${new Date(mod.startDate).toLocaleDateString('he-IL')}`}
                     {mod.electionInWeeks && ` · בחירות בעוד ${mod.electionInWeeks} שבועות`}
                     {mod.listsClosed && ' · הרשימות כבר נסגרו'}
+                    {mod.afterElection && ' · מתחילים למחרת הבחירות, בהרכבת ממשלה'}
                   </div>
                   {mod.source && <div className="tiny faint" style={{ marginTop: 4 }}>מקור: {mod.source}{mod.asOf ? ` (נכון ל-${mod.asOf})` : ''}</div>}
                   {mod.realPeople && <div className="tiny faint">התכונות, היחסים והאירועים במשחק בדיוניים.</div>}
@@ -268,6 +270,14 @@ export function CreateScreen() {
                 <div key={i} className="tiny bad">{e}</div>
               ))}
             </div>
+            {scenario === 'freshman' && (
+              <label className="card row small" style={{ gap: 8, marginBottom: 10, borderColor: asLeader ? 'var(--gold)' : undefined }} data-testid="as-leader">
+                <input type="checkbox" checked={asLeader} onChange={(e) => setAsLeader(e.target.checked)} />
+                <span>
+                  <b>👑 לשחק כיו"ר המפלגה</b> – במקום ראש הרשימה הנוכחי/ת.{mod?.afterElection ? ' אם תוכל/י להגיע ל-61, המנדט להרכבת הממשלה יהיה שלך.' : ''}
+                </span>
+              </label>
+            )}
             <p className="muted small">ממוין לפי קרבה לעמדות שלך. {needsParty ? 'בתרחיש הזה חייבים מפלגה.' : 'אפשר גם להתחיל בלי – ולהקים מפלגה בהמשך.'}</p>
             {!needsParty && (
               <button className={`pick ${partyId === null ? 'on' : ''}`} onClick={() => setPartyId(null)}>

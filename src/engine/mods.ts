@@ -35,6 +35,8 @@ export interface ModFile {
   startDate?: string; // YYYY-MM-DD
   electionInWeeks?: number;
   listsClosed?: boolean; // הרשימות כבר נסגרו – אי אפשר להגיש מועמדות
+  /** המשחק מתחיל למחרת הבחירות: המושבים הם התוצאות, coalition = ממשלת המעבר, ומתחילים בהרכבת ממשלה */
+  afterElection?: boolean;
   world?: Partial<Record<WorldKey, number>>;
   issues?: Partial<Record<IssueId, number>>;
   ministers?: Record<string, string>; // משרד → שם הח"כ
@@ -77,6 +79,7 @@ export function validateMod(raw: unknown): { mod: ModFile | null; errors: string
       if (p.satisfaction !== undefined && (typeof p.satisfaction !== 'number' || p.satisfaction < 0 || p.satisfaction > 100)) errors.push(`מפלגה ${i + 1}: satisfaction בין 0 ל-100`);
     });
     if (m.parties.every((p) => (p.polls ?? p.seats) <= 0)) errors.push('לפחות למפלגה אחת צריכה להיות תמיכה');
+    if (m.afterElection !== undefined && typeof m.afterElection !== 'boolean') errors.push('afterElection חייב להיות true/false');
     if (m.coalition && (!Array.isArray(m.coalition) || m.coalition.some((c) => !ids.has(c)))) errors.push('coalition מכיל מזהה מפלגה לא קיים');
   }
   if (m.startDate !== undefined && (typeof m.startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(m.startDate) || isNaN(Date.parse(m.startDate)))) errors.push('startDate בפורמט YYYY-MM-DD');

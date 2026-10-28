@@ -10,6 +10,8 @@ import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3, pickAgenda } from './migrate';
 import { checkMissions } from './systems/missions';
+import { formAfterElection } from './systems/elections';
+import { addNews } from './systems/news';
 import type {
   AvatarSpec,
   BackgroundId,
@@ -40,6 +42,8 @@ export interface NewGameOptions {
   drama?: Drama;
   /** מזהה "אתגר השבוע" (כולם משחקים את אותו עולם) – נשמר ב-flags.challenge */
   challenge?: string;
+  /** ח"כ טרי/ה שמתחיל/ה כיו"ר המפלגה (במקום היו"ר הנוכחי/ת) */
+  asLeader?: boolean;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -279,7 +283,26 @@ export function createGame(opts: NewGameOptions): GameState {
   if (opts.partyId) {
     const party = parties[opts.partyId];
     for (const npc of Object.values(npcs)) if (npc.partyId === party.id) npc.attitude += 10;
-    if (freshman && party.seats > 0) {
+    if (freshman && party.seats > 0 && opts.asLeader) {
+      // השחקן במקום היו"ר: ראש הרשימה, ומי שהיה יו"ר יוצא/ת מהכנסת
+      const old = npcs[party.list[0]];
+      old.isMK = false;
+      old.role = 'candidate';
+      party.list = ['player', ...party.list.filter((x) => x !== old.id)];
+      party.leaderId = 'player';
+      seating[seating.indexOf(old.id)] = 'player';
+      player.isMK = true;
+      player.rank = 'mk';
+      player.listPosition = 1;
+      player.partyStanding = 85;
+      player.committees = [];
+      player.reputation += 10;
+      player.fame = Math.min(100, player.fame + 35);
+      player.capital += 20;
+      player.money += 120;
+      player.memberSince = -200;
+      player.achievements.push('elected', 'leader');
+    } else if (freshman && party.seats > 0) {
       // השחקן נכנס כח"כ אחרון ברשימה
       const replaced = party.list[party.seats - 1];
       npcs[replaced].isMK = false;
@@ -315,6 +338,7 @@ export function createGame(opts: NewGameOptions): GameState {
   formGovernment(s, startCoalition);
   s.mod = opts.mod?.name ?? null;
   if (opts.mod) applyModSettings(s, opts.mod);
+  if (opts.mod?.afterElection) startAfterElection(s);
   refreshPresence(s);
   s.pollHistory.push({ week: 0, polls: Object.fromEntries(Object.values(parties).map((p) => [p.id, p.poll])) });
   s.weekStart = snapshot(s);
@@ -348,4 +372,17 @@ export function spawnCandidate(s: GameState, partyId: string): Npc {
   s.npcs[npc.id] = npc;
   party.list.push(npc.id);
   return npc;
+}
+
+/**
+ * תרחיש שמתחיל למחרת הבחירות: המושבים שבקובץ הם התוצאות, הממשלה שכבר קיימת היא ממשלת מעבר,
+ * ומתחילים בהרכבת ממשלה – השחקן כפורמטור/ית (אם הוא/היא יו"ר שמסוגל/ת להגיע ל-61), כשותפה, או שמישהו אחר מרכיב.
+ */
+function startAfterElection(s: GameState) {
+  const seats = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.seats]));
+  s.lastElection = { week: 0, knesset: s.knesset, votes: Object.fromEntries(Object.values(s.parties).map((p) => [p.id, Math.round(p.base * 1000)])), seats, playerElected: s.player.isMK, playerPosition: s.player.listPosition };
+  s.electionWeek = 208;
+  s.primariesWeek = 196;
+  formAfterElection(s, undefined, { preferPlayer: true });
+  if (s.negotiation) addNews(s, s.negotiation.mode === 'formateur' ? `הנשיא/ה הטיל/ה על ${s.player.name} להרכיב את הממשלה` : `${s.parties[s.negotiation.formateurParty]?.name ?? 'המפלגה הגדולה'} מקבלת את המנדט – ופונה אליך`, 'neutral', true, undefined, 'ערוץ המשכן');
 }

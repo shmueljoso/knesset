@@ -336,6 +336,13 @@ export function tickNegotiation(s: GameState) {
   if (!n) return;
   for (const t of n.talks) if (!t.signed && !t.walkedOut) t.base -= 1.5;
   if (s.week < n.deadline) return;
+  mandateExpired(s);
+}
+
+/** המנדט פקע (או הוחזר): מישהו אחר מנסה, ואם אין 61 – בחירות חוזרות */
+export function mandateExpired(s: GameState) {
+  const n = s.negotiation;
+  if (!n) return;
   if (n.mode === 'partner') {
     partnerDecline(s, 'לא הגעתם להסכמה בזמן – הממשלה קמה בלעדייך.');
     return;
@@ -362,6 +369,16 @@ export function tickNegotiation(s: GameState) {
     completeCoalition(s, proposeCoalition(s));
     callEarlyElections(s, 'אף מועמד לא הצליח להרכיב ממשלה');
   }
+}
+
+/** השחקן מחזיר את המנדט לנשיא/ה בעצמו/ה – בלי לחכות שיפקע */
+export function returnMandate(s: GameState): { ok: boolean; text: string } {
+  const n = s.negotiation;
+  if (!n || n.mode !== 'formateur') return { ok: false, text: 'אין מנדט להחזיר' };
+  if (electedLead(s) === n.formateurParty) return { ok: false, text: 'ראש ממשלה שנבחר/ה ישירות לא מחזיר/ה מנדט' };
+  const before = s.electionWeek;
+  mandateExpired(s);
+  return { ok: true, text: s.electionWeek !== before ? 'החזרת את המנדט. אין מי שירכיב 61 – הולכים לבחירות חוזרות.' : `החזרת את המנדט. ${s.npcs[s.coalition.pmId]?.name ?? 'מישהו אחר'} הרכיב/ה ממשלה בלעדיך.` };
 }
 
 export function extendMandate(s: GameState) {

@@ -132,6 +132,10 @@ export function ModEditor() {
               הרשימות נסגרו
             </label>
           </div>
+          <label className="small row" style={{ gap: 6, marginTop: 8 }} data-testid="after-election">
+            <input type="checkbox" checked={!!mod.afterElection} onChange={(e) => update({ afterElection: e.target.checked || undefined, ...(e.target.checked ? { electionInWeeks: undefined, listsClosed: undefined } : {}) })} />
+            🗳️ למחרת הבחירות: ההרכב כאן הוא התוצאות, ומתחילים בהרכבת ממשלה ("בקואליציה" = ממשלת המעבר)
+          </label>
           <label className="small muted" style={{ display: 'block', marginTop: 8 }}>
             תיאור (מופיע במסך הבחירה)
             <textarea className="text-input" rows={2} value={mod.description ?? ''} onChange={(e) => update({ description: e.target.value || undefined })} />
@@ -144,7 +148,7 @@ export function ModEditor() {
               מושבים: <b className={seats === 120 ? 'good' : 'bad'}>{seats}/120</b>
             </span>
             <span>
-              קואליציה: <b className={coal >= 61 ? 'good' : 'warn'}>{coal}</b> {coal < 61 ? '(פחות מ-61)' : ''}
+              {mod.afterElection ? 'ממשלת מעבר' : 'קואליציה'}: <b className={coal >= 61 || mod.afterElection ? 'good' : 'warn'}>{coal}</b> {coal < 61 && !mod.afterElection ? '(פחות מ-61)' : ''}
             </span>
           </div>
           {errors.length > 0 ? (

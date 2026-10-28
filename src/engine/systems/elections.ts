@@ -1,6 +1,6 @@
 import { addStat } from '../stats';
 import { rand } from '../rng';
-import type { GameState } from '../types';
+import type { GameState, PmRace } from '../types';
 
 import { spawnCandidate } from '../newGame';
 import { startFormateur, startPartner } from './coalition';
@@ -272,23 +272,7 @@ export function runElection(s: GameState) {
   const below = Object.values(s.parties).filter((p) => seats[p.id] === 0);
   if (below.length) addNews(s, `מתחת לאחוז החסימה: ${below.map((p) => p.name).join(', ')}`, 'neutral');
 
-  // הקמת ממשלה: השחקן כפורמטור, כשותפה, או הקמה אוטומטית.
-  // בבחירה ישירה – מי שנבחר/ה לראשות הממשלה מרכיב/ה, גם אם המפלגה שלו/ה לא הגדולה
-  const playerParty = s.player.partyId ? s.parties[s.player.partyId] : null;
-  const forced = electedLead(s);
-  const plan = proposeCoalition(s, [], forced);
-  const lead = forced ?? [...plan].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
-  const playerLeads = playerParty && playerParty.leaderId === 'player' && s.player.isMK && playerParty.seats > 0;
-  if (pmRace?.winner === 'player') startFormateur(s);
-  else if (playerLeads && !pmRace && lead === playerParty.id && !termLimited(s, 'player')) startFormateur(s);
-  else if (playerLeads && lead !== playerParty.id && plan.includes(playerParty.id)) startPartner(s, lead);
-  else {
-    // נשיא/ה שהוא/היא השחקן: מדיניות המנדט משפיעה על מי מרכיב/ה את הממשלה (לא בבחירה ישירה לראשות הממשלה)
-    const bySeats = Object.values(s.parties).filter((p) => p.seats > 0).sort((a, b) => b.seats - a.seats).map((p) => p.id);
-    const m = forced ? null : mandatePlan(s, lead, bySeats);
-    completeCoalition(s, m?.plan ?? plan, m?.lead ?? lead);
-    if (m) afterMandate(s, m.note, String(s.flags.mandateDoctrine ?? 'largest'));
-  }
+  formAfterElection(s, pmRace);
 
   s.electionWeek = s.week + 208;
   s.primariesWeek = s.electionWeek - 12;
@@ -316,3 +300,30 @@ export function callEarlyElections(s: GameState, reason: string) {
   addNews(s, `${reason} – הכנסת התפזרה, בחירות בעוד כ-90 יום`, 'bad', false, undefined, 'ערוץ המשכן');
   log(s, `${reason}. בחירות מוקדמות נקבעו.`, 'system');
 }
+
+/**
+ * הקמת ממשלה אחרי בחירות: השחקן כפורמטור, כשותפה, או הקמה אוטומטית.
+ * preferPlayer: יו"ר שיכול/ה להרכיב 61 מקבל/ת את המנדט גם אם המפלגה לא הגדולה (משחק שמתחיל למחרת הבחירות)
+ */
+export function formAfterElection(s: GameState, pmRace?: PmRace, opts: { preferPlayer?: boolean } = {}) {
+  // בבחירה ישירה – מי שנבחר/ה לראשות הממשלה מרכיב/ה, גם אם המפלגה שלו/ה לא הגדולה
+  const playerParty = s.player.partyId ? s.parties[s.player.partyId] : null;
+  const forced = electedLead(s);
+  const plan = proposeCoalition(s, [], forced);
+  const lead = forced ?? [...plan].sort((a, b) => s.parties[b].seats - s.parties[a].seats)[0];
+  const playerLeads = playerParty && playerParty.leaderId === 'player' && s.player.isMK && playerParty.seats > 0;
+  const canBuild = !!playerParty && !!playerLeads && coalitionSize(s, proposeCoalition(s, [], playerParty.id)) >= 61;
+  if (pmRace?.winner === 'player') startFormateur(s);
+  else if (opts.preferPlayer && playerLeads && !pmRace && canBuild && !termLimited(s, 'player')) startFormateur(s);
+  else if (playerLeads && !pmRace && lead === playerParty.id && !termLimited(s, 'player')) startFormateur(s);
+  else if (playerLeads && lead !== playerParty.id && plan.includes(playerParty.id)) startPartner(s, lead);
+  else {
+    // נשיא/ה שהוא/היא השחקן: מדיניות המנדט משפיעה על מי מרכיב/ה את הממשלה (לא בבחירה ישירה לראשות הממשלה)
+    const bySeats = Object.values(s.parties).filter((p) => p.seats > 0).sort((a, b) => b.seats - a.seats).map((p) => p.id);
+    const m = forced ? null : mandatePlan(s, lead, bySeats);
+    completeCoalition(s, m?.plan ?? plan, m?.lead ?? lead);
+    if (m) afterMandate(s, m.note, String(s.flags.mandateDoctrine ?? 'largest'));
+  }
+}
+
+const coalitionSize = (s: GameState, ids: string[]) => ids.reduce((a, id) => a + (s.parties[id]?.seats ?? 0), 0);

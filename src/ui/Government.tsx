@@ -7,6 +7,7 @@ import {
   demandConflict,
   demandLabel,
   extendMandate,
+  returnMandate,
   formationSeats,
   meetPartner,
   offerDeal,
@@ -236,6 +237,7 @@ export function NegotiationSheet() {
       {talks.map((t) => (
         <TalkCard key={t.partyId} t={t} g={g} />
       ))}
+      <ReturnMandate />
     </Sheet>
   );
 }
@@ -474,6 +476,33 @@ export function GovernmentCard() {
           {g.parties[g.player.partyId].name} בסקרים: {pollSeats(g.parties[g.player.partyId].poll)} מנדטים
         </p>
       )}
+    </div>
+  );
+}
+
+/** החזרת המנדט: מישהו אחר מנסה – ואם אין 61, בחירות חוזרות */
+function ReturnMandate() {
+  const act = useStore((s) => s.act);
+  const toast = useStore((s) => s.toast);
+  const close = useStore((s) => s.close);
+  const [armed, setArmed] = useState(false);
+  return (
+    <div className="card small" style={{ marginTop: 14 }}>
+      <b>↩️ להחזיר את המנדט לנשיא/ה</b>
+      <div className="muted">המנדט עובר למועמד/ת אחר/ת. אם גם לו/לה אין 61 – הכנסת מתפזרת והולכים לבחירות חוזרות בעוד כ-90 יום.</div>
+      <button
+        className={`btn sm ${armed ? 'danger' : ''}`}
+        style={{ marginTop: 8 }}
+        data-testid="return-mandate"
+        onClick={() => {
+          if (!armed) return setArmed(true);
+          const r = act((s) => returnMandate(s));
+          toast(r.text, r.ok ? 'neutral' : 'bad');
+          if (r.ok) close();
+        }}
+      >
+        {armed ? 'בטוח/ה? להחזיר את המנדט' : 'להחזיר את המנדט'}
+      </button>
     </div>
   );
 }
