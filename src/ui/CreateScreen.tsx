@@ -64,7 +64,7 @@ export function CreateScreen() {
 
   return (
     <div className="scroll">
-      <div className="page" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)' }}>
+      <div className="page" style={{ paddingTop: 'calc(var(--sat) + 16px)' }}>
         <div className="spread" style={{ marginBottom: 14 }}>
           <button className="btn ghost sm" onClick={() => (step ? setStep(step - 1) : setScreen('title'))}>
             → חזרה
@@ -289,7 +289,7 @@ export function CreateScreen() {
 
         <div style={{ height: 90 }} />
       </div>
-      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(0deg, var(--bg) 70%, transparent)' }}>
+      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px calc(14px + var(--sab))', background: 'linear-gradient(0deg, var(--bg) 70%, transparent)' }}>
         {step < 4 ? (
           <button className="btn primary block" disabled={!canNext} onClick={() => setStep(step + 1)}>
             המשך ←

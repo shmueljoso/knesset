@@ -4,6 +4,7 @@ import type { OpenPanel } from './engine/actions';
 import { migrate } from './engine/migrate';
 import { repairLeadership } from './engine/systems/figures';
 import type { ModFile } from './engine/mods';
+import { autoBackup, haptic, safetyBackup } from './platform';
 
 export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
 export type Panel =
@@ -18,6 +19,7 @@ export type Panel =
   | { kind: 'polls' }
   | { kind: 'tools' }
   | { kind: 'president' }
+  | { kind: 'saves' }
   | { kind: OpenPanel };
 
 export interface Toast {
@@ -29,11 +31,16 @@ export interface Toast {
 
 const SAVE_KEY = 'hamishkan.save.v1';
 
-function persist(g: GameState | null) {
+let persistWarned = false;
+
+/** שמירה מיידית של המשחק הנוכחי. מחזיר false אם האחסון לא זמין או מלא */
+function persist(g: GameState | null): boolean {
   try {
     if (g) localStorage.setItem(SAVE_KEY, JSON.stringify(g));
+    return true;
   } catch {
-    /* אחסון לא זמין – המשחק ממשיך בלי שמירה */
+    // אחסון מלא/חסום: המשחק ממשיך, והגיבויים (קבצים/IndexedDB) ממשיכים להישמר
+    return false;
   }
 }
 
@@ -52,6 +59,7 @@ export function loadSaved(): GameState | null {
 }
 
 export function clearSaved() {
+  safetyBackup(loadSaved(), 'לפני מחיקה');
   try {
     localStorage.removeItem(SAVE_KEY);
   } catch {
@@ -78,6 +86,8 @@ interface Store {
   closeAll: () => void;
   newGame: (o: NewGameOptions) => void;
   continueGame: () => boolean;
+  /** טעינת משחק משמירה/קובץ (המשחק הנוכחי מגובה קודם) */
+  loadGame: (g: GameState) => void;
   /** מריץ פונקציה על עותק של המצב, שומר ומחזיר את התוצאה */
   act: <T>(fn: (s: GameState) => T) => T;
   toast: (text: string, tone?: Toast['tone'], lines?: string[]) => void;
@@ -105,9 +115,17 @@ export const useStore = create<Store>((set, get) => ({
   close: () => set((st) => ({ panels: st.panels.slice(0, -1) })),
   closeAll: () => set({ panels: [] }),
   newGame: (o) => {
+    safetyBackup(get().game ?? loadSaved(), 'לפני משחק חדש');
     const game = createGame(o);
     persist(game);
     set({ game, screen: 'game', tab: 'map', panels: [], showReport: false });
+  },
+  loadGame: (raw) => {
+    safetyBackup(get().game ?? loadSaved(), 'לפני טעינה');
+    const game = migrate(structuredClone(raw));
+    repairLeadership(game);
+    persist(game);
+    set({ game, screen: 'game', tab: 'map', panels: [], showReport: false, eventResult: null });
   },
   continueGame: () => {
     const game = loadSaved();
@@ -120,7 +138,10 @@ export const useStore = create<Store>((set, get) => ({
     if (!g) throw new Error('no game');
     const next = structuredClone(g);
     const res = fn(next);
-    persist(next);
+    if (!persist(next) && !persistWarned) {
+      persistWarned = true;
+      get().toast('האחסון של הדפדפן מלא – המשחק ממשיך, וגיבויים נשמרים בנפרד. כדאי לייצא שמירה לקובץ.', 'bad');
+    }
     set({ game: next });
     return res;
   },
@@ -133,6 +154,8 @@ export const useStore = create<Store>((set, get) => ({
   nextWeek: () => {
     get().act((s) => endWeek(s));
     set({ showReport: true, panels: [] });
+    haptic('tap');
+    autoBackup(get().game);
   },
   setShowReport: (showReport) => set({ showReport }),
 }));

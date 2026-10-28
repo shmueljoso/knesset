@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- צבעי האפליקציה (אותם צבעים כמו ב-styles.css של המשחק) -->
+<resources>
+    <color name="hamishkan_bg">#0C1626</color>
+    <color name="hamishkan_gold">#E8C37A</color>
+    <color name="colorPrimary">#0C1626</color>
+    <color name="colorPrimaryDark">#070D18</color>
+    <color name="colorAccent">#E8C37A</color>
+</resources>

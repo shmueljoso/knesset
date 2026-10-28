@@ -246,7 +246,7 @@ export function NegotiationBanner() {
   const n = g.negotiation;
   if (!n) return null;
   return (
-    <button className="toast" style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 100px)', insetInline: 12, zIndex: 6, textAlign: 'start', borderInlineStartColor: 'var(--gold)' }} onClick={() => open({ kind: 'negotiation' })}>
+    <button className="toast" style={{ position: 'absolute', top: 'calc(var(--sat) + 100px)', insetInline: 12, zIndex: 6, textAlign: 'start', borderInlineStartColor: 'var(--gold)' }} onClick={() => open({ kind: 'negotiation' })}>
       <b>🤝 {n.mode === 'formateur' ? `הרכבת ממשלה: ${formationSeats(g)}/61` : 'מוזמנים לקואליציה'}</b>
       <div className="small muted">עוד {n.deadline - g.week} שבועות · הקש/י כדי לנהל</div>
     </button>

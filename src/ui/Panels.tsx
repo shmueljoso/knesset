@@ -247,18 +247,10 @@ export function SettingsSheet() {
   const setPendingMod = useStore((s) => s.setPendingMod);
   const open = useStore((s) => s.open);
   const bg = BACKGROUNDS.find((b) => b.id === g.player.background)!;
-  const exportSave = () => {
-    const blob = new Blob([JSON.stringify(g)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `hamishkan-${g.player.name}-week${g.week + 1}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
   return (
     <Sheet title="⚙️ תפריט" sub={`${g.player.name} · ${bg.name[g.player.gender]} · ${dateLabel(g)}`}>
       <div className="card small">
-        <div>המשחק נשמר אוטומטית אחרי כל פעולה.</div>
+        <div>המשחק נשמר אוטומטית אחרי כל פעולה, ומגובה בכל סוף שבוע.</div>
         <div className="muted">הישגים: {g.player.achievements.length ? g.player.achievements.map((a) => ({ first_law: 'חוק ראשון', elected: 'נבחר/ה לכנסת', chair: 'יו"ר ועדה', minister: 'שר/ה', leader: 'יו"ר מפלגה', pm: 'ראשות הממשלה' })[a] ?? a).join(' · ') : 'עדיין אין'}</div>
       </div>
       <div className="card small" style={{ marginTop: 10 }}>
@@ -287,8 +279,8 @@ export function SettingsSheet() {
         <button className="btn" onClick={() => open({ kind: 'tools' })} data-testid="open-tools">
           🛠️ כלים מתקדמים (דילוג ועריכה) ⚠️
         </button>
-        <button className="btn" onClick={exportSave}>
-          💾 ייצוא שמירה לקובץ
+        <button className="btn" onClick={() => open({ kind: 'saves' })} data-testid="open-saves">
+          💾 שמירות, גיבויים וייצוא
         </button>
         <button className="btn" onClick={() => { setPendingMod(modFromGame(g)); closeAll(); setScreen('editor'); }}>
           🛠️ ייצוא הכנסת הנוכחית לעורך

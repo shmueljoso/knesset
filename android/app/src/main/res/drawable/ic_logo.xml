@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- הסמל בלי רקע – למסך הפתיחה -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+        <path android:fillColor="#E8C37A" android:pathData="M102,380 h308 a6,6 0 0 1 6,6 v16 a6,6 0 0 1 -6,6 h-308 a6,6 0 0 1 -6,-6 v-16 a6,6 0 0 1 6,-6 z" />
+        <path android:fillColor="#E8C37A" android:pathData="M236,180 h40 v200 h-40 z" />
+        <path android:fillColor="#E8C37A" android:pathData="M244,120 h24 a8,8 0 0 1 8,8 v52 h-40 v-52 a8,8 0 0 1 8,-8 z" />
+        <path android:strokeColor="#E8C37A" android:strokeWidth="22" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M256,300 C256,300 120,300 120,150 M256,300 C256,300 392,300 392,150 M256,270 C256,270 166,270 166,150 M256,270 C256,270 346,270 346,150 M256,240 C256,240 212,240 212,150 M256,240 C256,240 300,240 300,150" />
+</vector>

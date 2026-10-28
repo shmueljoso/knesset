@@ -160,7 +160,7 @@ export function PresidencyView() {
   const trustColor = pr.trust >= 55 ? 'var(--good)' : pr.trust >= 30 ? 'var(--gold)' : 'var(--bad)';
   return (
     <div className="scroll">
-      <div className="page" data-testid="presidency">
+      <div className="page dash" data-testid="presidency">
         <div className="card">
           <div className="card-title">
             <h3>🏛️ בית הנשיא</h3>

@@ -78,7 +78,7 @@ export function Dashboard() {
 
   return (
     <div className="scroll">
-      <div className="page">
+      <div className="page dash">
         <div className="card">
           <div className="card-title">
             <h3>🧭 המסלול שלך</h3>

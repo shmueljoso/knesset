@@ -1,7 +1,7 @@
 {
   "name": "hamishkan",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "המשכן – סימולטור קריירה פוליטית בכנסת",
   "scripts": {
@@ -11,14 +11,26 @@
     "test": "vitest run",
     "sim": "vitest run tests/sim.test.ts",
     "e2e": "playwright test",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:run": "npm run android:sync && cap run android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/share": "^8.0.3",
+    "@fontsource/heebo": "^5.3.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",

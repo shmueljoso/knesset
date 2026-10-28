@@ -101,7 +101,7 @@ export function ModEditor() {
 
   return (
     <div className="scroll">
-      <div className="page" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)' }}>
+      <div className="page" style={{ paddingTop: 'calc(var(--sat) + 16px)' }}>
         <div className="spread" style={{ marginBottom: 12 }}>
           <button className="btn ghost sm" onClick={() => setScreen(pendingMod ? 'create' : 'title')}>
             → חזרה
@@ -300,7 +300,7 @@ export function ModEditor() {
 
         <div style={{ height: 80 }} />
       </div>
-      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px calc(14px + env(safe-area-inset-bottom))', background: 'linear-gradient(0deg, var(--bg) 70%, transparent)' }}>
+      <div style={{ position: 'sticky', bottom: 0, padding: '12px 16px calc(14px + var(--sab))', background: 'linear-gradient(0deg, var(--bg) 70%, transparent)' }}>
         <button className="btn primary block" disabled={errors.length > 0} onClick={play}>
           {errors.length ? 'יש לתקן את השגיאות כדי לשחק' : '🏛️ לשחק עם הכנסת הזו'}
         </button>

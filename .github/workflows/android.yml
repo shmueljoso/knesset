@@ -1,0 +1,67 @@
+# בונה את אפליקציית האנדרואיד בכל push ומפרסם APK להורדה.
+# ההורדה: לשונית Actions ← הריצה האחרונה ← Artifacts, או ב-Releases ← "android-latest" (נוח מהטלפון).
+name: Android APK
+
+on:
+  push:
+    branches: [ccr-b895278b-7u0siq, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install
+        run: npm ci
+
+      - name: Check (types + unit tests)
+        run: npx tsc --noEmit -p . && npm test
+
+      - name: Build web + sync to Android
+        run: npm run android:sync
+
+      - name: Gradle – Java unit tests + debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk hamishkan-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hamishkan-debug-apk
+          path: hamishkan-debug.apk
+
+      - name: Publish as the "android-latest" pre-release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: המשכן – APK אחרון (debug)
+          prerelease: true
+          body: |
+            גרסת debug שנבנתה אוטומטית מ-${{ github.sha }}.
+            להתקנה: להוריד את hamishkan-debug.apk בטלפון ולאשר "התקנה ממקור לא ידוע".
+          files: hamishkan-debug.apk

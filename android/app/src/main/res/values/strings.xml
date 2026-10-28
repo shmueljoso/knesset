@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">המשכן</string>
+    <string name="title_activity_main">המשכן</string>
+    <string name="package_name">com.shmueljoso.hamishkan</string>
+    <string name="custom_url_scheme">com.shmueljoso.hamishkan</string>
+</resources>

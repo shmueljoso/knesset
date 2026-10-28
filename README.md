@@ -16,6 +16,18 @@ npm run build      # בנייה ל-dist/ כולל service worker
 npm run e2e        # בדיקות דפדפן במבט iPhone (CHROMIUM_PATH=... אם צריך)
 ```
 
+## אפליקציית אנדרואיד
+
+הפרויקט כולל אפליקציית אנדרואיד (Capacitor) בתיקייה `android/`, שנפתחת ב-Android Studio. בה גיבויים אוטומטיים, ייצוא ושיתוף, כפתור "חזור", רטט ופלאגין ג'אווה לדוגמה.
+
+```bash
+npm run android:sync   # בנייה והעתקה לפרויקט האנדרואיד
+npm run android:open   # פתיחה ב-Android Studio
+```
+
+- **מדריך:** המדריך המלא, כולל תרגילים, נמצא ב-[`docs/ANDROID.md`](docs/ANDROID.md).
+- **APK מוכן:** כל push בונה APK אוטומטית. מורידים אותו מ-**Releases ← android-latest**.
+
 ## מבנה
 
 - `src/engine/` – מנוע המשחק: TypeScript טהור, דטרמיניסטי (RNG עם seed בתוך המצב), ללא תלות ב-UI.
