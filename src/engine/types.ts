@@ -558,6 +558,8 @@ export interface CareerStats {
   pmWeeks: number;
   electionsOutside: number;
   startWorld: number;
+  /** השבוע שבו השחקן הגיע לראשות הממשלה בפעם הראשונה */
+  firstPmWeek?: number;
 }
 
 // ---------- קואליציה וממשלה ----------

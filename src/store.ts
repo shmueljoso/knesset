@@ -5,6 +5,7 @@ import { migrate } from './engine/migrate';
 import { repairLeadership } from './engine/systems/figures';
 import type { ModFile } from './engine/mods';
 import { autoBackup, haptic, safetyBackup } from './platform';
+import { cloudAutoSync } from './online';
 
 export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
 export type Panel =
@@ -20,6 +21,8 @@ export type Panel =
   | { kind: 'tools' }
   | { kind: 'president' }
   | { kind: 'saves' }
+  | { kind: 'account' }
+  | { kind: 'leaderboard' }
   | { kind: OpenPanel };
 
 export interface Toast {
@@ -71,6 +74,9 @@ interface Store {
   screen: 'title' | 'create' | 'game' | 'editor';
   pendingMod: ModFile | null;
   setPendingMod: (m: ModFile | null) => void;
+  /** אתגר השבוע שנבחר במסך הפתיחה – מסך היצירה נועל את התרחיש וה-seed */
+  pendingChallenge: { id: string; seed: number; scenario: 'grassroots' | 'freshman'; title: string } | null;
+  setPendingChallenge: (c: Store['pendingChallenge']) => void;
   /** תוצאת האירוע האחרון – נשארת על המסך גם כשהתור התרוקן */
   eventResult: { lines: string[]; success: boolean; title: string } | null;
   setEventResult: (r: { lines: string[]; success: boolean; title: string } | null) => void;
@@ -102,6 +108,8 @@ export const useStore = create<Store>((set, get) => ({
   screen: 'title',
   pendingMod: null,
   setPendingMod: (pendingMod) => set({ pendingMod }),
+  pendingChallenge: null,
+  setPendingChallenge: (pendingChallenge) => set({ pendingChallenge }),
   eventResult: null,
   setEventResult: (eventResult) => set({ eventResult }),
   game: null,
@@ -156,6 +164,7 @@ export const useStore = create<Store>((set, get) => ({
     set({ showReport: true, panels: [] });
     haptic('tap');
     autoBackup(get().game);
+    cloudAutoSync(get().game);
   },
   setShowReport: (showReport) => set({ showReport }),
 }));

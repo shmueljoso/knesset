@@ -3,6 +3,9 @@ import { ENDINGS, computeLegacy } from '../engine/systems/legacy';
 import { presidencyScore } from '../engine/systems/presidency';
 import { clearSaved, useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
+import { useEffect, useState } from 'react';
+import { recordLocal } from '../online';
+import { AccountSheet, PublishScore, ScoreCard } from './Online';
 
 export function LegacyModal() {
   const g = useGame();
@@ -10,6 +13,9 @@ export function LegacyModal() {
   const setScreen = useStore((s) => s.setScreen);
   const end = ENDINGS[g.gameOver ?? 'retired'] ?? ENDINGS.retired;
   const L = computeLegacy(g);
+  // השיא נשמר במכשיר מיד – גם בלי חשבון ובלי אינטרנט
+  useEffect(() => recordLocal(g), [g]);
+  const [login, setLogin] = useState(false);
   const keepPlaying = () =>
     act((s) => {
       s.flags.endSeen = s.gameOver ?? '';
@@ -45,6 +51,10 @@ export function LegacyModal() {
               ))}
             </div>
           )}
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <ScoreCard g={g} />
+          <PublishScore g={g} onLogin={() => setLogin(true)} />
         </div>
         <div className="section-label">תפקידים</div>
         <div className="small">{L.roles.length ? L.roles.join(' · ') : 'לא הגעת לכנסת.'}</div>
@@ -87,6 +97,11 @@ export function LegacyModal() {
           </button>
         </div>
       </div>
+      {login && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 35 }}>
+          <AccountSheet onClose={() => setLogin(false)} />
+        </div>
+      )}
     </div>
   );
 }

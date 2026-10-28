@@ -4,6 +4,7 @@ import { KIND_LABEL, looksLikeSave, type SaveKind, type SaveMeta } from '../save
 import { deviceInfo, exportGame, isNative, pickFile, saves, type DeviceInfo } from '../platform';
 import { useStore } from '../store';
 import { Sheet } from './common';
+import { CloudSaves } from './Online';
 
 function ago(ms: number): string {
   const m = Math.round((Date.now() - ms) / 60000);
@@ -125,6 +126,10 @@ export function SavesSheet({ onClose }: { onClose?: () => void }) {
           📥 ייבוא מקובץ
         </button>
       </div>
+
+      <CloudSaves onLoaded={onClose} />
+
+      <div className="section-label">📱 במכשיר</div>
 
       <div className="filter-row" style={{ marginTop: 12 }}>
         <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>

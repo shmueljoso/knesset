@@ -282,6 +282,12 @@ export function SettingsSheet() {
         <button className="btn" onClick={() => open({ kind: 'saves' })} data-testid="open-saves">
           💾 שמירות, גיבויים וייצוא
         </button>
+        <button className="btn" onClick={() => open({ kind: 'account' })} data-testid="open-account">
+          ☁️ חשבון וסנכרון
+        </button>
+        <button className="btn" onClick={() => open({ kind: 'leaderboard' })} data-testid="open-board">
+          🏆 טבלת השיאים והניקוד שלי
+        </button>
         <button className="btn" onClick={() => { setPendingMod(modFromGame(g)); closeAll(); setScreen('editor'); }}>
           🛠️ ייצוא הכנסת הנוכחית לעורך
         </button>

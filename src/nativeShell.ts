@@ -1,6 +1,7 @@
 // חיבור לאירועי המערכת של אנדרואיד: כפתור "חזור" ויציאה לרקע.
 import { App } from '@capacitor/app';
 import { autoBackup, isNative } from './platform';
+import { cloudAutoSync, flushPending } from './online';
 import { useStore } from './store';
 
 /** כפתור החזור של אנדרואיד: סוגר חלון → חוזר למפה → למסך הפתיחה → יוצא מהאפליקציה */
@@ -39,5 +40,10 @@ export function initNativeShell() {
     if (handleBack() === 'exit') void App.minimizeApp();
   });
   // יציאה לרקע: גיבוי (לכל היותר פעם ב-3 דקות), כי מערכת ההפעלה עלולה לסגור את האפליקציה
-  void App.addListener('pause', () => autoBackup(useStore.getState().game, { minGapMs: 3 * 60_000 }));
+  void App.addListener('pause', () => {
+    autoBackup(useStore.getState().game, { minGapMs: 3 * 60_000 });
+    cloudAutoSync(useStore.getState().game);
+  });
+  // חזרה לאפליקציה: שולחים מה שחיכה לחיבור
+  void App.addListener('resume', () => void flushPending());
 }

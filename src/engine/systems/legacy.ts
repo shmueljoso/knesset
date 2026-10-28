@@ -93,7 +93,10 @@ export function computeLegacy(s: GameState): Legacy {
 export function tickCareer(s: GameState) {
   const p = s.player;
   if (p.partyId) s.career.peakSeats = Math.max(s.career.peakSeats, s.parties[p.partyId].seats);
-  if (s.coalition.pmId === 'player') s.career.pmWeeks += 1;
+  if (s.coalition.pmId === 'player') {
+    s.career.pmWeeks += 1;
+    s.career.firstPmWeek ??= s.week;
+  }
 }
 
 export function retire(s: GameState) {

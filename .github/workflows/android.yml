@@ -39,6 +39,10 @@ jobs:
 
       - name: Build web + sync to Android
         run: npm run android:sync
+        env:
+          # השרת המקוון (לא חובה). מוגדר ב-Settings ← Secrets and variables ← Actions
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Gradle – Java unit tests + debug APK
         working-directory: android

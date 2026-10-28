@@ -24,7 +24,7 @@ export function CreateScreen() {
   const newGame = useStore((s) => s.newGame);
   const setScreen = useStore((s) => s.setScreen);
   const [step, setStep] = useState(0);
-  const [scenario, setScenario] = useState<ScenarioId>('grassroots');
+  const [scenario, setScenario] = useState<ScenarioId>(() => useStore.getState().pendingChallenge?.scenario ?? 'grassroots');
   const [background, setBackground] = useState<BackgroundId>('aide');
   const [gender, setGender] = useState<Gender>('f');
   const [name, setName] = useState(NAMES_F[Math.floor(Math.random() * 5)]);
@@ -32,6 +32,8 @@ export function CreateScreen() {
   const [ideology, setIdeology] = useState<Ideology>({ econ: 0, security: 20, religion: -20, judiciary: 0 });
   const [partyId, setPartyId] = useState<string | null>(null);
   const pendingMod = useStore((st) => st.pendingMod);
+  const challenge = useStore((st) => st.pendingChallenge);
+  const setPendingChallenge = useStore((st) => st.setPendingChallenge);
   const setPendingMod = useStore((st) => st.setPendingMod);
   const [mod, setMod] = useState<ModFile | null>(pendingMod);
   const [modErr, setModErr] = useState<string[]>([]);
@@ -59,8 +61,15 @@ export function CreateScreen() {
   const canNext = step !== 2 || name.trim().length >= 2;
   const canStart = !needsParty || !!partyId;
 
-  const start = () =>
+  const start = () => {
+    // אתגר השבוע: אותו עולם לכולם – seed ותרחיש קבועים, בלי מוד, דרמה רגילה
+    if (challenge) {
+      newGame({ name: name.trim(), gender, background, ideology, partyId, scenario: challenge.scenario, avatar, mod: null, drama: 'normal', seed: challenge.seed, challenge: challenge.id });
+      setPendingChallenge(null);
+      return;
+    }
     newGame({ name: name.trim(), gender, background, ideology, partyId, scenario, avatar, mod: mod && early && mod.listsClosed ? earlyStart(mod) : mod, drama });
+  };
 
   return (
     <div className="scroll">
@@ -77,17 +86,23 @@ export function CreateScreen() {
           <span className="small muted">{steps[step]}</span>
         </div>
 
+        {challenge && (
+          <div className="card small" style={{ borderColor: 'var(--gold)', marginBottom: 12 }} data-testid="challenge-banner">
+            <b className="gold">🎯 {challenge.title}</b>
+            <div className="muted">כל השחקנים מקבלים את אותו עולם ואותן הפתעות. התרחיש קבוע; את הדמות בוחרים חופשי. התוצאה נכנסת לטבלת האתגר.</div>
+          </div>
+        )}
         {step === 0 && (
           <>
             <h2>איך מתחילים?</h2>
             <p className="muted small">אפשר לטפס מלמטה או לקפוץ ישר למים.</p>
-            <button className={`pick ${scenario === 'grassroots' ? 'on' : ''}`} onClick={() => setScenario('grassroots')}>
+            <button className={`pick ${scenario === 'grassroots' ? 'on' : ''}`} disabled={!!challenge && challenge.scenario !== 'grassroots'} onClick={() => setScenario('grassroots')}>
               <h3>🌱 מהשטח</h3>
               <p className="small muted" style={{ margin: '4px 0 0' }}>
                 מחוץ לכנסת, שנה לפני הבחירות. בונים שם, נכנסים לרשימה, נלחמים על מקום ריאלי – ומקווים להיבחר.
               </p>
             </button>
-            <button className={`pick ${scenario === 'freshman' ? 'on' : ''}`} onClick={() => setScenario('freshman')}>
+            <button className={`pick ${scenario === 'freshman' ? 'on' : ''}`} disabled={!!challenge && challenge.scenario !== 'freshman'} onClick={() => setScenario('freshman')}>
               <h3>🏛️ ח"כ טרי</h3>
               <p className="small muted" style={{ margin: '4px 0 0' }}>
                 נבחרת זה עתה כאחרון/ה ברשימה. ועדות, הצעות חוק ומאבקי כוח – מהיום הראשון.
@@ -205,7 +220,7 @@ export function CreateScreen() {
         {step === 4 && (
           <>
             <h2>באיזו מפלגה?</h2>
-            <div className="card small" style={{ marginBottom: 10 }}>
+            <div className="card small" style={{ marginBottom: 10, display: challenge ? 'none' : undefined }}>
               <div className="small muted" style={{ marginBottom: 6 }}>איזו כנסת?</div>
               <div className="filter-row">
                 <button className={!mod ? 'on' : ''} onClick={() => { setMod(null); setPartyId(null); }}>

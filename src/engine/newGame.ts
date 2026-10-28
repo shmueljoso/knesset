@@ -38,6 +38,8 @@ export interface NewGameOptions {
   seed?: number;
   mod?: ModFile | null;
   drama?: Drama;
+  /** מזהה "אתגר השבוע" (כולם משחקים את אותו עולם) – נשמר ב-flags.challenge */
+  challenge?: string;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -267,7 +269,7 @@ export function createGame(opts: NewGameOptions): GameState {
     report: null,
     log: [],
     lastElection: null,
-    flags: {},
+    flags: opts.challenge ? { challenge: opts.challenge } : {},
     counter: 0,
     gameOver: null,
   } as Partial<GameState> as GameState;

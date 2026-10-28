@@ -10,6 +10,7 @@ import { PrimariesNight } from './PrimariesNight';
 import { PresidentRace } from './PresidentRace';
 import { PresidencyView, PresidentSheet } from './President';
 import { SavesSheet } from './Saves';
+import { AccountSheet, LeaderboardSheet } from './Online';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -63,6 +64,10 @@ function PanelView({ p }: { p: Panel }) {
       return <PresidentSheet />;
     case 'saves':
       return <SavesSheet />;
+    case 'account':
+      return <AccountSheet />;
+    case 'leaderboard':
+      return <LeaderboardSheet />;
   }
 }
 
