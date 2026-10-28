@@ -16,6 +16,8 @@ export { weeklyChallenge, type Challenge } from './challenge';
 /** כתובת האתר ב-Cloudflare שנקבעה בבנייה (VITE_API_URL). אפשר גם להזין אותה במסך ההגדרות */
 const BUILD_API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
 const SERVER_KEY = 'hamishkan.apiUrl';
+/** האתר ב-Cloudflare – ברירת המחדל באפליקציה כשלא נקבעה כתובת אחרת */
+export const DEFAULT_SERVER = 'https://knesset.s029995083.workers.dev';
 const PENDING_SCORES = 'hamishkan.pendingScores';
 const PENDING_SAVE = 'hamishkan.cloudPending';
 const LOCAL_RECORDS = 'hamishkan.myRecords';
@@ -48,7 +50,8 @@ export const serverConfigured = () => useOnline.getState().status !== 'unconfigu
 
 /** כתובת השרת: מה שהוזן בהגדרות, אחרת מהבנייה. בדפדפן ריק = אותו אתר */
 export function apiUrl(): string {
-  return (safeLS.get(SERVER_KEY) ?? BUILD_API_URL).trim().replace(/\/$/, '');
+  const fallback = BUILD_API_URL || (Capacitor.isNativePlatform() ? DEFAULT_SERVER : '');
+  return (safeLS.get(SERVER_KEY) ?? fallback).trim().replace(/\/$/, '');
 }
 
 /** כתובת האתר לקישורי שיתוף (באפליקציה – כתובת השרת) */
