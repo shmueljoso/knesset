@@ -2,7 +2,7 @@
 // מסד הנתונים "hamishkan" נוצר בממשק של Cloudflare; הטבלאות נוצרות לבד בבקשה הראשונה (worker/schema.ts)
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "hamishkan",
+  "name": "knesset",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {

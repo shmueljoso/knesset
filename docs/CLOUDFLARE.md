@@ -28,12 +28,12 @@ APK   ──▶ │   /           → האתר (התיקייה dist/)    │
    את הטבלאות לא צריך ליצור: ה-Worker יוצר אותן לבד בבקשה הראשונה (`worker/schema.ts`).
 2. **חיבור הריפו:** ב-Cloudflare נכנסים ל-**Workers & Pages ← Create application ← Import a repository**, ומחברים את GitHub. אחר כך:
    - **Repository:** בוחרים את `shmueljoso/knesset`.
-   - **Project name:** `hamishkan`. חייב להיות זהה לשם ב-`wrangler.jsonc`.
+   - **Project name:** `knesset`. חייב להיות זהה לשם ב-`wrangler.jsonc`.
    - **Production branch:** `ccr-b895278b-7u0siq`.
    - **Build command:** `npm run build`
    - **Deploy command:** `npx wrangler deploy`
    - לוחצים **Deploy**. החיבור למסד הנתונים מגיע לבד מ-`wrangler.jsonc`.
-3. **הכתובת:** בסוף מופיעה כתובת כמו `https://hamishkan.<השם-שלך>.workers.dev`. זה האתר, עם חשבונות, שיאים וקישורי שיתוף.
+3. **הכתובת:** בסוף מופיעה כתובת כמו `https://knesset.<השם-שלך>.workers.dev`. זה האתר, עם חשבונות, שיאים וקישורי שיתוף.
    מעכשיו כל push לענף מעדכן את האתר לבד.
    אפשר לחבר דומיין משלך: **Workers & Pages ← hamishkan ← Settings ← Domains & Routes**.
 
