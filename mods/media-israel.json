@@ -23,31 +23,517 @@
     "public": "כאן חדשות"
   },
   "pollsters": {
-    "מכון מדגמים": { "name": "מדגם (מנו גבע)", "outlet": "חדשות 12" },
-    "פאנל העם": { "name": "פאנלס פוליטיקס", "outlet": "מעריב" },
-    "קול-סקר": { "name": "קמיל פוקס", "outlet": "חדשות 13" },
-    "מכון הכיכר": { "name": "קנטר", "outlet": "כאן חדשות" }
+    "מכון מדגמים": {
+      "name": "מדגם (מנו גבע)",
+      "outlet": "חדשות 12"
+    },
+    "פאנל העם": {
+      "name": "פאנלס פוליטיקס",
+      "outlet": "מעריב"
+    },
+    "קול-סקר": {
+      "name": "קמיל פוקס",
+      "outlet": "חדשות 13"
+    },
+    "מכון הכיכר": {
+      "name": "קנטר",
+      "outlet": "כאן חדשות"
+    }
   },
   "journalists": [
-    { "id": "amit_segal", "name": "עמית סגל", "gender": "m", "outlet": "חדשות 12", "title": "הפרשן הפוליטי", "beat": "politics", "lean": { "econ": 40, "security": 40, "religion": 10, "judiciary": 45 }, "star": true },
-    { "id": "yonit_levi", "name": "יונית לוי", "gender": "f", "outlet": "חדשות 12", "title": "מגישת המהדורה", "beat": "anchor", "lean": { "security": -10, "judiciary": -30, "religion": -30 }, "star": true },
-    { "id": "dana_weiss", "name": "דנה וייס", "gender": "f", "outlet": "חדשות 12", "title": "הפרשנית הפוליטית הראשית", "beat": "politics", "lean": { "security": -15, "judiciary": -35, "religion": -30 }, "star": true },
-    { "id": "amnon_abramovich", "name": "עמנון אברמוביץ'", "gender": "m", "outlet": "חדשות 12", "title": "פרשן", "beat": "politics", "lean": { "security": -45, "judiciary": -55, "religion": -40 } },
-    { "id": "guy_peleg", "name": "גיא פלג", "gender": "m", "outlet": "חדשות 12", "title": "הכתב המשפטי", "beat": "legal", "lean": { "judiciary": -25 } },
-    { "id": "yaron_avraham", "name": "ירון אברהם", "gender": "m", "outlet": "חדשות 12", "title": "הכתב הפוליטי", "beat": "politics", "lean": { "judiciary": -10 } },
-    { "id": "daphna_liel", "name": "דפנה ליאל", "gender": "f", "outlet": "חדשות 12", "title": "הכתבת הפוליטית", "beat": "politics", "lean": { "judiciary": -15, "religion": -15 } },
-    { "id": "yair_cherki", "name": "יאיר צ'רקי", "gender": "m", "outlet": "חדשות 12", "title": "הכתב לענייני דת", "beat": "religion", "lean": { "religion": 35, "security": 20 } },
-    { "id": "barak_ravid", "name": "ברק רביד", "gender": "m", "outlet": "חדשות 12", "title": "הכתב המדיני", "beat": "security", "lean": { "security": -25 } },
-    { "id": "raviv_drucker", "name": "רביב דרוקר", "gender": "m", "outlet": "חדשות 13", "title": "תחקירן", "beat": "investigative", "lean": { "security": -40, "judiciary": -65, "religion": -40 }, "star": true },
-    { "id": "moriah_asraf", "name": "מוריה אסרף", "gender": "f", "outlet": "חדשות 13", "title": "הכתבת הפוליטית", "beat": "politics", "lean": { "security": 10, "judiciary": 5 } },
-    { "id": "ayala_hasson", "name": "איילה חסון", "gender": "f", "outlet": "כאן חדשות", "title": "הכתבת המדינית", "beat": "politics", "lean": { "judiciary": -10 } },
-    { "id": "kalman_liebeskind", "name": "קלמן ליבסקינד", "gender": "m", "outlet": "מעריב", "title": "פרשן", "beat": "investigative", "lean": { "security": 50, "judiciary": 60, "religion": 30 } },
-    { "id": "ben_caspit", "name": "בן כספית", "gender": "m", "outlet": "מעריב ו-103FM", "title": "פרשן", "beat": "politics", "lean": { "security": 10, "judiciary": -45, "religion": -30 } },
-    { "id": "nadav_eyal", "name": "נדב איל", "gender": "m", "outlet": "ידיעות אחרונות", "title": "פרשן", "beat": "security", "lean": { "security": -10, "judiciary": -20 } },
-    { "id": "sivan_rahav_meir", "name": "סיון רהב-מאיר", "gender": "f", "outlet": "ידיעות אחרונות", "title": "עיתונאית ופרשנית", "beat": "religion", "lean": { "religion": 55, "security": 30, "judiciary": 25 } },
-    { "id": "tal_shalev", "name": "טל שליו", "gender": "f", "outlet": "וואלה!", "title": "הכתבת הפוליטית", "beat": "politics", "lean": { "judiciary": -10 } },
-    { "id": "yinon_magal", "name": "ינון מגל", "gender": "m", "outlet": "ערוץ 14", "title": "מגיש", "beat": "anchor", "lean": { "econ": 40, "security": 75, "religion": 35, "judiciary": 75 }, "star": true },
-    { "id": "shimon_riklin", "name": "שמעון ריקלין", "gender": "m", "outlet": "ערוץ 14", "title": "פרשן", "beat": "politics", "lean": { "security": 80, "religion": 40, "judiciary": 80 } },
-    { "id": "erel_segal", "name": "אראל סגל", "gender": "m", "outlet": "ערוץ 14", "title": "פרשן", "beat": "politics", "lean": { "security": 65, "religion": 25, "judiciary": 70 } }
+    {
+      "id": "amit_segal",
+      "name": "עמית סגל",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הפרשן הפוליטי",
+      "beat": "politics",
+      "lean": {
+        "econ": 40,
+        "security": 40,
+        "religion": 10,
+        "judiciary": 45
+      },
+      "star": true
+    },
+    {
+      "id": "yonit_levi",
+      "name": "יונית לוי",
+      "gender": "f",
+      "outlet": "חדשות 12",
+      "title": "מגישת המהדורה",
+      "beat": "anchor",
+      "lean": {
+        "security": -10,
+        "judiciary": -30,
+        "religion": -30
+      },
+      "star": true
+    },
+    {
+      "id": "dana_weiss",
+      "name": "דנה וייס",
+      "gender": "f",
+      "outlet": "חדשות 12",
+      "title": "הפרשנית הפוליטית הראשית",
+      "beat": "politics",
+      "lean": {
+        "security": -15,
+        "judiciary": -35,
+        "religion": -30
+      },
+      "star": true
+    },
+    {
+      "id": "amnon_abramovich",
+      "name": "עמנון אברמוביץ'",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "פרשן",
+      "beat": "politics",
+      "lean": {
+        "security": -45,
+        "judiciary": -55,
+        "religion": -40
+      }
+    },
+    {
+      "id": "guy_peleg",
+      "name": "גיא פלג",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הכתב המשפטי",
+      "beat": "legal",
+      "lean": {
+        "judiciary": -25
+      }
+    },
+    {
+      "id": "yaron_avraham",
+      "name": "ירון אברהם",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הכתב הפוליטי",
+      "beat": "politics",
+      "lean": {
+        "judiciary": -10
+      }
+    },
+    {
+      "id": "daphna_liel",
+      "name": "דפנה ליאל",
+      "gender": "f",
+      "outlet": "חדשות 12",
+      "title": "הכתבת הפוליטית",
+      "beat": "politics",
+      "lean": {
+        "judiciary": -15,
+        "religion": -15
+      }
+    },
+    {
+      "id": "yair_cherki",
+      "name": "יאיר צ'רקי",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הכתב לענייני דת",
+      "beat": "religion",
+      "lean": {
+        "religion": 35,
+        "security": 20
+      }
+    },
+    {
+      "id": "barak_ravid",
+      "name": "ברק רביד",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הכתב המדיני",
+      "beat": "security",
+      "lean": {
+        "security": -25
+      }
+    },
+    {
+      "id": "raviv_drucker",
+      "name": "רביב דרוקר",
+      "gender": "m",
+      "outlet": "חדשות 13",
+      "title": "תחקירן",
+      "beat": "investigative",
+      "lean": {
+        "security": -40,
+        "judiciary": -65,
+        "religion": -40
+      },
+      "star": true
+    },
+    {
+      "id": "moriah_asraf",
+      "name": "מוריה אסרף",
+      "gender": "f",
+      "outlet": "חדשות 13",
+      "title": "הכתבת הפוליטית",
+      "beat": "politics",
+      "lean": {
+        "security": 10,
+        "judiciary": 5
+      }
+    },
+    {
+      "id": "ayala_hasson",
+      "name": "איילה חסון",
+      "gender": "f",
+      "outlet": "כאן חדשות",
+      "title": "הכתבת המדינית",
+      "beat": "politics",
+      "lean": {
+        "judiciary": -10
+      }
+    },
+    {
+      "id": "kalman_liebeskind",
+      "name": "קלמן ליבסקינד",
+      "gender": "m",
+      "outlet": "מעריב",
+      "title": "פרשן",
+      "beat": "investigative",
+      "lean": {
+        "security": 50,
+        "judiciary": 60,
+        "religion": 30
+      }
+    },
+    {
+      "id": "ben_caspit",
+      "name": "בן כספית",
+      "gender": "m",
+      "outlet": "מעריב ו-103FM",
+      "title": "פרשן",
+      "beat": "politics",
+      "lean": {
+        "security": 10,
+        "judiciary": -45,
+        "religion": -30
+      }
+    },
+    {
+      "id": "nadav_eyal",
+      "name": "נדב איל",
+      "gender": "m",
+      "outlet": "ידיעות אחרונות",
+      "title": "פרשן",
+      "beat": "security",
+      "lean": {
+        "security": -10,
+        "judiciary": -20
+      }
+    },
+    {
+      "id": "sivan_rahav_meir",
+      "name": "סיון רהב-מאיר",
+      "gender": "f",
+      "outlet": "ידיעות אחרונות",
+      "title": "עיתונאית ופרשנית",
+      "beat": "religion",
+      "lean": {
+        "religion": 55,
+        "security": 30,
+        "judiciary": 25
+      }
+    },
+    {
+      "id": "tal_shalev",
+      "name": "טל שליו",
+      "gender": "f",
+      "outlet": "וואלה!",
+      "title": "הכתבת הפוליטית",
+      "beat": "politics",
+      "lean": {
+        "judiciary": -10
+      }
+    },
+    {
+      "id": "yinon_magal",
+      "name": "ינון מגל",
+      "gender": "m",
+      "outlet": "ערוץ 14",
+      "title": "מגיש",
+      "beat": "anchor",
+      "lean": {
+        "econ": 40,
+        "security": 75,
+        "religion": 35,
+        "judiciary": 75
+      },
+      "star": true
+    },
+    {
+      "id": "shimon_riklin",
+      "name": "שמעון ריקלין",
+      "gender": "m",
+      "outlet": "ערוץ 14",
+      "title": "פרשן",
+      "beat": "politics",
+      "lean": {
+        "security": 80,
+        "religion": 40,
+        "judiciary": 80
+      }
+    },
+    {
+      "id": "erel_segal",
+      "name": "אראל סגל",
+      "gender": "m",
+      "outlet": "ערוץ 14",
+      "title": "פרשן",
+      "beat": "politics",
+      "lean": {
+        "security": 65,
+        "religion": 25,
+        "judiciary": 70
+      }
+    },
+    {
+      "id": "nahum_barnea",
+      "name": "נחום ברנע",
+      "gender": "m",
+      "outlet": "ידיעות אחרונות",
+      "title": "פרשן בכיר",
+      "beat": "politics",
+      "lean": {
+        "security": -20,
+        "judiciary": -35,
+        "religion": -30
+      },
+      "star": true
+    },
+    {
+      "id": "sima_kadmon",
+      "name": "סימה קדמון",
+      "gender": "f",
+      "outlet": "ידיעות אחרונות",
+      "title": "פרשנית פוליטית",
+      "beat": "politics",
+      "lean": {
+        "security": -15,
+        "judiciary": -40,
+        "religion": -30
+      }
+    },
+    {
+      "id": "ben_dror_yemini",
+      "name": "בן-דרור ימיני",
+      "gender": "m",
+      "outlet": "ידיעות אחרונות",
+      "title": "פובליציסט",
+      "beat": "opinion",
+      "lean": {
+        "security": 25,
+        "judiciary": -10,
+        "religion": -15
+      }
+    },
+    {
+      "id": "yossi_verter",
+      "name": "יוסי ורטר",
+      "gender": "m",
+      "outlet": "הארץ",
+      "title": "פרשן פוליטי",
+      "beat": "politics",
+      "lean": {
+        "security": -40,
+        "judiciary": -60,
+        "religion": -50
+      }
+    },
+    {
+      "id": "gideon_levy",
+      "name": "גדעון לוי",
+      "gender": "m",
+      "outlet": "הארץ",
+      "title": "בעל טור",
+      "beat": "opinion",
+      "lean": {
+        "econ": -40,
+        "security": -85,
+        "judiciary": -60,
+        "religion": -70
+      }
+    },
+    {
+      "id": "hagai_segal",
+      "name": "חגי סגל",
+      "gender": "m",
+      "outlet": "מקור ראשון",
+      "title": "עורך ופרשן",
+      "beat": "opinion",
+      "lean": {
+        "security": 65,
+        "judiciary": 60,
+        "religion": 55
+      }
+    },
+    {
+      "id": "arnon_segal",
+      "name": "ארנון סגל",
+      "gender": "m",
+      "outlet": "מקור ראשון",
+      "title": "כתב ופובליציסט",
+      "beat": "religion",
+      "lean": {
+        "security": 80,
+        "judiciary": 60,
+        "religion": 70
+      }
+    },
+    {
+      "id": "amnon_lord",
+      "name": "אמנון לורד",
+      "gender": "m",
+      "outlet": "ישראל היום",
+      "title": "פובליציסט",
+      "beat": "opinion",
+      "lean": {
+        "security": 60,
+        "judiciary": 65,
+        "religion": 20
+      }
+    },
+    {
+      "id": "yehuda_schlesinger",
+      "name": "יהודה שלזינגר",
+      "gender": "m",
+      "outlet": "ישראל היום",
+      "title": "הכתב לענייני דת",
+      "beat": "religion",
+      "lean": {
+        "religion": 50,
+        "security": 30
+      }
+    },
+    {
+      "id": "ilana_dayan",
+      "name": "אילנה דיין",
+      "gender": "f",
+      "outlet": "חדשות 12",
+      "title": "מגישת 'עובדה'",
+      "beat": "investigative",
+      "lean": {
+        "security": -30,
+        "judiciary": -50,
+        "religion": -40
+      },
+      "star": true
+    },
+    {
+      "id": "rina_matzliach",
+      "name": "רינה מצליח",
+      "gender": "f",
+      "outlet": "חדשות 12",
+      "title": "פרשנית פוליטית",
+      "beat": "politics",
+      "lean": {
+        "security": -20,
+        "judiciary": -40,
+        "religion": -35
+      }
+    },
+    {
+      "id": "arie_golan",
+      "name": "אריה גולן",
+      "gender": "m",
+      "outlet": "כאן ב'",
+      "title": "מגיש הבוקר",
+      "beat": "anchor",
+      "lean": {
+        "security": -30,
+        "judiciary": -40,
+        "religion": -30
+      }
+    },
+    {
+      "id": "keren_neubach",
+      "name": "קרן נויבך",
+      "gender": "f",
+      "outlet": "כאן ב'",
+      "title": "מגישה",
+      "beat": "anchor",
+      "lean": {
+        "econ": -40,
+        "security": -20,
+        "judiciary": -30
+      }
+    },
+    {
+      "id": "nir_dvori",
+      "name": "ניר דבורי",
+      "gender": "m",
+      "outlet": "חדשות 12",
+      "title": "הכתב הצבאי",
+      "beat": "security",
+      "lean": {
+        "security": 10
+      }
+    },
+    {
+      "id": "or_heller",
+      "name": "אור הלר",
+      "gender": "m",
+      "outlet": "חדשות 13",
+      "title": "הכתב לענייני ביטחון",
+      "beat": "security",
+      "lean": {
+        "security": 10
+      }
+    },
+    {
+      "id": "alon_ben_david",
+      "name": "אלון בן דוד",
+      "gender": "m",
+      "outlet": "חדשות 13",
+      "title": "פרשן צבאי",
+      "beat": "security",
+      "lean": {
+        "security": -10,
+        "judiciary": -20
+      }
+    },
+    {
+      "id": "jacky_hugi",
+      "name": "ג'קי חוגי",
+      "gender": "m",
+      "outlet": "גלי צה\"ל",
+      "title": "הפרשן לענייני ערבים",
+      "beat": "arab",
+      "lean": {
+        "security": 5
+      }
+    },
+    {
+      "id": "zvi_yehezkeli",
+      "name": "צבי יחזקאלי",
+      "gender": "m",
+      "outlet": "חדשות 13",
+      "title": "הפרשן לענייני ערבים",
+      "beat": "arab",
+      "lean": {
+        "security": 45,
+        "religion": 10
+      }
+    },
+    {
+      "id": "avishai_grinzaig",
+      "name": "אבישי גרינצייג",
+      "gender": "m",
+      "outlet": "i24NEWS",
+      "title": "הכתב הפוליטי",
+      "beat": "religion",
+      "lean": {
+        "religion": 40,
+        "security": 30,
+        "judiciary": 30
+      }
+    }
   ]
 }

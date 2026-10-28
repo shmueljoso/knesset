@@ -9,6 +9,7 @@ import { clamp, ideologyDistance, leanAlignment } from '../util';
 import { addNews } from './news';
 import { addMomentum } from './opinion';
 import { latestSurvey } from './surveys';
+import { ensureOutsiders } from './outsiders';
 
 export interface RealJournalist {
   id: string;
@@ -86,6 +87,7 @@ function makeJournalist(s: GameState, j: RealJournalist): Npc {
 
 /** מצב התקשורת: יוצר/מסתיר את העיתונאים המתאימים. בטוח לקרוא שוב ושוב */
 export function setMediaMode(s: GameState, mode: 'fictional' | 'real') {
+  ensureOutsiders(s, mode === 'real');
   s.settings = { ...s.settings, media: mode };
   if (mode === 'real') {
     const taken = String(s.flags.playsJournalist ?? '');
@@ -159,6 +161,14 @@ export function makeColumn(s: GameState, j: Npc): { headline: string; tone: News
   if (beat === 'security') opts.push({ w: s.world.security < 45 ? 4 : 1.5, c: () => ({ headline: s.world.security < 45 ? `${j.name}: "מערכת הביטחון מזהירה – והדרג המדיני משותק"` : `${j.name} חושף/ת: מגעים חשאיים בערוץ המדיני`, tone: s.world.security < 45 ? 'bad' : 'neutral', about: false }) });
   // דת ומדינה
   if (beat === 'religion') opts.push({ w: s.issues.draft > 55 || s.issues.religion > 55 ? 4 : 1.5, c: () => ({ headline: s.issues.draft > 55 ? `${j.name}: "משבר הגיוס הוא פצצה מתקתקת – לכל הצדדים"` : `${j.name} על דת ומדינה: "השבוע נחצה עוד קו"`, tone: 'neutral', about: false }) });
+  // בעלי טור: דעה חדה על הממשלה ועל הכנסת
+  if (beat === 'opinion') {
+    const govIdeo = s.coalition.pmId === 'player' ? p.ideology : s.npcs[s.coalition.pmId]?.ideology;
+    const hates = govIdeo ? leanAlignment(govIdeo, j.ideology) < -0.2 : false;
+    opts.push({ w: 3, c: () => (hates ? { headline: pick(s, [`${j.name}: "${pm} מוביל/ה אותנו לתהום"`, `${j.name}: "הממשלה הגרועה בתולדות המדינה"`, `${j.name} על ${pm}: "די"`]), tone: 'neutral', about: false } : { headline: pick(s, [`${j.name}: "תנו ל${pm} לעבוד"`, `${j.name}: "האופוזיציה הזו לא מציעה כלום"`]), tone: 'neutral', about: false }) });
+  }
+  // החברה הערבית
+  if (beat === 'arab') opts.push({ w: s.issues.crime > 55 ? 4 : 1.5, c: () => ({ headline: s.issues.crime > 55 ? `${j.name}: "הפשיעה בחברה הערבית היא כבר בעיה ביטחונית"` : `${j.name} מנתח/ת: מה קורה ברחוב הערבי`, tone: 'neutral', about: false }) });
   // מגיש/ה: ראיונות
   const guest = Object.values(s.npcs).filter((n) => n.isMK && n.notable);
   if (beat === 'anchor' && guest.length) opts.push({ w: 1.5, c: () => ({ headline: `הערב אצל ${j.name}: ${pick(s, ['העימות הגדול עם', 'ראיון בלעדי עם', 'השאלות הקשות ל'])} ${pick(s, guest).name}`, tone: 'neutral', about: false }) });

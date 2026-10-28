@@ -22,7 +22,7 @@ function game(): GameState {
   return g;
 }
 
-/** שרת מדומה במקום Supabase (אותו ממשק) */
+/** שרת מדומה במקום Cloudflare (אותו ממשק) */
 async function boot(page: Page, g: GameState | null, mock = true) {
   await page.addInitScript(
     ([json, m]) => {

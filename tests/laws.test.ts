@@ -125,14 +125,19 @@ describe('lowering the electoral threshold', () => {
   });
 
   it('small parties poll higher the lower the threshold, and lower when it is raised', () => {
+    // ממוצע על כמה עולמות: בעולם בודד מפלגה חדשה שקמה במקרה מטה את התוצאה
     const mk = (thr: number) => {
-      const s = createGame({ ...base, seed: 8 });
-      s.rules.threshold = thr;
-      for (let i = 0; i < 30; i++) {
-        s.eventQueue = [];
-        endWeek(s);
+      let sum = 0;
+      for (const seed of [8, 9, 10, 11, 12, 13]) {
+        const s = createGame({ ...base, seed });
+        s.rules.threshold = thr;
+        for (let i = 0; i < 30; i++) {
+          s.eventQueue = [];
+          endWeek(s);
+        }
+        sum += Object.values(s.parties).filter((p) => p.base < 6).reduce((a, p) => a + p.poll, 0);
       }
-      return Object.values(s.parties).filter((p) => p.base < 6).reduce((a, p) => a + p.poll, 0);
+      return sum / 6;
     };
     expect(mk(1.5)).toBeGreaterThan(mk(3.25));
     expect(mk(5)).toBeLessThan(mk(3.25));

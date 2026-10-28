@@ -30,7 +30,7 @@ export const HEADLINES: HeadlineDef[] = [
   { id: 'trust_low', weight: 2, when: (s) => s.world.trust < 33, make: () => [['מדד האמון במוסדות בשפל של כל הזמנים', 'bad'], ['"כולם מושחתים": רק אחד מחמישה סומך על הכנסת', 'bad']] },
   { id: 'cohesion_low', weight: 2, when: (s) => s.world.cohesion < 33, make: () => [['"שתי מדינות לשני עמים – בתוך ישראל": הקרע מעמיק', 'bad'], ['הפגנות ענק משני הצדדים באותו ערב; המשטרה מפרידה', 'bad']] },
   // ---- סוגיות ----
-  { id: 'draft_hot', weight: 2, when: (s) => s.issues.draft > 70 && tf(s, 'volunteer') < 2, make: () => [['המילואימניקים חוסמים את איילון: "אנחנו לא פראיירים"', 'bad'], ['ישיבות מתכוננות למעצרים; ההנהגה החרדית: "נצא לרחובות"', 'bad']] },
+  { id: 'draft_hot', weight: 2, when: (s) => s.issues.draft > 70 && tf(s, 'volunteer') < 2 && (s.issueFatigue?.draft ?? 0) < 50, make: () => [['המילואימניקים חוסמים את איילון: "אנחנו לא פראיירים"', 'bad'], ['ישיבות מתכוננות למעצרים; ההנהגה החרדית: "נצא לרחובות"', 'bad']] },
   { id: 'wages_hot', weight: 2, when: (s) => s.issues.wages > 68, make: () => [['ההסתדרות מאיימת בשביתה כללית', 'bad'], ['רופאים, אחיות ומורים: גל שביתות במגזר הציבורי', 'bad']] },
   { id: 'judiciary_hot', weight: 2, when: (s) => s.issues.judiciary > 70, make: () => [['מוצאי שבת: מאות אלפים בקפלן', 'neutral'], ['טייסי מילואים מאיימים: "לא נתייצב"', 'bad']] },
   { id: 'religion_hot', weight: 1, when: (s) => s.issues.religion > 70, make: () => [['עימותים בשכונה מעורבת על רקע פתיחת עסקים בשבת', 'bad']] },

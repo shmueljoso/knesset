@@ -1,3 +1,4 @@
+import { StancesCard } from './Stances';
 import { STAFF_ROLES, staffAdvice } from '../engine/systems/staff';
 import { pollsterName } from '../engine/systems/media';
 import { inSession, SESSION_NAMES, sessionOf, shortDateLabel } from '../engine/calendar';
@@ -109,6 +110,8 @@ export function Dashboard() {
         </div>
 
         <StaffAdviceCard />
+
+        {!(g.presidency && g.president?.id === 'player') && <StancesCard />}
 
         <PresidentCard />
 

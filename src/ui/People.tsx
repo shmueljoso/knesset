@@ -12,8 +12,9 @@ import { Meter, PartyTag, Sheet } from './common';
 import { CATCHPHRASES, greeting } from '../engine/data/personality';
 import { templateById } from '../engine/data/bills';
 import { npcBenefits } from '../engine/systems/influence';
+import { KIND_LABEL, recruitBlocked, recruitChance, recruitFigure, type OutsideKind } from '../engine/systems/outsiders';
 
-type Filter = 'notable' | 'mine' | 'coalition' | 'opposition' | 'allies' | 'rivals' | 'gov' | 'media' | 'all';
+type Filter = 'notable' | 'mine' | 'coalition' | 'opposition' | 'allies' | 'rivals' | 'gov' | 'media' | 'public' | 'all';
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'notable', label: 'בולטים' },
   { id: 'mine', label: 'המפלגה שלי' },
@@ -23,6 +24,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'coalition', label: 'קואליציה' },
   { id: 'opposition', label: 'אופוזיציה' },
   { id: 'media', label: 'תקשורת ולובי' },
+  { id: 'public', label: 'דמויות ציבוריות' },
   { id: 'all', label: 'כולם' },
 ];
 
@@ -41,7 +43,7 @@ export function PeopleView() {
   const [limit, setLimit] = useState(40);
 
   const list = useMemo(() => {
-    let arr = Object.values(g.npcs).filter((n) => n.isMK || isActiveJournalist(g, n) || n.role === 'lobbyist' || (n.role === 'candidate' && n.partyId === g.player.partyId));
+    let arr = Object.values(g.npcs).filter((n) => n.isMK || isActiveJournalist(g, n) || n.role === 'lobbyist' || (n.role === 'candidate' && n.partyId === g.player.partyId) || (!!n.outside && n.notable));
     const f: Record<Filter, (n: Npc) => boolean> = {
       notable: (n) => n.notable || !!n.title || n.id === g.player.employerId,
       mine: (n) => !!g.player.partyId && n.partyId === g.player.partyId,
@@ -51,6 +53,7 @@ export function PeopleView() {
       coalition: (n) => n.isMK && isCoalition(g, n.partyId),
       opposition: (n) => n.isMK && !isCoalition(g, n.partyId),
       media: (n) => isActiveJournalist(g, n) || n.role === 'lobbyist',
+      public: (n) => !!n.outside && n.notable,
       all: () => true,
     };
     arr = arr.filter(f[filter]);
@@ -151,6 +154,23 @@ export function NpcSheet({ id }: { id: string }) {
             ))}
           </div>
         </>
+      )}
+      {n.outside && !n.partyId && (
+        <div className="card small" data-testid="recruit-figure">
+          <b>🌟 {KIND_LABEL[n.outside as OutsideKind] ?? 'דמות ציבורית'}</b>
+          <div className="muted tiny">משפיע/ה מבחוץ: הצהרות, המלצות לפני בחירות, ולפעמים כניסה לפוליטיקה.</div>
+          <button
+            className="btn sm"
+            style={{ marginTop: 8 }}
+            disabled={!!recruitBlocked(g, n.id)}
+            onClick={() => {
+              const r = act((s) => recruitFigure(s, n.id));
+              toast(r.text, r.ok ? 'good' : 'bad');
+            }}
+          >
+            ⏱1 · להציע מקום ברשימה{recruitBlocked(g, n.id) ? ` (${recruitBlocked(g, n.id)})` : ` · סיכוי ${Math.round(recruitChance(g, n.id) * 100)}%`}
+          </button>
+        </div>
       )}
       <div className="section-label">מה הוא/היא יכול/ה לעשות בשבילך</div>
       <div className="card">

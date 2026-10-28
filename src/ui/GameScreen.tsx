@@ -11,6 +11,7 @@ import { PresidentRace } from './PresidentRace';
 import { PresidencyView, PresidentSheet } from './President';
 import { SavesSheet } from './Saves';
 import { AccountSheet, LeaderboardSheet } from './Online';
+import { StancesSheet } from './Stances';
 import { CaucusSheet } from './PowerMap';
 import { CoalitionSheet, MinistrySheet, NegotiationBanner, NegotiationSheet } from './Government';
 import { EventModal } from './EventModal';
@@ -68,6 +69,8 @@ function PanelView({ p }: { p: Panel }) {
       return <AccountSheet />;
     case 'leaderboard':
       return <LeaderboardSheet />;
+    case 'stances':
+      return <StancesSheet />;
   }
 }
 

@@ -1,4 +1,4 @@
-// הממשק בין המשחק לשרת. יש שני מימושים: Supabase (אמיתי) ו-Mock (מקומי, לבדיקות ולהדגמה).
+// הממשק בין המשחק לשרת. יש שני מימושים: Cloudflare (ה-Worker שלנו, worker/index.ts) ו-Mock (מקומי, לבדיקות ולהדגמה).
 
 export interface OnlineUser {
   id: string;
@@ -55,14 +55,15 @@ export interface BoardRow extends ScoreRow {
 export type BoardKind = 'all' | 'challenge' | 'fastest' | 'mine';
 
 export interface OnlineBackend {
-  readonly kind: 'supabase' | 'mock';
+  readonly kind: 'cloudflare' | 'mock';
   currentUser(): Promise<OnlineUser | null>;
   onAuthChange(cb: (u: OnlineUser | null) => void): () => void;
   signUp(email: string, password: string): Promise<'signed-in' | 'confirm-email'>;
   signIn(email: string, password: string): Promise<void>;
   signInGuest(): Promise<void>;
   signOut(): Promise<void>;
-  resetPassword(email: string): Promise<void>;
+  /** אורח/ת → חשבון קבוע (אימייל וסיסמה), בלי לאבד שמירות ושיאים */
+  upgrade(email: string, password: string): Promise<void>;
   deleteAccount(): Promise<void>;
   getProfile(): Promise<Profile | null>;
   setDisplayName(name: string): Promise<void>;
@@ -80,9 +81,7 @@ export function friendlyError(e: unknown): string {
   if (/Invalid login credentials/i.test(m)) return 'אימייל או סיסמה שגויים';
   if (/already registered|already exists/i.test(m)) return 'כבר יש חשבון עם האימייל הזה – נסה/י להתחבר';
   if (/Password should be|weak/i.test(m)) return 'הסיסמה קצרה מדי (לפחות 6 תווים)';
-  if (/Email not confirmed/i.test(m)) return 'צריך לאשר את האימייל (בדוק/י את תיבת הדואר)';
   if (/profiles_name_unique|duplicate key/i.test(m)) return 'השם הזה כבר תפוס';
-  if (/Anonymous sign-ins are disabled/i.test(m)) return 'כניסת אורח לא הופעלה בשרת';
   if (/too many cloud saves/i.test(m)) return 'הגעת למקסימום 12 שמירות בענן – מחק/י אחת';
   if (/Failed to fetch|NetworkError|network/i.test(m)) return 'אין חיבור לאינטרנט';
   return m.length > 120 ? m.slice(0, 120) + '…' : m;

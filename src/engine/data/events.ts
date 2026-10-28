@@ -31,6 +31,8 @@ export interface GameEvent {
   body: string;
   icon: string;
   queued?: boolean; // מופיע רק כשמערכת אחרת מכניסה אותו לתור
+  /** הסוגיה שהאירוע עוסק בה: הציבור מתעייף מאירועים חוזרים באותה סוגיה (issueFatigue) */
+  issue?: IssueId;
   weight?: number;
   cooldown?: number;
   once?: boolean;
@@ -300,7 +302,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'housing_protest', icon: '⛺', weight: 4, cooldown: 20,
+    id: 'housing_protest', icon: '⛺', weight: 4, cooldown: 40, issue: 'housing',
     title: 'מחאת הדיור חוזרת',
     body: 'מאות אוהלים בשדרה בתל אביב. "העם דורש צדק חברתי" חוזר לכותרות. המוחים מזמינים פוליטיקאים לנאום – אבל לא את כולם מקבלים בברכה.',
     when: (s) => isHot(s, 'housing', 55) || isHot(s, 'cost', 65),
@@ -311,7 +313,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'general_strike', icon: '🪧', weight: 3, cooldown: 25,
+    id: 'general_strike', icon: '🪧', weight: 3, cooldown: 35, issue: 'wages',
     title: 'ההסתדרות מכריזה על שביתה כללית',
     body: 'נמלי הים, נתב"ג והרשויות המקומיות מושבתים. הצדדים מחפשים מתווכים – ומחפשים אשמים.',
     when: (s) => isHot(s, 'wages', 45),
@@ -328,7 +330,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'court_ruling', icon: '⚖️', weight: 3, cooldown: 20,
+    id: 'court_ruling', icon: '⚖️', weight: 3, cooldown: 30, issue: 'judiciary',
     when: (s) => s.issues.judiciary >= 40,
     title: 'בג"ץ פסל חוק של הכנסת',
     body: 'בית המשפט העליון פסל סעיף בחוק שהכנסת חוקקה בשנה שעברה. הקואליציה זועמת, האופוזיציה חוגגת.',
@@ -339,7 +341,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'draft_protest', icon: '🪖', weight: 3, cooldown: 25,
+    id: 'draft_protest', icon: '🪖', weight: 2.5, cooldown: 45, issue: 'draft',
     when: (s) => isHot(s, 'draft', 45),
     title: 'הפגנת ענק נגד גיוס',
     body: 'מאות אלפים חוסמים את כניסת העיר. הקואליציה תלויה במפלגות החרדיות, והמילואימניקים זועמים.',
@@ -350,7 +352,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'inflation', icon: '📈', weight: 3, cooldown: 16,
+    id: 'inflation', icon: '📈', weight: 3, cooldown: 24, issue: 'cost',
     title: 'הלמ"ס: מדד המחירים זינק',
     body: 'האינפלציה קפצה, המשכנתאות מתייקרות, והרשתות מעלות מחירים. כולם מחפשים אשם.',
     when: (s) => isHot(s, 'cost', 50),
@@ -1033,7 +1035,7 @@ EVENTS.push({
 const courtActive = (s: GameState) => !s.rules.noReview && (!s.rules.packedCourt || s.week % 3 === 0);
 EVENTS.push(
   {
-    id: 'court_draft', icon: '⚖️', weight: 1.5, cooldown: 60,
+    id: 'court_draft', icon: '⚖️', weight: 1.5, cooldown: 80, issue: 'draft',
     title: 'בג"ץ: המדינה חייבת לגייס בני ישיבות',
     body: 'בהרכב של תשעה שופטים קבע בית המשפט שאין בסיס חוקי לפטור הגורף. המפלגות החרדיות מאיימות לפרק את הממשלה, והמילואימניקים חוגגים מול הבניין.',
     when: (s) => courtActive(s) && !(s.transforms ?? []).some((t) => t.id === 'volunteer'),

@@ -37,7 +37,8 @@ export function moodTarget(s: GameState): Ideology {
   return {
     security: clamp((50 - w.security) * 1.1, -40, 40),
     econ: clamp((w.affordability - 50) * 0.8 + (w.economy - 50) * 0.3, -40, 40),
-    religion: clamp(-(s.issues.draft - 50) * 0.25 - (s.issues.religion - 50) * 0.15, -25, 25),
+    // גיוס חרדים מייצר כותרות ורייטינג, אבל מזיז פחות מצביעים ממה שנדמה
+    religion: clamp(-(s.issues.draft - 50) * 0.12 - (s.issues.religion - 50) * 0.15, -25, 25),
     judiciary: clamp((50 - w.trust) * 0.35, -25, 25),
   };
 }

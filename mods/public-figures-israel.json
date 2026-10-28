@@ -1,0 +1,29 @@
+{
+  "name": "דמויות ציבוריות",
+  "description": "אנשים מוכרים מחוץ לכנסת – ביטחון, שלטון מקומי, כלכלה, מחאה, דת ותרבות – שמשפיעים מבחוץ ולפעמים נכנסים לפוליטיקה. פעילים רק במצב \"תקשורת ודמויות אמיתיות\".",
+  "source": "ידע ציבורי. התפקידים מתוארים כפי שהיו ידועים עד 2026, והעמדות על 4 הצירים – הערכה משחקית. כל מה שהדמויות עושות במשחק בדיוני.",
+  "asOf": "2026",
+  "realPeople": true,
+  "figures": [
+    { "id": "yossi_cohen", "name": "יוסי כהן", "gender": "m", "kind": "security", "title": "ראש המוסד לשעבר", "fame": 75, "canRun": true, "lean": { "econ": 30, "security": 50, "religion": 10, "judiciary": 20 } },
+    { "id": "herzi_halevi", "name": "הרצי הלוי", "gender": "m", "kind": "security", "title": "הרמטכ\"ל לשעבר", "fame": 70, "canRun": true, "lean": { "security": 20, "judiciary": -20, "religion": 10 } },
+    { "id": "aviv_kochavi", "name": "אביב כוכבי", "gender": "m", "kind": "security", "title": "הרמטכ\"ל לשעבר", "fame": 60, "canRun": true, "lean": { "security": 25, "judiciary": -10 } },
+    { "id": "yoav_gallant", "name": "יואב גלנט", "gender": "m", "kind": "politician", "title": "שר הביטחון לשעבר", "fame": 78, "canRun": true, "lean": { "econ": 30, "security": 60, "religion": 15, "judiciary": 10 } },
+    { "id": "ron_huldai", "name": "רון חולדאי", "gender": "m", "kind": "mayor", "title": "ראש עיריית תל אביב-יפו", "fame": 65, "canRun": true, "lean": { "econ": -10, "security": -30, "religion": -60, "judiciary": -50 } },
+    { "id": "moshe_lion", "name": "משה ליאון", "gender": "m", "kind": "mayor", "title": "ראש עיריית ירושלים", "fame": 55, "canRun": true, "lean": { "security": 30, "religion": 30, "judiciary": 20 } },
+    { "id": "haim_bibas", "name": "חיים ביבס", "gender": "m", "kind": "mayor", "title": "יו\"ר מרכז השלטון המקומי", "fame": 45, "canRun": true, "lean": { "security": 20, "religion": 10 } },
+    { "id": "arnon_bar_david", "name": "ארנון בר-דוד", "gender": "m", "kind": "union", "title": "יו\"ר ההסתדרות", "fame": 60, "canRun": true, "lean": { "econ": -55, "security": 0 } },
+    { "id": "amir_yaron", "name": "אמיר ירון", "gender": "m", "kind": "official", "title": "נגיד בנק ישראל", "fame": 50, "canRun": false, "lean": { "econ": 40 } },
+    { "id": "gali_baharav_miara", "name": "גלי בהרב-מיארה", "gender": "f", "kind": "official", "title": "היועצת המשפטית לממשלה", "fame": 70, "canRun": false, "lean": { "judiciary": -70 } },
+    { "id": "shikma_bressler", "name": "שקמה ברסלר", "gender": "f", "kind": "activist", "title": "ממובילות המחאה", "fame": 55, "canRun": true, "lean": { "security": -20, "judiciary": -75, "religion": -50 } },
+    { "id": "moshe_radman", "name": "משה רדמן", "gender": "m", "kind": "activist", "title": "ממובילי המחאה", "fame": 45, "canRun": true, "lean": { "econ": 30, "judiciary": -70, "religion": -50 } },
+    { "id": "einav_zangauker", "name": "עינב צנגאוקר", "gender": "f", "kind": "activist", "title": "פעילה למען החטופים", "fame": 60, "canRun": true, "lean": { "security": -40, "judiciary": -40 } },
+    { "id": "rabbi_dov_lando", "name": "הרב דב לנדו", "gender": "m", "kind": "rabbi", "title": "ממנהיגי הציבור החרדי-ליטאי", "fame": 50, "canRun": false, "lean": { "religion": 95, "security": 10 } },
+    { "id": "eyal_waldman", "name": "אייל וולדמן", "gender": "m", "kind": "business", "title": "יזם הייטק", "fame": 45, "canRun": true, "lean": { "econ": 50, "security": -20, "religion": -40 } },
+    { "id": "assi_azar", "name": "אסי עזר", "gender": "m", "kind": "celebrity", "title": "מנחה ופעיל", "fame": 75, "canRun": true, "lean": { "security": -30, "judiciary": -50, "religion": -75 } },
+    { "id": "guy_zoaretz", "name": "גיא זוארץ", "gender": "m", "kind": "celebrity", "title": "מנחה טלוויזיה", "fame": 65, "canRun": true, "lean": { "security": 10, "religion": -10 } },
+    { "id": "lior_schleien", "name": "ליאור שליין", "gender": "m", "kind": "celebrity", "title": "סאטיריקן", "fame": 55, "canRun": true, "lean": { "security": -45, "judiciary": -60, "religion": -70 } },
+    { "id": "omer_adam", "name": "עומר אדם", "gender": "m", "kind": "celebrity", "title": "זמר", "fame": 85, "canRun": false, "lean": { "security": 40, "religion": 20, "judiciary": 30 } },
+    { "id": "yehuda_glick", "name": "יהודה גליק", "gender": "m", "kind": "activist", "title": "פעיל הר הבית", "fame": 40, "canRun": true, "lean": { "security": 75, "religion": 70, "judiciary": 60 } }
+  ]
+}

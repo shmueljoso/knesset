@@ -71,6 +71,8 @@ export interface Npc {
   /** עיתונאים: כלי התקשורת והתחום */
   outlet?: string;
   beat?: string;
+  /** דמות ציבורית מחוץ לכנסת (mods/public-figures-israel.json): התחום שלה */
+  outside?: string;
 }
 
 export interface Party {
@@ -428,6 +430,8 @@ export interface GameState {
   // ---- שלב 3 ----
   issues: Record<IssueId, number>; // בולטות 0-100
   issueTrend: Record<IssueId, number>;
+  /** עייפות הציבור מסוגיה (0-100): אחרי מחאות חוזרות היא נרגעת לתקופה */
+  issueFatigue?: Partial<Record<IssueId, number>>;
   lawsPassed: LawRecord[];
   rules: Rules;
   scheduled: { week: number; eventId: string; ctx: Record<string, string> }[];

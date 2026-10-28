@@ -23,6 +23,7 @@ export type Panel =
   | { kind: 'saves' }
   | { kind: 'account' }
   | { kind: 'leaderboard' }
+  | { kind: 'stances' }
   | { kind: OpenPanel };
 
 export interface Toast {

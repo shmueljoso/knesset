@@ -1,4 +1,5 @@
 import { rand } from '../rng';
+import { driftTowards } from './stances';
 import { salienceMultiplier } from './issues';
 import { reactToStance } from './relationships';
 import { playerSeatContribution } from './influence';
@@ -38,6 +39,7 @@ export function takeStance(s: GameState, lean: Partial<Ideology>, magnitude: num
     changeApproval(s, sec, d);
   }
   const selfAlign = leanAlignment(s.player.ideology, lean);
+  driftTowards(s, lean, magnitude); // מי שמצהיר/ה שוב ושוב בכיוון מסוים – זז/ה אליו לאט
   if (selfAlign < 0) s.player.consistency = clamp(s.player.consistency + selfAlign * 6, 0, 100);
   else s.player.consistency = clamp(s.player.consistency + 0.5, 0, 100);
   return out;

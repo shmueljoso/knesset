@@ -31,11 +31,29 @@ function issueTarget(s: GameState, id: IssueId): number {
     if (army >= 2) return 0;
     t = clamp(50 + (50 - w.cohesion) * 0.6, 10, 95) * (army ? 0.5 : 1);
   } else t = clamp(55 + (50 - w.security) * 0.5, 10, 95); // פשיעה
-  if (recentLaw(s, id)) t = Math.min(t, 25);
-  return t;
+  // חוק שנתן מענה: שנתיים של רגיעה, ואחר כך הסוגיה חוזרת – אבל חלשה יותר (עד שני חוקים)
+  if (recentLaw(s, id, 104)) t = Math.min(t, 25);
+  const solved = Math.min(2, s.lawsPassed.filter((l) => !l.struck && templateById(l.templateId)?.issue === id && !templateById(l.templateId)?.inflames).length);
+  t -= solved * 12;
+  // עייפות: הציבור לא יוצא לרחובות על אותו דבר בלי סוף
+  t -= (s.issueFatigue?.[id] ?? 0) * 0.35;
+  return clamp(t, 0, 100);
+}
+
+/** עוד אירוע/מחאה באותה סוגיה: הציבור מתעייף (דועך לאט, כ-1.2 לשבוע) */
+export function tireIssue(s: GameState, id: IssueId, d: number) {
+  s.issueFatigue ??= {};
+  const before = s.issueFatigue[id] ?? 0;
+  s.issueFatigue[id] = clamp(before + d, 0, 100);
+  if (before < 55 && s.issueFatigue[id]! >= 55) {
+    const def = ISSUES.find((i) => i.id === id);
+    if (def) addNews(s, `${def.icon} ${def.name}: הציבור עייף – המחאות דועכות`, 'neutral', false, 'הסוגיה לא נפתרה, אבל היא כבר לא מוציאה אנשים לרחובות. היא תחזור – אם יקרה משהו גדול.');
+  }
 }
 
 export function tickIssues(s: GameState) {
+  s.issueFatigue ??= {};
+  for (const k of Object.keys(s.issueFatigue) as IssueId[]) s.issueFatigue[k] = Math.max(0, (s.issueFatigue[k] ?? 0) - 1.2);
   for (const def of ISSUES) {
     const before = s.issues[def.id];
     const target = issueTarget(s, def.id);

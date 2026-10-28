@@ -12,7 +12,7 @@ import { appointPlayerMinister, ministryTitle } from './government';
 import { fireFromMinistry, resignMinistry } from './ministry';
 import { addNews } from './news';
 import { scandalAttack, scandalCooperate, scandalPardon, scandalStepDown } from './scandals';
-import { bumpIssue, reenactLaw, scheduleEvent, strikeChance, strikeLaw } from './issues';
+import { bumpIssue, reenactLaw, scheduleEvent, strikeChance, strikeLaw, tireIssue } from './issues';
 import { openWindow } from './climate';
 import { addWorldEffect, changeApproval } from './opinion';
 import { templateById } from '../data/bills';
@@ -96,15 +96,18 @@ export function rollEvents(s: GameState) {
       const last = s.eventsFired[e.id];
       if (last !== undefined && e.once) return false;
       if (last !== undefined && s.week - last < (e.cooldown ?? 6)) return false;
+      // הציבור עייף מהסוגיה: אחרי כמה מחאות באותו נושא – שקט לתקופה
+      if (e.issue && (s.issueFatigue?.[e.issue] ?? 0) >= 55) return false;
       return e.when ? e.when(s) : true;
     });
     for (let attempt = 0; attempt < 3; attempt++) {
-      const ev = pickWeighted(s, pool, (e) => e.weight ?? 3);
+      const ev = pickWeighted(s, pool, (e) => (e.weight ?? 3) * (e.issue ? 1 - (s.issueFatigue?.[e.issue] ?? 0) / 100 : 1));
       if (!ev) break;
       const ctx = ev.ctx ? ev.ctx(s) : {};
       if (!ctx) continue;
       s.eventQueue.push({ eventId: ev.id, ctx });
       s.eventsFired[ev.id] = s.week;
+      if (ev.issue) tireIssue(s, ev.issue, 25);
       break;
     }
   }

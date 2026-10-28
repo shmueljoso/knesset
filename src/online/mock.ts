@@ -1,4 +1,4 @@
-// שרת מדומה ב-localStorage: אותו ממשק כמו Supabase, בלי אינטרנט.
+// שרת מדומה ב-localStorage: אותו ממשק כמו השרת ב-Cloudflare, בלי אינטרנט.
 // משמש לבדיקות אוטומטיות, ואפשר להפעיל אותו ידנית כדי לנסות את הפיצ'רים בלי להקים שרת:
 // localStorage.setItem('hamishkan.onlineMock', '1')
 import type { BoardKind, BoardRow, CloudSave, CloudSaveMeta, OnlineBackend, OnlineUser, Profile, ScoreRow } from './types';
@@ -85,7 +85,14 @@ export class MockBackend implements OnlineBackend {
     this.save(db);
     this.emit();
   }
-  async resetPassword() {}
+  async upgrade(email: string, password: string) {
+    const db = this.db();
+    const me = this.me(db);
+    if (db.users.some((u) => u.email === email && u.id !== me.id)) throw new Error('User already registered');
+    Object.assign(me, { email, password, anonymous: false });
+    this.save(db);
+    this.emit();
+  }
   async deleteAccount() {
     const db = this.db();
     const me = this.me(db);

@@ -26,6 +26,7 @@ export function ensurePhase3(g: GameState) {
     g.issueTrend = Object.fromEntries(ISSUES.map((i) => [i.id, 0])) as Record<IssueId, number>;
   }
   g.lawsPassed ??= [];
+  g.issueFatigue ??= {};
   g.rules ??= { threshold: 3.25, norwegian: false, termLimit: false, override: false, entrench: false, equality: false };
   g.scheduled ??= [];
   g.counters ??= {};

@@ -66,7 +66,7 @@ export function AccountSheet({ onClose }: { onClose?: () => void }) {
         <div className="card small" data-testid="online-unconfigured">
           <b>השרת המקוון עוד לא הוגדר.</b>
           <p className="muted" style={{ margin: '6px 0 0' }}>
-            המשחק עובד מלא גם בלי – כולל שמירות וגיבויים במכשיר. כדי להפעיל חשבונות, שמירה בענן וטבלת שיאים צריך להקים פרויקט חינמי ב-Supabase ולהזין את הכתובת והמפתח (המדריך: docs/ONLINE.md).
+            המשחק עובד מלא גם בלי – כולל שמירות וגיבויים במכשיר. החשבונות, השמירה בענן וטבלת השיאים עובדים כשהמשחק רץ מהאתר שלך ב-Cloudflare (או באפליקציה שנבנתה עם הכתובת שלו). המדריך: docs/CLOUDFLARE.md.
           </p>
         </div>
       </Sheet>
@@ -110,11 +110,6 @@ export function AccountSheet({ onClose }: { onClose?: () => void }) {
             <button className="btn ghost" disabled={busy || !online} onClick={() => run(async () => { await account.guest(); return 'נכנסת כאורח/ת. אפשר לשדרג לחשבון מלא בהמשך.'; })} data-testid="auth-guest">
               👤 המשך כאורח/ת
             </button>
-            {mode === 'in' && (
-              <button className="btn ghost sm" disabled={busy || !email.includes('@')} onClick={() => run(async () => { await account.reset(email); return 'אם יש חשבון – נשלח קישור לאיפוס.'; })}>
-                שכחתי סיסמה
-              </button>
-            )}
           </div>
           <p className="tiny faint" style={{ margin: '8px 0 0' }}>החשבון משמש רק לשמירה בענן ולטבלת השיאים. אפשר למחוק אותו בכל רגע.</p>
         </div>
@@ -128,6 +123,7 @@ export function AccountSheet({ onClose }: { onClose?: () => void }) {
               <span className="chip">{user?.anonymous ? 'אורח/ת' : user?.email}</span>
             </div>
             {!profile && <p className="small gold" style={{ margin: '6px 0' }}>בחר/י שם שיופיע בטבלת השיאים:</p>}
+            {user?.anonymous && <GuestUpgrade />}
             <div className="row" style={{ marginTop: 8 }}>
               <input className="text-input grow" placeholder={profile?.display_name ?? 'שם תצוגה (2–24 תווים)'} value={name} maxLength={24} onChange={(e) => setName(e.target.value)} data-testid="display-name" />
               <button className="btn" disabled={busy || name.trim().length < 2} onClick={() => run(async () => { await account.setName(name); setName(''); return 'השם נשמר'; })} data-testid="save-name-btn">
@@ -279,7 +275,7 @@ export function ScoreCard({ g }: { g: GameState }) {
 }
 
 /** בסוף הקריירה: פרסום בטבלה (או לתור, אם אין חיבור) */
-export function PublishScore({ g, onLogin }: { g: GameState; onLogin?: () => void }) {
+export function PublishScore({ g, onLogin, onDone }: { g: GameState; onLogin?: () => void; onDone?: () => void }) {
   const { status } = useOnline();
   const open = useStore((s) => s.open);
   const { busy, run } = useBusy();
@@ -295,6 +291,7 @@ export function PublishScore({ g, onLogin }: { g: GameState; onLogin?: () => voi
             const r = await publishScore(g);
             const msg = r === 'sent' ? 'פורסם בטבלת השיאים!' : status === 'signedIn' ? 'אין חיבור – יפורסם אוטומטית כשיחזור.' : 'נשמר בשיאים שלך. התחבר/י כדי לפרסם בטבלה.';
             setDone(msg);
+            onDone?.();
             return msg;
           })
         }
@@ -327,6 +324,7 @@ export function LeaderboardSheet({ onClose }: { onClose?: () => void }) {
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
   const ch = weeklyChallenge();
   const canFetch = status !== 'unconfigured' && online && (tab !== 'mine' || status === 'signedIn');
 
@@ -335,7 +333,7 @@ export function LeaderboardSheet({ onClose }: { onClose?: () => void }) {
     setErr(null);
     if (!canFetch) return;
     fetchBoard(tab, { challenge: ch.id }).then(setRows, (e: Error) => setErr(e.message));
-  }, [tab, canFetch, ch.id]);
+  }, [tab, canFetch, ch.id, refresh]);
 
   const local = localRecords();
   return (
@@ -343,7 +341,7 @@ export function LeaderboardSheet({ onClose }: { onClose?: () => void }) {
       {screen === 'game' && game && <ScoreCard g={game} />}
       {screen === 'game' && game && (
         <div style={{ marginTop: 8 }}>
-          <PublishScore g={game} />
+          <PublishScore g={game} onDone={() => setRefresh((x) => x + 1)} />
         </div>
       )}
       <div className="filter-row" style={{ marginTop: 12 }}>
@@ -408,5 +406,25 @@ export function LeaderboardSheet({ onClose }: { onClose?: () => void }) {
       )}
       {!serverConfigured() && <p className="tiny faint">להפעלת הטבלה המקוונת: docs/ONLINE.md</p>}
     </Sheet>
+  );
+}
+
+/** אורח/ת: להוסיף אימייל וסיסמה כדי שהחשבון יעבור גם למכשיר אחר */
+function GuestUpgrade() {
+  const { busy, run } = useBusy();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  return (
+    <div className="card small" style={{ marginTop: 8 }} data-testid="guest-upgrade">
+      <b>🔐 לשמור את החשבון</b>
+      <div className="muted tiny">כאורח/ת, החשבון קיים רק במכשיר הזה. עם אימייל וסיסמה אפשר להתחבר מכל מכשיר – והשמירות והשיאים נשארים.</div>
+      <div className="col" style={{ marginTop: 6 }}>
+        <input className="text-input" type="email" dir="ltr" placeholder="אימייל" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input className="text-input" type="password" dir="ltr" placeholder="סיסמה (לפחות 6 תווים)" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <button className="btn" disabled={busy || !email.includes('@') || password.length < 6} onClick={() => run(async () => { await account.upgrade(email, password); return 'החשבון נשמר'; })}>
+          שמירת החשבון
+        </button>
+      </div>
+    </div>
   );
 }

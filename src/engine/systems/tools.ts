@@ -1,7 +1,7 @@
 // כלי משחק מתקדמים (⚠️): דילוג על שבועות עם החלטות אוטומטיות, ועריכת מספרים. מסמנים בשמירה שהם שימשו.
 import { endWeek } from '../turn';
-import type { GameState, IssueId, Sector, WorldKey } from '../types';
-import { SECTORS, clamp } from '../util';
+import type { Axis, GameState, IssueId, Sector, WorldKey } from '../types';
+import { AXES, AXIS_NAMES, SECTORS, clamp } from '../util';
 import { currentEvent, choiceBlocked, resolveEvent } from './events';
 import { finishVote } from './legislation';
 import { normalizePolls } from './opinion';
@@ -89,6 +89,7 @@ export function editFields(s: GameState): EditField[] {
     ['consistency', 'עקביות', 0, 100],
   ];
   for (const [k, label, min, max] of P) out.push({ id: `player.${k}`, group: 'את/ה', label, min, max, get: (g) => round(g.player[k as 'money']) });
+  for (const ax of AXES) out.push({ id: `ideology.${ax}`, group: 'העמדות שלך', label: `${AXIS_NAMES[ax][0]} (− ${AXIS_NAMES[ax][1]} / + ${AXIS_NAMES[ax][2]})`, min: -100, max: 100, get: (g) => round(g.player.ideology[ax]) });
   for (const sec of SECTORS) out.push({ id: `approval.${sec}`, group: 'תדמית במגזרים', label: SECTOR_LABEL[sec], min: 0, max: 100, get: (g) => round(g.player.approval[sec]) });
   const W: [WorldKey, string][] = [['economy', 'כלכלה'], ['affordability', 'יוקר המחיה'], ['housing', 'דיור'], ['security', 'ביטחון'], ['trust', 'אמון במוסדות'], ['cohesion', 'לכידות']];
   for (const [k, label] of W) out.push({ id: `world.${k}`, group: 'מצב המדינה', label, min: 0, max: 100, get: (g) => round(g.world[k]) });
@@ -109,6 +110,7 @@ export function setEdit(s: GameState, id: string, raw: number): boolean {
   const [kind, key] = id.split('.');
   if (kind === 'player') (s.player as unknown as Record<string, number>)[key] = v;
   else if (kind === 'approval') s.player.approval[key as Sector] = v;
+  else if (kind === 'ideology') s.player.ideology[key as Axis] = v;
   else if (kind === 'world') s.world[key as WorldKey] = v;
   else if (kind === 'issue') s.issues[key as IssueId] = v;
   else if (kind === 'mood') s.mood[key as 'econ'] = v;

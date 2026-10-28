@@ -6,14 +6,15 @@ import { careerId, careerScore } from '../engine/systems/score';
 import { ENDINGS } from '../engine/systems/legacy';
 import { decode, encode, fromBase64, looksLikeSave, toBase64 } from '../saves';
 import { MockBackend } from './mock';
-import { SupabaseBackend } from './supabase';
+import { CloudflareBackend } from './cloudflare';
+import { Capacitor } from '@capacitor/core';
 import { friendlyError, type BoardKind, type BoardRow, type CloudSaveMeta, type OnlineBackend, type OnlineUser, type Profile, type ScoreRow } from './types';
 
 export * from './types';
 export { weeklyChallenge, type Challenge } from './challenge';
 
-const URL_ = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const KEY_ = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+/** כתובת האתר ב-Cloudflare. בדפדפן ריק = אותו אתר; באפליקציה חייבים כתובת מלאה (VITE_API_URL בבנייה) */
+const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
 const PENDING_SCORES = 'hamishkan.pendingScores';
 const PENDING_SAVE = 'hamishkan.cloudPending';
 const LOCAL_RECORDS = 'hamishkan.myRecords';
@@ -42,12 +43,12 @@ const safeLS = {
   },
 };
 
-export const serverConfigured = () => !!(URL_ && KEY_) || safeLS.get('hamishkan.onlineMock') === '1';
+export const serverConfigured = () => useOnline.getState().status !== 'unconfigured';
 
 function pickBackend(): OnlineBackend | null {
   if (typeof localStorage !== 'undefined' && safeLS.get('hamishkan.onlineMock') === '1') return new MockBackend();
-  if (URL_ && KEY_) return new SupabaseBackend(URL_, KEY_);
-  return null;
+  if (Capacitor.isNativePlatform() && !API_URL) return null;
+  return new CloudflareBackend(API_URL);
 }
 
 export type OnlineStatus = 'unconfigured' | 'loading' | 'signedOut' | 'signedIn';
@@ -77,6 +78,11 @@ export const useOnline = create<OnlineStore>((set, get) => ({
   init: async () => {
     const backend = pickBackend();
     if (!backend) {
+      set({ backend: null, status: 'unconfigured' });
+      return;
+    }
+    // האם יש Worker מאחורי האתר? (npm run dev לבד – אין; האתר ב-Cloudflare – יש)
+    if (backend instanceof CloudflareBackend && !(await backend.health())) {
       set({ backend: null, status: 'unconfigured' });
       return;
     }
@@ -145,7 +151,7 @@ export const account = {
   signIn: (email: string, password: string) => wrap(() => backend().signIn(email.trim(), password)),
   guest: () => wrap(() => backend().signInGuest()),
   signOut: () => wrap(() => backend().signOut()),
-  reset: (email: string) => wrap(() => backend().resetPassword(email.trim())),
+  upgrade: (email: string, password: string) => wrap(() => backend().upgrade(email.trim(), password)),
   setName: (name: string) =>
     wrap(async () => {
       await backend().setDisplayName(name);
