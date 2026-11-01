@@ -12,6 +12,7 @@ import { directElection, electedLead, enforceTermLimit, recordPmTerm, restoreNor
 import { log } from './report';
 import { afterElection } from './society';
 import { afterMandate, mandatePlan } from './presidency';
+import { applyPledges } from './sway';
 
 export const THRESHOLD = 0.0325;
 
@@ -150,6 +151,9 @@ export function runElection(s: GameState) {
   recordPmTerm(s);
   enforceTermLimit(s);
   restoreNorwegian(s);
+  applyPledges(s);
+  // נשיא/ה מכהן/ת לא רץ/ה לכנסת
+  if (s.presidency && s.president?.id === 'player') for (const p of Object.values(s.parties)) p.list = p.list.filter((x) => x !== 'player');
   const ranForKnesset = s.player.isMK || s.player.listPosition !== null;
   const votes: Record<string, number> = {};
   const turnout = 4_700_000 + Math.round(rand(s) * 400_000);
@@ -249,7 +253,7 @@ export function runElection(s: GameState) {
   if (s.player.isMK) {
     s.career.mkTerms += 1;
     s.career.electionsOutside = 0;
-  } else if ((ranForKnesset || s.career.mkTerms > 0) && s.president?.id !== 'player') {
+  } else if ((ranForKnesset || s.career.mkTerms > 0) && s.president?.id !== 'player' && !s.player.ministry && !Object.values(s.parties).some((p) => p.leaderId === 'player')) {
     s.career.electionsOutside += 1;
     if (s.career.electionsOutside >= 2 && !s.gameOver) s.gameOver = 'outside';
   }

@@ -21,6 +21,7 @@ import { LocationSheet } from './LocationSheet';
 import { MapView } from './MapView';
 import { HelpSheet, NewsView, PartySheet, SettingsSheet, StaffSheet } from './Panels';
 import { NpcSheet, PeopleView } from './People';
+import { RolesSheet, SwaySheet } from './Roles';
 import { ElectionModal, ReportModal } from './ReportModal';
 
 function PanelView({ p }: { p: Panel }) {
@@ -71,6 +72,10 @@ function PanelView({ p }: { p: Panel }) {
       return <LeaderboardSheet />;
     case 'stances':
       return <StancesSheet />;
+    case 'roles':
+      return <RolesSheet />;
+    case 'sway':
+      return <SwaySheet />;
   }
 }
 

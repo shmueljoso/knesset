@@ -144,6 +144,7 @@ export function PresidencyView() {
   const act = useStore((s) => s.act);
   const toast = useStore((s) => s.toast);
   const pr = g.presidency!;
+  const open = useStore((s) => s.open);
   const [sector, setSector] = useState(false);
   const [tables, setTables] = useState(false);
   const run = (fn: (s: typeof g) => PresResult) => {
@@ -275,6 +276,9 @@ export function PresidencyView() {
           </>
         )}
         <p className="tiny faint">נושאי הדיון בבית הנשיא: {Object.values(DIVIDES).map((d) => d.name).join(' · ')}.</p>
+        <button className="btn ghost block" onClick={() => open({ kind: 'roles' })} data-testid="pres-resign">
+          🚪 להתפטר מהנשיאות ולחזור לפוליטיקה
+        </button>
       </div>
     </div>
   );

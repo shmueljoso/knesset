@@ -27,7 +27,7 @@ import { staffBonus } from './systems/staff';
 import type { GameState, Ideology, LocationId } from './types';
 import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_NAMES, clamp, leanAlignment } from './util';
 
-export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus' | 'alliances';
+export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus' | 'alliances' | 'roles' | 'sway';
 
 export interface ActionResult {
   text: string;
@@ -359,6 +359,16 @@ export const ACTIONS: ActionDef[] = [
     id: 'party_menu', loc: 'partyhq', icon: '🔀', label: 'הצטרפות / מעבר / הקמת מפלגה', ap: 0,
     desc: 'לנהל את השייכות המפלגתית שלך.',
     run: () => ({ text: '', open: 'party' }),
+  },
+  {
+    id: 'sway', loc: 'cafeteria', icon: '🎭', label: 'מאחורי הקלעים', ap: 0,
+    desc: 'להזיז אחרים: לגייס ח"כים שיערקו אליך, לשכנע מישהו להקים מפלגה, לתווך איחוד או לעודד מרד ביו"ר.',
+    run: () => ({ text: '', open: 'sway' }),
+  },
+  {
+    id: 'roles', loc: 'offices', icon: '🚪', label: 'התפקידים שלי – התפטרות וביטול', ap: 0,
+    desc: 'כל התפקידים שלך במקום אחד: לפרוש מהכנסת, מהממשלה, מראשות ועדה או מפלגה, ולבטל הצעות חוק ומיזמים.',
+    run: () => ({ text: '', open: 'roles' }),
   },
   {
     id: 'alliances', loc: 'partyhq', icon: '🤝', label: 'איחודים ובריתות', ap: 0,

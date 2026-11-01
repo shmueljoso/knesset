@@ -310,6 +310,9 @@ export function SettingsSheet() {
         <button className="btn" onClick={() => open({ kind: 'tools' })} data-testid="open-tools">
           🛠️ כלים מתקדמים (דילוג ועריכה) ⚠️
         </button>
+        <button className="btn" onClick={() => open({ kind: 'roles' })} data-testid="open-roles">
+          🚪 התפקידים שלי – התפטרות וביטול
+        </button>
         <button className="btn" onClick={() => open({ kind: 'saves' })} data-testid="open-saves">
           💾 שמירות, גיבויים וייצוא
         </button>

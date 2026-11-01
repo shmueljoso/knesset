@@ -12,6 +12,7 @@ import { Meter, PartyTag, Sheet } from './common';
 import { CATCHPHRASES, greeting } from '../engine/data/personality';
 import { templateById } from '../engine/data/bills';
 import { npcBenefits } from '../engine/systems/influence';
+import { NpcSwayCard } from './Roles';
 import { KIND_LABEL, recruitBlocked, recruitChance, recruitFigure, type OutsideKind } from '../engine/systems/outsiders';
 
 type Filter = 'notable' | 'mine' | 'coalition' | 'opposition' | 'allies' | 'rivals' | 'gov' | 'media' | 'public' | 'all';
@@ -172,6 +173,7 @@ export function NpcSheet({ id }: { id: string }) {
           </button>
         </div>
       )}
+      <NpcSwayCard id={n.id} />
       <div className="section-label">מה הוא/היא יכול/ה לעשות בשבילך</div>
       <div className="card">
         {npcBenefits(g, n).map((b, i) => (

@@ -407,7 +407,6 @@ registerSpecial('fg_call_hint', (s) => {
 export function stepDownBlocked(s: GameState): string | null {
   const p = s.player.partyId ? s.parties[s.player.partyId] : null;
   if (!p || p.leaderId !== 'player') return 'רק ליו"ר מפלגה';
-  if (!s.player.isMK) return 'רק ח"כ';
   if (!successors(s, p.id, 'player').length) return 'אין מחליף/ה ראוי/ה ברשימה';
   return null;
 }
@@ -428,7 +427,7 @@ export function stepDownLeader(s: GameState): { ok: boolean; text: string } {
   s.player.partyStanding = clamp(s.player.partyStanding - 10, 0, 100);
   addStat(s, 'reputation', 3);
   addNews(s, `${s.player.name} פורש/ת מראשות ${p.name}${wasPM ? ' ומראשות הממשלה' : ''}; ${heir.name} ייכנס/תיכנס לנעליו/ה`, 'neutral', true, 'הצעד נחשב לאחראי – גם מי שלא אוהב אותך מודה בכך.', 'ערוץ המשכן');
-  return { ok: true, text: `${heir.name} יו"ר ${p.name}${wasPM ? ' וראש/ת הממשלה' : ''}. את/ה ממשיך/ה כח"כ.` };
+  return { ok: true, text: `${heir.name} יו"ר ${p.name}${wasPM ? ' וראש/ת הממשלה' : ''}.${s.player.isMK ? ' את/ה ממשיך/ה כח"כ.' : ''}` };
 }
 
 registerSpecial('fg_step_down', (s) => stepDownLeader(s).text);

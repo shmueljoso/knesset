@@ -73,6 +73,8 @@ export interface Npc {
   beat?: string;
   /** דמות ציבורית מחוץ לכנסת (mods/public-figures-israel.json): התחום שלה */
   outside?: string;
+  /** התחייב/ה לרוץ בבחירות הבאות ברשימה של מפלגה אחרת (systems/sway.ts, applyPledges) */
+  pledgedTo?: string;
 }
 
 export interface Party {
@@ -502,6 +504,8 @@ export interface PresInitiative {
 
 export interface Presidency {
   sinceWeek: number;
+  /** התפטר/ה לפני סוף הכהונה (systems/resign.ts) */
+  resignedWeek?: number;
   /** אחדות העם 0-100 */
   unity: number;
   /** אמון הציבור בנשיא/ה 0-100 */

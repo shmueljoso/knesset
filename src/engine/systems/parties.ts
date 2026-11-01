@@ -83,6 +83,7 @@ export function joinParty(s: GameState, partyId: string): Result {
   const party = s.parties[partyId];
   if (!party) return { ok: false, text: 'מפלגה לא קיימת' };
   if (p.partyId === partyId) return { ok: false, text: 'אתה כבר חבר במפלגה הזו' };
+  if (s.presidency && s.president?.id === 'player') return { ok: false, text: 'נשיא/ת המדינה לא יכול/ה להיות חבר/ת מפלגה. קודם להתפטר מהנשיאות.' };
   if (p.isMK) return { ok: false, text: 'ח"כ לא יכול לעבור סיעה באמצע כנסת – רק פילוג (שליש מהסיעה) או פרישה.' };
   const notes = leaveAsMember(s, partyId);
   p.partyId = partyId;
@@ -256,6 +257,7 @@ export function defect(s: GameState): Result {
 export function foundParty(s: GameState, name: string, color: string): Result {
   const p = s.player;
   if (!name.trim()) return { ok: false, text: 'צריך שם למפלגה' };
+  if (s.presidency && s.president?.id === 'player') return { ok: false, text: 'נשיא/ת המדינה לא יכול/ה להקים מפלגה. קודם להתפטר מהנשיאות.' };
   if (p.money < FOUND_COST) return { ok: false, text: `נדרשים ${FOUND_COST} אלף ₪ לרישום ולהקמת מטה` };
   if (p.isMK && p.partyId) return { ok: false, text: 'כח"כ בסיעה – קודם פילוג או פרישה' };
   if (Object.values(s.parties).some((x) => x.playerFounded && x.id === p.partyId)) return { ok: false, text: 'כבר יש לך מפלגה' };

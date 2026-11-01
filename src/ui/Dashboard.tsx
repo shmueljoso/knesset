@@ -109,6 +109,17 @@ export function Dashboard() {
           </div>
         </div>
 
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn grow" onClick={() => open({ kind: 'roles' })} data-testid="dash-roles">
+            🚪 התפקידים שלי
+          </button>
+          {!(g.presidency && g.president?.id === 'player') && (
+            <button className="btn grow" onClick={() => open({ kind: 'sway' })} data-testid="dash-sway">
+              🎭 מאחורי הקלעים
+            </button>
+          )}
+        </div>
+
         <StaffAdviceCard />
 
         {!(g.presidency && g.president?.id === 'player') && <StancesCard />}

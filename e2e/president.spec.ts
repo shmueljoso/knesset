@@ -86,3 +86,13 @@ test('the presidency tab: unity, actions, initiatives and mandate policy', async
   await expect(page.getByTestId('mandate')).toContainText('אחדות רחבה');
   await shot(page, '113-presidency-initiatives');
 });
+
+test('a president can resign and go back to politics', async ({ page }) => {
+  await load(page, president());
+  await page.locator('.tabbar').getByText('נשיאות').click();
+  await page.getByTestId('pres-resign').click();
+  await page.getByTestId('role-presidency').getByRole('button', { name: 'לעזוב' }).click();
+  await page.getByTestId('role-presidency').getByRole('button', { name: 'בטוח?' }).click();
+  await expect(page.locator('.toast').last()).toContainText('התפטרת מהנשיאות');
+  await expect(page.locator('.tabbar')).not.toContainText('נשיאות');
+});

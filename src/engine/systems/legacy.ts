@@ -37,7 +37,7 @@ export function computeLegacy(s: GameState): Legacy {
   if (a.includes('minister')) roles.push('שר/ה');
   if (a.includes('leader')) roles.push('יו"ר מפלגה');
   if (a.includes('pm')) roles.push(`ראש/ת ממשלה (${s.career.pmWeeks} שבועות)`);
-  if (s.president?.id === 'player') roles.push(`נשיא/ת המדינה (${Math.round((s.presidency?.weeks ?? 0) / 52 * 10) / 10} שנים)`);
+  if (s.president?.id === 'player' || s.presidency?.resignedWeek !== undefined) roles.push(`נשיא/ת המדינה (${Math.round((s.presidency?.weeks ?? 0) / 52 * 10) / 10} שנים)`);
   const allies = Object.values(s.npcs).filter((n) => n.attitude >= 40).length;
   const enemies = Object.values(s.npcs).filter((n) => n.attitude <= -40).length;
   const worldNow = Object.values(s.world).reduce((x, y) => x + y, 0) / 6;

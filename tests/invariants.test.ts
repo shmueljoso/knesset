@@ -9,6 +9,8 @@ import { swearIn, startFormateur, partnerSign, partnerDecline, offerDeal, cancel
 import { challengeLeader, defect, foundParty, joinParty, leaveParty, splitFaction, recruitCandidate } from '../src/engine/systems/parties';
 import { announceRetirement, dissolveKnesset, foundByNpc, resignPremiership, stepDownLeader } from '../src/engine/systems/figures';
 import { executeMerger, proposeSurplus } from '../src/engine/systems/mergers';
+import { cancellables, playerRoles, resignRole } from '../src/engine/systems/resign';
+import { courtDefector, oustLeader, urgeFound, urgeMerge } from '../src/engine/systems/sway';
 
 const base = (seed: number, partyId: string | null = 'merkaz', scenario: 'freshman' | 'grassroots' = 'freshman'): NewGameOptions => ({
   name: 'שחקן', gender: 'm', background: 'journalist',
@@ -23,8 +25,9 @@ function randomAction(s: GameState, r: () => number): string {
   const pickP = () => parties[Math.floor(r() * parties.length)];
   const npcs = Object.values(s.npcs).filter((n) => n.notable);
   const pickN = () => npcs[Math.floor(r() * npcs.length)];
-  const k = Math.floor(r() * 19);
+  const k = Math.floor(r() * 24);
   s.player.money = Math.max(s.player.money, 400);
+  s.player.capital = Math.max(s.player.capital, 40);
   s.player.ap = 6;
   switch (k) {
     case 0: return `split:${splitFaction(s, 'חדשה', '#22c55e').ok}`;
@@ -63,6 +66,15 @@ function randomAction(s: GameState, r: () => number): string {
       if (!s.negotiation && s.player.partyId && s.parties[s.player.partyId].leaderId === 'player' && s.parties[s.player.partyId].seats > 0) startFormateur(s);
       return 'formateur';
     }
+    case 19: {
+      const roles = [...playerRoles(s), ...cancellables(s)].filter((x) => !x.blocked);
+      const role = roles[Math.floor(r() * roles.length)];
+      return role ? `quit:${role.id.split(':')[0]}:${resignRole(s, role.id).ok}` : 'noop';
+    }
+    case 20: return `court:${courtDefector(s, pickN()?.id).ok}`;
+    case 21: return `urgefound:${urgeFound(s, pickN()?.id).ok}`;
+    case 22: return `urgemerge:${urgeMerge(s, pickP().id, pickP().id).ok}`;
+    case 23: return `oust:${oustLeader(s, pickP().id).ok}`;
     default: return 'noop';
   }
 }

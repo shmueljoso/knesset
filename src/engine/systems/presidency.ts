@@ -301,7 +301,7 @@ export function campaignLost(s: GameState, winnerName: string) {
 
 // ---------------- הכניסה לבית הנשיא ----------------
 
-function vacatePlayerSeat(s: GameState) {
+export function vacatePlayerSeat(s: GameState) {
   const p = s.player;
   if (!s.seating.includes('player')) return;
   const party = p.partyId ? s.parties[p.partyId] : null;
