@@ -1328,3 +1328,465 @@ table.results td {
   width: 28px;
   text-align: center;
 }
+
+/* ---- במות לאירועים (ui/Scene.tsx) ---- */
+.scene {
+  position: relative;
+  height: 168px;
+  margin: -6px -4px 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  isolation: isolate;
+}
+.scene .sc-person {
+  position: absolute;
+  bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 3;
+}
+.scene .sc-name {
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.55);
+  border-bottom: 2px solid;
+  padding: 1px 7px;
+  border-radius: 6px;
+  color: #fff;
+}
+.sc-steps {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 4;
+}
+.sc-steps i {
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.sc-steps i.done {
+  background: var(--good);
+}
+.sc-steps i.now {
+  background: var(--gold);
+}
+.sc-lower {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  background: rgba(10, 16, 30, 0.92);
+  border-top: 2px solid var(--gold);
+  font-size: 12px;
+  z-index: 5;
+  overflow: hidden;
+}
+.sc-lower b {
+  background: var(--gold);
+  color: #1a1206;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  flex: none;
+}
+.sc-lower.red {
+  border-top-color: #ef4444;
+}
+.sc-lower.red b {
+  background: #ef4444;
+  color: #fff;
+}
+.sc-ticker {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sc-ticker span {
+  display: inline-block;
+  padding-inline-start: 10px;
+  animation: sc-ticker 16s linear infinite;
+}
+/* מבזק בעברית: הטקסט נכנס משמאל וזז ימינה; מתחיל גלוי */
+@keyframes sc-ticker {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  80% {
+    transform: translateX(105%);
+  }
+  80.01% {
+    transform: translateX(-105%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+/* אולפן */
+.sc-studio,
+.sc-debate {
+  background: radial-gradient(ellipse at 50% 120%, #2a3f6b 0%, #0d1730 55%, #070c1a 100%);
+}
+.sc-beam {
+  position: absolute;
+  top: -40px;
+  width: 90px;
+  height: 230px;
+  background: linear-gradient(180deg, rgba(255, 240, 200, 0.28), transparent 80%);
+  filter: blur(2px);
+  transform-origin: top center;
+  animation: sc-sway 6s ease-in-out infinite alternate;
+  z-index: 1;
+}
+.sc-beam.a {
+  left: 18%;
+  transform: rotate(-18deg);
+}
+.sc-beam.b {
+  right: 18%;
+  transform: rotate(18deg);
+  animation-delay: -3s;
+}
+@keyframes sc-sway {
+  from {
+    rotate: -6deg;
+  }
+  to {
+    rotate: 6deg;
+  }
+}
+.sc-screen {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  translate: -50% 0;
+  width: 42%;
+  height: 62px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9 60%, #1e3a8a);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.45);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 13px;
+  color: #fff;
+  z-index: 1;
+}
+.sc-live {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 12px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 5px;
+  z-index: 4;
+  animation: sc-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sc-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+.sc-desk {
+  position: absolute;
+  bottom: 26px;
+  left: 6%;
+  right: 6%;
+  height: 34px;
+  border-radius: 50% 50% 6px 6px / 70% 70% 6px 6px;
+  background: linear-gradient(180deg, #3b4f7a, #1c2a48);
+  border-top: 2px solid #8fb4ff;
+  z-index: 2;
+}
+.sc-meter {
+  position: absolute;
+  top: 84px;
+  left: 50%;
+  translate: -50% 0;
+  width: 30%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.55);
+  z-index: 4;
+}
+.sc-meter span {
+  position: absolute;
+  top: -14px;
+  width: 100%;
+  text-align: center;
+  font-size: 9.5px;
+  color: #cbd5e1;
+}
+.sc-meter b,
+.sc-tug b {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--good);
+  transition: width 0.6s;
+}
+/* עימות */
+.sc-vs {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(232, 195, 122, 0.7);
+  z-index: 3;
+}
+.sc-podium {
+  position: absolute;
+  bottom: 26px;
+  width: 96px;
+  height: 104px;
+  border-top: 4px solid;
+  background: linear-gradient(180deg, #24365e, #131f3a);
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+  z-index: 2;
+}
+.sc-tug {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  translate: -50% 0;
+  width: 26%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 4;
+}
+/* מסדרון */
+.sc-corridor {
+  background: linear-gradient(180deg, #d8c9a8 0%, #c2b089 62%, #6b5b45 62%, #4a3e30 100%);
+}
+.sc-doors {
+  position: absolute;
+  inset: 22px 6% auto;
+  display: flex;
+  justify-content: space-between;
+}
+.sc-doors i {
+  width: 34px;
+  height: 66px;
+  background: linear-gradient(180deg, #7c5a3a, #5b4029);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.15);
+}
+.sc-paper {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: 60%;
+  background: #fffdf5;
+  color: #1f2937;
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  rotate: -2deg;
+  z-index: 4;
+  text-align: center;
+}
+.sc-paper b {
+  display: block;
+  color: #15803d;
+}
+/* חדר סגור */
+.sc-backroom {
+  background: radial-gradient(circle at 50% 18%, rgba(255, 210, 130, 0.35), #1a1410 55%, #0c0907 100%);
+}
+.sc-lamp {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 60px;
+  height: 26px;
+  background: #2b2116;
+  border-radius: 0 0 30px 30px;
+  box-shadow: 0 18px 50px 20px rgba(255, 200, 110, 0.25);
+}
+.sc-table {
+  position: absolute;
+  bottom: 22px;
+  left: 10%;
+  right: 10%;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #5b3d22, #3a2614);
+  z-index: 2;
+}
+.sc-tag {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 12px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+/* הפגנה */
+.sc-protest {
+  background: linear-gradient(180deg, #f59e0b33, #1e293b 70%);
+}
+.sc-sky {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 10%, rgba(251, 191, 36, 0.4), transparent 40%);
+}
+.sc-signs {
+  position: absolute;
+  top: 22px;
+  inset-inline: 6%;
+  display: flex;
+  justify-content: space-around;
+  z-index: 2;
+}
+.sc-signs span {
+  background: #fff;
+  color: #b91c1c;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  max-width: 34%;
+  text-align: center;
+  box-shadow: 0 3px 0 #7c2d12;
+  animation: sc-bob 1.2s ease-in-out infinite alternate;
+}
+.sc-signs span:nth-child(2) {
+  animation-delay: -0.6s;
+}
+.sc-crowd {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  height: 70px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+.sc-crowd i {
+  width: 14px;
+  border-radius: 7px 7px 0 0;
+  background: #0f172a;
+  position: relative;
+  animation: sc-bob 0.9s ease-in-out infinite alternate;
+}
+.sc-crowd i::before {
+  content: '';
+  position: absolute;
+  top: -11px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0f172a;
+}
+@keyframes sc-bob {
+  to {
+    transform: translateY(-4px);
+  }
+}
+/* בית משפט */
+.sc-court {
+  background: linear-gradient(180deg, #e2e8f0, #94a3b8 70%, #475569);
+}
+.sc-pediment {
+  position: absolute;
+  top: 12px;
+  left: 18%;
+  right: 18%;
+  height: 30px;
+  background: #f8fafc;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.sc-columns {
+  position: absolute;
+  top: 44px;
+  left: 20%;
+  right: 20%;
+  display: flex;
+  justify-content: space-between;
+}
+.sc-columns i {
+  width: 12px;
+  height: 80px;
+  background: linear-gradient(90deg, #cbd5e1, #f8fafc, #cbd5e1);
+}
+.sc-scale {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 40px;
+  animation: sc-sway 4s ease-in-out infinite alternate;
+}
+/* מבזק */
+.sc-breaking {
+  background: linear-gradient(135deg, #450a0a, #111827 60%);
+}
+.sc-siren {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(239, 68, 68, 0.5), transparent 45%), radial-gradient(circle at 80% 30%, rgba(59, 130, 246, 0.45), transparent 45%);
+  animation: sc-pulse 1s ease-in-out infinite;
+}
+.sc-big {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 60px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+}
+/* מליאה */
+.sc-plenum {
+  background: radial-gradient(ellipse at 50% 100%, #3b2f1f, #120f0b 75%);
+}
+.sc-hemi {
+  position: absolute;
+  inset: 0;
+}
+.sc-hemi i {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  translate: -50% 50%;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+.sc-menorah {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 34px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene *,
+  .scene *::before {
+    animation: none !important;
+  }
+}

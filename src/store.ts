@@ -86,8 +86,8 @@ interface Store {
   pendingChallenge: { id: string; seed: number; scenario: 'grassroots' | 'freshman'; title: string } | null;
   setPendingChallenge: (c: Store['pendingChallenge']) => void;
   /** תוצאת האירוע האחרון – נשארת על המסך גם כשהתור התרוקן */
-  eventResult: { lines: string[]; success: boolean; title: string } | null;
-  setEventResult: (r: { lines: string[]; success: boolean; title: string } | null) => void;
+  eventResult: { lines: string[]; success: boolean; title: string; ev?: string; ctx?: Record<string, string> } | null;
+  setEventResult: (r: { lines: string[]; success: boolean; title: string; ev?: string; ctx?: Record<string, string> } | null) => void;
   game: GameState | null;
   tab: Tab;
   dashTab: DashTab;

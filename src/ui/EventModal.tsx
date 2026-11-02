@@ -3,6 +3,8 @@ import { choiceBlocked, choiceOps, currentEvent, resolveEvent } from '../engine/
 import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { Chips } from './common';
+import { Scene, sceneFor } from './Scene';
+import { eventById } from '../engine/data/events';
 
 export function EventModal() {
   const g = useGame();
@@ -10,11 +12,13 @@ export function EventModal() {
   const result = useStore((s) => s.eventResult);
   const setResult = useStore((s) => s.setEventResult);
   const cur = currentEvent(g);
+  const resEv = result?.ev ? eventById(result.ev) : undefined;
 
   if (result) {
     return (
       <div className="event-overlay">
         <div className="event-card">
+          {resEv && <Scene g={g} ev={resEv} ctx={result.ctx ?? {}} />}
           <div className="row" style={{ marginBottom: 12 }}>
             <div className="event-icon">{result.success ? '✅' : '⚠️'}</div>
             <h2 className="grow">{result.title}</h2>
@@ -43,14 +47,15 @@ export function EventModal() {
     const title = fill(g, ev.title, ctx);
     const r = act((s) => resolveEvent(s, i));
     // הצבעה חיה נפתחה – התוצאה תוצג שם
-    if (!useStore.getState().game?.liveVote) setResult({ ...r, title });
+    if (!useStore.getState().game?.liveVote) setResult({ ...r, title, ev: ev.id, ctx });
   };
 
   return (
     <div className="event-overlay">
       <div className="event-card">
+        <Scene g={g} ev={ev} ctx={ctx} />
         <div className="row" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
-          {npc ? <Avatar spec={npc.avatar} size={58} ring={npc.partyId ? g.parties[npc.partyId].color : '#64748b'} /> : <div className="event-icon">{ev.icon}</div>}
+          {sceneFor(ev) ? null : npc ? <Avatar spec={npc.avatar} size={58} ring={npc.partyId ? g.parties[npc.partyId].color : '#64748b'} /> : <div className="event-icon">{ev.icon}</div>}
           <div className="grow">
             <div className="tiny gold" style={{ fontWeight: 700 }}>
               {ev.icon} אירוע
