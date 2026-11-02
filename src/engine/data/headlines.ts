@@ -1,5 +1,6 @@
 // כותרות שנולדות ממצב המדינה: כלכלה, ביטחון, סוגיות בוערות, רוח הציבור, כללי המשחק והמהפכות שבתוקף.
 import type { GameState, NewsItem, TransformId } from '../types';
+import { draftEnforced, harediParty, worldFacts } from '../systems/facts';
 
 export interface HeadlineDef {
   id: string;
@@ -30,7 +31,15 @@ export const HEADLINES: HeadlineDef[] = [
   { id: 'trust_low', weight: 2, when: (s) => s.world.trust < 33, make: () => [['מדד האמון במוסדות בשפל של כל הזמנים', 'bad'], ['"כולם מושחתים": רק אחד מחמישה סומך על הכנסת', 'bad']] },
   { id: 'cohesion_low', weight: 2, when: (s) => s.world.cohesion < 33, make: () => [['"שתי מדינות לשני עמים – בתוך ישראל": הקרע מעמיק', 'bad'], ['הפגנות ענק משני הצדדים באותו ערב; המשטרה מפרידה', 'bad']] },
   // ---- סוגיות ----
-  { id: 'draft_hot', weight: 2, when: (s) => s.issues.draft > 70 && tf(s, 'volunteer') < 2 && (s.issueFatigue?.draft ?? 0) < 50, make: () => [['המילואימניקים חוסמים את איילון: "אנחנו לא פראיירים"', 'bad'], ['ישיבות מתכוננות למעצרים; ההנהגה החרדית: "נצא לרחובות"', 'bad']] },
+  { id: 'draft_hot', weight: 2, when: (s) => s.issues.draft > 70 && tf(s, 'volunteer') < 2 && (s.issueFatigue?.draft ?? 0) < 50, make: (s) => draftEnforced(worldFacts(s)) ? [['ישיבות מתכוננות למעצרים; ההנהגה החרדית: "נצא לרחובות"', 'bad']] : [['המילואימניקים חוסמים את איילון: "אנחנו לא פראיירים"', 'bad']] },
+  // ---- מה שבתוקף בפועל ----
+  { id: 'f_draft_law', weight: 2, when: (s) => draftEnforced(worldFacts(s)), make: () => [['צה"ל: עלייה חדה בגיוס החרדי מאז חוק השוויון בנטל', 'good'], ['ראשי ישיבות: "לא נתייצב – גם אם יעצרו אותנו"', 'bad'], ['האוצר: הסנקציות על הישיבות כבר חסכו מאות מיליונים', 'neutral']] },
+  { id: 'f_exemption', weight: 2, when: (s) => worldFacts(s).draft === 'exemptionLaw', make: () => [['ארגוני המילואימניקים עתרו לבג"ץ נגד חוק הפטור', 'neutral'], ['סקר: רוב הציבור מתנגד לחוק מעמד לומדי התורה', 'neutral'], ['הרמטכ"ל בוועדה: "חסרים לנו לוחמים, והחוק לא עוזר"', 'bad']] },
+  { id: 'f_haredi_out', weight: 1, when: (s) => !worldFacts(s).haredimInGov && !!harediParty(s, false), make: (s) => [[`${harediParty(s, false)!.name} באופוזיציה: "נחזור לממשלה רק עם חוק הפטור"`, 'neutral'], ['בלי החרדים בקואליציה: הדרך לחוק גיוס פתוחה – אבל יש רוב?', 'neutral']] },
+  { id: 'f_arab_in', weight: 1, when: (s) => worldFacts(s).arabsInGov, make: () => [['לראשונה: תוכנית חומש לחברה הערבית עוברת בממשלה', 'good'], ['בימין זועמים: "ממשלה שנשענת על מפלגה ערבית"', 'neutral']] },
+  { id: 'f_core', weight: 1, when: (s) => worldFacts(s).coreStudies, make: () => [['מבחני הליבה הראשונים בתלמודי התורה: הנתונים מפתיעים', 'neutral']] },
+  { id: 'f_shabbat', weight: 1, when: (s) => worldFacts(s).shabbatTransit, make: () => [['שבת שנייה של תחבורה ציבורית: הקווים מלאים, והמחאה בשכונות החרדיות נמשכת', 'neutral']] },
+  { id: 'f_civil', weight: 1, when: (s) => worldFacts(s).civilMarriage, make: () => [['אלפי זוגות כבר נרשמו לברית הזוגיות; הרבנות: "פגיעה במשפחה היהודית"', 'neutral']] },
   { id: 'wages_hot', weight: 2, when: (s) => s.issues.wages > 68, make: () => [['ההסתדרות מאיימת בשביתה כללית', 'bad'], ['רופאים, אחיות ומורים: גל שביתות במגזר הציבורי', 'bad']] },
   { id: 'judiciary_hot', weight: 2, when: (s) => s.issues.judiciary > 70, make: () => [['מוצאי שבת: מאות אלפים בקפלן', 'neutral'], ['טייסי מילואים מאיימים: "לא נתייצב"', 'bad']] },
   { id: 'religion_hot', weight: 1, when: (s) => s.issues.religion > 70, make: () => [['עימותים בשכונה מעורבת על רקע פתיחת עסקים בשבת', 'bad']] },

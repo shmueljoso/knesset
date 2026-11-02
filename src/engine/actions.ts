@@ -19,7 +19,7 @@ import { noConfidenceBill, startVote } from './systems/legislation';
 import { directRival, playerLeads } from './systems/mergers';
 import { checkMissions } from './systems/missions';
 import { scheduleEvent, strikeChance } from './systems/issues';
-import { CABINET_EVENTS } from './data/events';
+import { CABINET_EVENTS, eventById } from './data/events';
 import { ISSUES } from './data/issues';
 import { addMemory, changeAttitude, revealTrait, TRAIT_INFO } from './systems/relationships';
 import { log } from './systems/report';
@@ -430,8 +430,10 @@ export const ACTIONS: ActionDef[] = [
     avail: (s) => (s.player.ministry || s.coalition.pmId === 'player' ? null : 'רק לשרים'),
     run: (s) => {
       const recent = (id: string) => s.week - (s.eventsFired[id] ?? -99) < 10;
-      const pool = CABINET_EVENTS.filter((id) => !recent(id));
-      const id = pool.length ? pick(s, pool) : pick(s, CABINET_EVENTS);
+      // רק החלטות שהגיוניות בממשלה הזו (למשל: תקציב לישיבות רק כשהחרדים בקואליציה)
+      const fits = CABINET_EVENTS.filter((id) => eventById(id)?.when?.(s) ?? true);
+      const pool = fits.filter((id) => !recent(id));
+      const id = pool.length ? pick(s, pool) : pick(s, fits.length ? fits : CABINET_EVENTS);
       s.eventsFired[id] = s.week;
       s.eventQueue.push({ eventId: id, ctx: {} });
       return { text: 'הישיבה נפתחה. על השולחן: החלטה קשה.' };

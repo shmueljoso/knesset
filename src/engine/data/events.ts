@@ -14,6 +14,8 @@ import { TRANSFORM_EVENTS } from './transforms';
 import { CHAIN_EVENTS } from './chains';
 import { activeJournalists } from '../systems/media';
 import { PRES_EVENTS } from './presidency';
+import { FACT_EVENTS } from './factEvents';
+import { draftEnforced, exemptionInPlace, worldFacts } from '../systems/facts';
 
 export interface EventChoice {
   label: string;
@@ -331,9 +333,14 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'court_ruling', icon: '⚖️', weight: 3, cooldown: 30, issue: 'judiciary',
-    when: (s) => s.issues.judiciary >= 40,
-    title: 'בג"ץ פסל חוק של הכנסת',
-    body: 'בית המשפט העליון פסל סעיף בחוק שהכנסת חוקקה בשנה שעברה. הקואליציה זועמת, האופוזיציה חוגגת.',
+    when: (s) => s.issues.judiciary >= 40 && worldFacts(s).courtActive,
+    // רק חוק שבאמת עבר לאחרונה ובתוקף
+    ctx: (s) => {
+      const recent = s.lawsPassed.filter((l) => !l.struck && s.week - l.week >= 10 && s.week - l.week < 156);
+      return recent.length ? { title: pick(s, recent).title } : null;
+    },
+    title: 'בג"ץ פסל סעיף ב"{title}"',
+    body: 'בית המשפט העליון פסל סעיף מרכזי ב"{title}", שהכנסת חוקקה לא מזמן. הקואליציה זועמת, האופוזיציה חוגגת.',
     choices: [
       { label: 'לתקוף את "האקטיביזם השיפוטי"', ops: [{ op: 'stance', lean: { judiciary: 80 }, d: 3 }, { op: 'fame', d: 2 }, { op: 'world', key: 'trust', d: -1 }] },
       { label: 'להגן על בית המשפט', ops: [{ op: 'stance', lean: { judiciary: -80 }, d: 3 }, { op: 'fame', d: 2 }] },
@@ -342,9 +349,15 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'draft_protest', icon: '🪖', weight: 2.5, cooldown: 45, issue: 'draft',
-    when: (s) => isHot(s, 'draft', 45),
+    // החרדים מפגינים נגד גיוס רק כשיש חובה שנאכפת, או פסיקה טרייה שמאיימת על הפטור
+    when: (s) => {
+      const f = worldFacts(s);
+      const ruling = s.week - (s.eventsFired.court_draft ?? s.eventsFired.court_draft_order ?? s.eventsFired.court_exemption_law ?? -99) < 12;
+      return (draftEnforced(f) || (exemptionInPlace(f) && ruling)) && (isHot(s, 'draft', 45) || draftEnforced(f));
+    },
+    ctx: (s) => ({ gov: worldFacts(s).haredimInGov ? 'הקואליציה תלויה במפלגות החרדיות, והמילואימניקים זועמים.' : 'המפלגות החרדיות באופוזיציה מאיימות "להפיל כל ממשלה שתגייס".' }),
     title: 'הפגנת ענק נגד גיוס',
-    body: 'מאות אלפים חוסמים את כניסת העיר. הקואליציה תלויה במפלגות החרדיות, והמילואימניקים זועמים.',
+    body: 'מאות אלפים חוסמים את כניסת העיר. {gov}',
     choices: [
       { label: '"שוויון בנטל – עכשיו"', ops: [{ op: 'stance', lean: { religion: -60, security: 30 }, d: 3 }, { op: 'fame', d: 2 }] },
       { label: '"לימוד תורה הוא שליחות"', ops: [{ op: 'stance', lean: { religion: 80 }, d: 3 }, { op: 'fame', d: 2 }] },
@@ -441,6 +454,7 @@ const GOV_EVENTS: GameEvent[] = [
   },
   {
     id: 'cab_haredi', queued: true, icon: '📚', title: 'ישיבת ממשלה: תקציב לישיבות',
+    when: (s) => worldFacts(s).haredimInGov,
     body: 'השותפות החרדיות מתנות את המשך הקואליציה בתוספת תקציב למוסדות תורניים.',
     choices: [
       { label: 'לאשר את התוספת', ops: [...supportPM(4), { op: 'stability', d: 6 }, { op: 'stance', lean: { religion: 70 }, d: 1.5 }, { op: 'world', key: 'economy', d: -1, weeks: 8 }] },
@@ -1038,7 +1052,8 @@ EVENTS.push(
     id: 'court_draft', icon: '⚖️', weight: 1.5, cooldown: 80, issue: 'draft',
     title: 'בג"ץ: המדינה חייבת לגייס בני ישיבות',
     body: 'בהרכב של תשעה שופטים קבע בית המשפט שאין בסיס חוקי לפטור הגורף. המפלגות החרדיות מאיימות לפרק את הממשלה, והמילואימניקים חוגגים מול הבניין.',
-    when: (s) => courtActive(s) && !(s.transforms ?? []).some((t) => t.id === 'volunteer'),
+    // פסיקה נגד פטור "בלי חוק" כשהחרדים בממשלה; אם יש חוק פטור או חוק גיוס – אירועים אחרים (factEvents)
+    when: (s) => courtActive(s) && worldFacts(s).draft === 'statusQuo' && worldFacts(s).haredimInGov,
     choices: [
       { label: 'לכבד את פסק הדין', ops: [{ op: 'special', id: 'court_draft_ruling', label: 'החרדים זועמים' }, { op: 'stance', lean: { judiciary: -50, religion: -40 }, d: 1.5 }] },
       { label: 'לקרוא לחוקק לעקוף את הפסיקה', hint: 'התגברות – אם יש', ops: [{ op: 'special', id: 'court_bypass', label: 'משבר עם בית המשפט' }, { op: 'stance', lean: { judiciary: 70, religion: 60 }, d: 1.5 }] },
@@ -1066,6 +1081,9 @@ EVENTS.push(
     ],
   },
 );
+
+// אירועים שתלויים בעובדות בשטח (חוקים בתוקף, מי בממשלה)
+EVENTS.push(...FACT_EVENTS);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id) ?? CHAIN_EVENTS.find((e) => e.id === id) ?? PRES_EVENTS.find((e) => e.id === id);
 

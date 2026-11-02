@@ -67,7 +67,7 @@ export const EXTRA_BILLS: BillTemplate[] = [
     effects: [{ key: 'economy', d: -1.5, weeks: 40, delay: 20, from: 3, note: 'בריחת מנהלים וחברות לחו"ל' }],
   },
   {
-    id: 'yeshiva', title: 'חוק מעמד לומדי התורה', icon: '📖', committee: 'security', category: 'religion', issue: 'draft', petitionRisk: 0.45, aftermath: [['draft_backlash', 2]],
+    id: 'yeshiva', title: 'חוק מעמד לומדי התורה', icon: '📖', committee: 'security', category: 'religion', issue: 'draft', petitionRisk: 0.45, aftermath: [['exemption_backlash', 2]],
     summary: 'עיגון פטור משירות ללומדי תורה ותקציב קבוע לישיבות.',
     lean: { religion: 70, security: -10 },
     sectors: { haredi: 12, religious: 2, traditional: -2, secular: -8, olim: -6, arab: 0 },

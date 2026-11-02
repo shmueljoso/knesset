@@ -2,6 +2,7 @@ import { templateById } from '../engine/data/bills';
 import { ISSUES } from '../engine/data/issues';
 import { recentLaw } from '../engine/systems/issues';
 import { useGame } from '../store';
+import { DRAFT_LABEL, worldFacts } from '../engine/systems/facts';
 
 const heatColor = (v: number) => (v >= 65 ? 'var(--bad)' : v >= 45 ? 'var(--warn)' : 'var(--good)');
 
@@ -33,9 +34,35 @@ export function IssuesCard() {
           </div>
         );
       })}
+      <StateLine />
       <p className="tiny muted" style={{ margin: '8px 0 0' }}>
         סוגיה בוערת = מחאות ואירועים. עמדה פומבית בסוגיה בוערת מזיזה את הציבור חזק יותר. חוק שעובר בנושא מקרר אותה (✅).
       </p>
+    </div>
+  );
+}
+
+/** המצב בשטח: מה בתוקף ומי בממשלה – זה מה שקובע אילו אירועים וכותרות יגיעו */
+function StateLine() {
+  const g = useGame();
+  const f = worldFacts(g);
+  const chips = [
+    `🪖 גיוס: ${DRAFT_LABEL[f.draft]}`,
+    f.haredimInGov ? '📜 החרדים בממשלה' : '📜 החרדים באופוזיציה',
+    f.arabsInGov ? '🤝 מפלגה ערבית בממשלה' : null,
+    `🏛️ ממשלת ${f.govLean === 'right' ? 'ימין' : f.govLean === 'left' ? 'שמאל' : 'מרכז'}`,
+    f.courtActive ? (f.canOverride ? '⚖️ בג"ץ – עם פסקת התגברות' : '⚖️ בג"ץ פעיל') : '⚖️ בלי ביקורת שיפוטית',
+    f.shabbatTransit ? '🚌 תחבורה בשבת' : null,
+    f.civilMarriage ? '💍 נישואים אזרחיים' : null,
+    f.coreStudies ? '📐 חובת ליבה' : null,
+  ].filter(Boolean);
+  return (
+    <div className="chips" style={{ marginTop: 10 }} data-testid="state-facts">
+      {chips.map((c) => (
+        <span key={c} className="chip">
+          {c}
+        </span>
+      ))}
     </div>
   );
 }
