@@ -1,3 +1,4 @@
+import { applySetup, type StartSetup } from './systems/setup';
 import { backgroundById } from './data/backgrounds';
 import { guessGender, makeName } from './data/names';
 import { makeAvatar } from './avatarGen';
@@ -50,6 +51,8 @@ export interface NewGameOptions {
    * journalist = עיתונאי/ת מחבילת התקשורת האמיתית שנכנס/ת לפוליטיקה
    */
   asFigure?: { npcId?: string; journalist?: string };
+  /** עולם מותאם אישית: כללים, חוקים בתוקף, מצב המדינה וסקרים (systems/setup.ts) */
+  setup?: StartSetup | null;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -392,6 +395,8 @@ export function createGame(opts: NewGameOptions): GameState {
   s.mod = opts.mod?.name ?? null;
   if (opts.mod) applyModSettings(s, opts.mod);
   if (opts.mod?.afterElection) startAfterElection(s);
+  if (opts.mod?.laws?.length) applySetup(s, { laws: opts.mod.laws }, true);
+  if (opts.setup) applySetup(s, opts.setup);
   setMediaMode(s, s.settings.media ?? 'fictional');
   if (jr) addNews(s, `${jr.name} עוזב/ת את ${jr.outlet} ונכנס/ת לפוליטיקה`, 'neutral', true, 'באולפן כבר מחפשים מחליף/ה. ברשתות – סערה.', jr.outlet);
   refreshPresence(s);

@@ -4,6 +4,7 @@ import type { CustomEvent, GameState, Ideology, IssueId, Rules, Sector, Transfor
 import { recomputeStability } from './systems/coalition';
 import { ministryTitle } from './systems/government';
 import { ISSUES } from './data/issues';
+import { BILL_TEMPLATES } from './data/bills';
 import { MINISTRIES } from './systems/government';
 import { AXES, SECTORS } from './util';
 
@@ -44,6 +45,8 @@ export interface ModFile {
   rules?: Partial<Pick<Rules, 'threshold' | 'directPM' | 'presidential' | 'districts' | 'override' | 'norwegian' | 'termLimit' | 'entrench' | 'equality'>>;
   /** שינויי משטר שכבר בתוקף בתחילת התרחיש (בלי אירועי ההמשך) */
   transforms?: TransformId[];
+  /** חוקים שכבר בתוקף בפתיחת התרחיש (מזהה תבנית + היקף 1-3) */
+  laws?: { id: string; scope: 1 | 2 | 3 }[];
   /** אירועים שכתבת בעצמך */
   events?: Omit<CustomEvent, 'id'>[];
 }
@@ -93,6 +96,11 @@ export function validateMod(raw: unknown): { mod: ModFile | null; errors: string
     else if (k === 'threshold' ? typeof v !== 'number' || v < 0 || v > 20 : typeof v !== 'boolean') errors.push(`rules.${k} – ערך לא תקין`);
   }
   for (const id of m.transforms ?? []) if (!TRANSFORM_IDS.includes(id)) errors.push(`transforms: ${id} – שינוי משטר לא מוכר`);
+  if (m.laws !== undefined && !Array.isArray(m.laws)) errors.push('laws חייב להיות מערך');
+  for (const l of Array.isArray(m.laws) ? m.laws : []) {
+    if (!l || typeof l.id !== 'string' || !BILL_TEMPLATES.some((t) => t.id === l.id)) errors.push(`laws: ${l?.id} – חוק לא מוכר`);
+    else if (![1, 2, 3].includes(l.scope)) errors.push(`laws: ${l.id} – היקף חייב להיות 1, 2 או 3`);
+  }
   (m.events ?? []).forEach((e, i) => {
     if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.body !== 'string') errors.push(`אירוע ${i + 1}: חסרים כותרת או תיאור`);
     else if (!Array.isArray(e.choices) || e.choices.length < 1 || e.choices.length > 4 || e.choices.some((c) => typeof c.label !== 'string' || !c.label.trim())) errors.push(`אירוע ${i + 1}: צריך 1–4 בחירות עם טקסט`);

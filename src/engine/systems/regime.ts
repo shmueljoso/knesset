@@ -72,6 +72,12 @@ function swapBack(s: GameState, ministerId: string) {
     const swapped = new Set([...Object.keys(s.norwegianSwaps), ...Object.values(s.norwegianSwaps)]);
     const alt = [...s.parties[n.partyId].list].reverse().find((id) => id !== 'player' && id !== ministerId && s.seating.includes(id) && s.npcs[id]?.partyId === n.partyId && !senior(id) && !swapped.has(id));
     if (alt) out = alt;
+    // אין מי שיפנה את המקום (סיעה קטנה): ראש/ת הממשלה נשאר/ת ח"כ, והשר/ה נשאר/ת מחוץ לכנסת
+    else {
+      if (n && !n.ministry) n.role = 'candidate';
+      recountSeats(s);
+      return;
+    }
   }
   if (back) n.isMK = true;
   const into = back ? ministerId : repl;

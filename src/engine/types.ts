@@ -133,6 +133,8 @@ export interface Settings {
   dynamics?: Dynamics;
   /** שמות כלי התקשורת והעיתונאים: בדיוניים, או אמיתיים (חדשות 12, עמית סגל...) */
   media?: 'fictional' | 'real';
+  /** עולם מותאם אישית: הערכים נקבעו בפתיחה ואי אפשר לערוך אותם במשחק (systems/setup.ts) */
+  locked?: boolean;
 }
 
 export type ProjectKind = 'tour' | 'branches' | 'ads' | 'supporters';
@@ -536,6 +538,8 @@ export interface LawRecord {
   week: number;
   sponsor: string; // 'player' או מזהה NPC
   struck?: boolean;
+  /** בוטל בכנסת (ולא נפסל בבג"ץ) */
+  repealed?: boolean;
   coSponsor?: boolean;
 }
 

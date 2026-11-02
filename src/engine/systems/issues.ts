@@ -151,7 +151,7 @@ function coalitionReaction(s: GameState, templateId: string, scope: 1 | 2 | 3) {
   }
 }
 
-function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>, scope: 1 | 2 | 3) {
+export function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>, scope: 1 | 2 | 3) {
   switch (rule) {
     case 'threshold':
       s.flags.thresholdBefore ??= s.rules.threshold;
@@ -249,6 +249,19 @@ export function strikeLaw(s: GameState, templateId: string, quiet = false) {
   addWorldEffect(s, 'cohesion', -1.5, 2, 'בג"ץ');
   if (t.issue) bumpIssue(s, t.issue, 15);
   if (!quiet) triggerChains(s, 'struck', templateId);
+}
+
+/** ביטול חוק בכנסת: ההשפעות שנותרו מתבטלות, הכלל חוזר לקדמותו, והסוגיה מתחממת שוב */
+export function repealLaw(s: GameState, templateId: string): boolean {
+  const rec = [...s.lawsPassed].reverse().find((l) => l.templateId === templateId && !l.struck);
+  if (!rec) return false;
+  rec.struck = true;
+  rec.repealed = true;
+  const t = templateById(templateId);
+  s.effects = s.effects.filter((e) => e.source !== rec.title && e.source !== t.title);
+  if (t.rule) revertRule(s, t.rule);
+  if (t.issue) bumpIssue(s, t.issue, 10);
+  return true;
 }
 
 /** חקיקה מחדש בפסקת ההתגברות */

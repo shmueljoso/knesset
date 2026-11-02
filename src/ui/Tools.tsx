@@ -48,6 +48,12 @@ export function ToolsSheet() {
         </div>
 
         <div className="section-label">✏️ עריכת מספרים</div>
+        {g.settings?.locked && (
+          <div className="card small" data-testid="tools-locked">
+            🔒 זה משחק בעולם מותאם אישית: הכללים, החוקים והמספרים נקבעו בפתיחה ואי אפשר לערוך אותם במשחק.
+          </div>
+        )}
+        {!g.settings?.locked && <>
         <div className="filter-row">
           {groups.map((x) => (
             <button key={x} className={open === x ? 'on' : ''} onClick={() => setGroup(x)}>
@@ -81,6 +87,7 @@ export function ToolsSheet() {
             ))}
           <p className="tiny faint" style={{ margin: '6px 0 0' }}>ההזנה נשמרת ביציאה מהשדה. טווח מותר: מוגבל לכל שדה.</p>
         </div>
+        </>}
       </div>
     </Sheet>
   );

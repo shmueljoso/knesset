@@ -104,6 +104,8 @@ export function editFields(s: GameState): EditField[] {
 
 /** עריכת מספר בודד. מחזיר false אם השדה לא קיים */
 export function setEdit(s: GameState, id: string, raw: number): boolean {
+  // עולם מותאם אישית: הערכים נקבעו בפתיחה וננעלו
+  if (s.settings?.locked) return false;
   const f = editFields(s).find((x) => x.id === id);
   if (!f || !Number.isFinite(raw)) return false;
   const v = clamp(raw, f.min, f.max);

@@ -15,6 +15,8 @@ import { CHAIN_EVENTS } from './chains';
 import { activeJournalists } from '../systems/media';
 import { PRES_EVENTS } from './presidency';
 import { FACT_EVENTS } from './factEvents';
+import { LAW_LIFE_EVENTS } from './lawEvents';
+import { lawInForce } from '../systems/facts';
 import { draftEnforced, exemptionInPlace, worldFacts } from '../systems/facts';
 
 export interface EventChoice {
@@ -42,6 +44,12 @@ export interface GameEvent {
   ctx?: (s: GameState) => Ctx | null;
   choices: EventChoice[];
 }
+
+/** "למרות החוק" – כשיש חוק בתוקף בנושא והבעיה עדיין כאן */
+const despite = (s: GameState, ids: string[]) => {
+  const l = ids.map((id) => lawInForce(s, id)).find(Boolean);
+  return l ? `, למרות "${l.title}"` : '';
+};
 
 const mks = (s: GameState, f: (n: Npc) => boolean = () => true) => Object.values(s.npcs).filter((n) => n.isMK && f(n));
 const pickNpc = (s: GameState, list: Npc[]): Ctx | null => (list.length ? { npc: pick(s, list).id } : null);
@@ -306,7 +314,8 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'housing_protest', icon: '⛺', weight: 4, cooldown: 40, issue: 'housing',
     title: 'מחאת הדיור חוזרת',
-    body: 'מאות אוהלים בשדרה בתל אביב. "העם דורש צדק חברתי" חוזר לכותרות. המוחים מזמינים פוליטיקאים לנאום – אבל לא את כולם מקבלים בברכה.',
+    body: 'מאות אוהלים בשדרה בתל אביב. "העם דורש צדק חברתי" חוזר לכותרות{despite}. המוחים מזמינים פוליטיקאים לנאום – אבל לא את כולם מקבלים בברכה.',
+    ctx: (s) => ({ despite: despite(s, ['housing', 'rent', 'fast_build', 'third_home', 'vat_food']) }),
     when: (s) => isHot(s, 'housing', 55) || isHot(s, 'cost', 65),
     choices: [
       { label: 'לנאום בהפגנה', ops: [{ op: 'stance', lean: { econ: -50 }, d: 3.5 }, { op: 'fame', d: 4 }, { op: 'att', who: '@pm', d: -6 }, { op: 'stability', d: -2 }] },
@@ -317,7 +326,8 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'general_strike', icon: '🪧', weight: 3, cooldown: 35, issue: 'wages',
     title: 'ההסתדרות מכריזה על שביתה כללית',
-    body: 'נמלי הים, נתב"ג והרשויות המקומיות מושבתים. הצדדים מחפשים מתווכים – ומחפשים אשמים.',
+    body: 'נמלי הים, נתב"ג והרשויות המקומיות מושבתים{despite}. הצדדים מחפשים מתווכים – ומחפשים אשמים.',
+    ctx: (s) => ({ despite: despite(s, ['pension', 'exec_pay', 'ports']) }),
     when: (s) => isHot(s, 'wages', 45),
     choices: [
       { label: 'לתמוך בעובדים', ops: [{ op: 'stance', lean: { econ: -60 }, d: 3 }, { op: 'fame', d: 2 }] },
@@ -367,7 +377,8 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'inflation', icon: '📈', weight: 3, cooldown: 24, issue: 'cost',
     title: 'הלמ"ס: מדד המחירים זינק',
-    body: 'האינפלציה קפצה, המשכנתאות מתייקרות, והרשתות מעלות מחירים. כולם מחפשים אשם.',
+    body: 'האינפלציה קפצה, המשכנתאות מתייקרות, והרשתות מעלות מחירים{despite}. כולם מחפשים אשם.',
+    ctx: (s) => ({ despite: despite(s, ['vat_food', 'banks', 'ports']) }),
     when: (s) => isHot(s, 'cost', 50),
     choices: [
       { label: 'להאשים את הממשלה', requires: (s) => (isCoalition(s, s.player.partyId) ? 'אתה בקואליציה' : null), ops: [{ op: 'fame', d: 2 }, { op: 'approval', sector: 'all', d: 1 }, { op: 'att', who: '@pm', d: -5 }] },
@@ -1083,7 +1094,7 @@ EVENTS.push(
 );
 
 // אירועים שתלויים בעובדות בשטח (חוקים בתוקף, מי בממשלה)
-EVENTS.push(...FACT_EVENTS);
+EVENTS.push(...FACT_EVENTS, ...LAW_LIFE_EVENTS);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id) ?? CHAIN_EVENTS.find((e) => e.id === id) ?? PRES_EVENTS.find((e) => e.id === id);
 

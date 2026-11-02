@@ -10,6 +10,8 @@ import type { AvatarSpec, BackgroundId, Drama, Gender, Ideology, ScenarioId } fr
 import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
 import { Avatar } from './Avatar';
+import { WorldSetupSheet } from './WorldSetup';
+import { setupSummary, type StartSetup } from '../engine/systems/setup';
 
 const NAMES_M = ['דניאל כהן', 'יונתן לוי', 'עומר אברהם', 'איתי ברק', 'אליאב שגב'];
 const NAMES_F = ['נועה כהן', 'מאיה לוי', 'שירה אברהם', 'תמר ברק', 'הדר שגב'];
@@ -47,6 +49,9 @@ export function CreateScreen() {
   const [figureId, setFigureId] = useState<string | null>(null);
   const [journalistId, setJournalistId] = useState<string | null>(null);
   const [showFigures, setShowFigures] = useState(false);
+  // עולם מותאם אישית (כללים, חוקים, מצב המדינה, סקרים)
+  const [setup, setSetup] = useState<StartSetup | null>(null);
+  const [showSetup, setShowSetup] = useState(false);
 
   const seedFor = challenge?.seed ?? figSeed;
   const pool = useMemo(() => (step === 4 && showFigures ? figurePool({ mod: challenge ? null : mod, seed: seedFor, scenario: challenge?.scenario ?? scenario }) : null), [step, showFigures, mod, seedFor, scenario, challenge]);
@@ -83,7 +88,8 @@ export function CreateScreen() {
     }
     const m = mod && early && mod.listsClosed ? earlyStart(mod) : mod;
     // דמות קיימת: אותו עולם בדיוק כמו בתצוגה (בלי "4 חודשים קודם", שמשנה את הרשימות)
-    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure });
+    const custom = setup && setupSummary(setup).length ? setup : null;
+    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure, setup: custom });
   };
 
   return (
@@ -311,7 +317,31 @@ export function CreateScreen() {
               {modErr.map((e, i) => (
                 <div key={i} className="tiny bad">{e}</div>
               ))}
+              <div className="spread" style={{ marginTop: 10, gap: 8 }}>
+                <span className="small muted">🧪 עולם מותאם אישית: שיטה, חוקים, מצב המדינה וסקרים</span>
+                <button className="btn sm" onClick={() => setShowSetup(true)} data-testid="open-setup">
+                  {setup && setupSummary(setup).length ? 'עריכה' : 'להגדיר'}
+                </button>
+              </div>
+              {setup && setupSummary(setup).length > 0 && (
+                <div className="chips" style={{ marginTop: 6 }} data-testid="setup-summary">
+                  {setupSummary(setup).map((x) => (
+                    <span key={x} className="chip gold">
+                      {x}
+                    </span>
+                  ))}
+                  {setup.locked !== false && <span className="chip">🔒 נעול</span>}
+                </div>
+              )}
             </div>
+            {showSetup && (
+              <WorldSetupSheet
+                setup={setup ?? {}}
+                onChange={setSetup}
+                onClose={() => setShowSetup(false)}
+                parties={(mod ? modToPartyDefs(mod) : PARTY_DEFS).map((p) => ({ id: p.id, name: p.name, color: p.color, poll: mod?.parties.find((x) => x.id === p.id)?.polls ?? (p.seats / 120) * 100 }))}
+              />
+            )}
             {scenario === 'freshman' && (
               <label className="card row small" style={{ gap: 8, marginBottom: 10, borderColor: asLeader ? 'var(--gold)' : undefined }} data-testid="as-leader">
                 <input type="checkbox" checked={asLeader} onChange={(e) => setAsLeader(e.target.checked)} />

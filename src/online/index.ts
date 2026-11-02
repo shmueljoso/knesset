@@ -258,7 +258,7 @@ export function scoreRow(g: GameState): ScoreRow {
     years: b.years,
     laws: b.laws,
     pm_week: b.pmWeek,
-    scenario: g.scenario,
+    scenario: g.flags.customStart ? 'custom' : g.scenario,
     challenge: typeof g.flags.challenge === 'string' ? g.flags.challenge : null,
     edited: b.edited,
     client_version: import.meta.env.VITE_APP_VERSION ?? '',
