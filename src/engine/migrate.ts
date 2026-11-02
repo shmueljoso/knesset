@@ -41,6 +41,9 @@ export function ensurePhase3(g: GameState) {
   g.customEvents ??= [];
   g.windows ??= {};
   g.norwegianSwaps ??= {};
+  g.districtBias ??= {};
+  g.gerryBias ??= {};
+  g.player.district ??= null;
   g.surveys ??= [];
   g.retired ??= [];
   g.buzz ??= {};

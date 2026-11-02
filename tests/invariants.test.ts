@@ -81,6 +81,9 @@ function randomAction(s: GameState, r: () => number): string {
 
 /** חלק מהמשחקים עם כללים אחרים: בחירה ישירה, שיטה נשיאותית, החוק הנורבגי, הגבלת כהונה */
 export const rulesSetup = (sd: number) => (g: GameState) => {
+  // שיטות בחירה שונות: ארצית, מעורבת, מחוזית, ואלקטורים
+  if (sd % 4 === 1 || sd % 4 === 3) g.rules.districtShare = [0.5, 1, 0.3][sd % 3];
+  if (sd % 7 === 0) g.rules.electoral = true, g.rules.directPM = true;
   if (sd % 4 === 1) g.rules.directPM = true;
   if (sd % 4 === 2) g.rules.presidential = true;
   if (sd % 3 === 0) {

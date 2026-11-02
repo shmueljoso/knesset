@@ -1,3 +1,4 @@
+import { boostHome } from './systems/districts';
 import { activeJournalists, pollsterName } from './systems/media';
 import { addStat } from './stats';
 import { inSession } from './calendar';
@@ -27,7 +28,7 @@ import { staffBonus } from './systems/staff';
 import type { GameState, Ideology, LocationId } from './types';
 import { AXES, SECTORS, SECTOR_IDEOLOGY, SECTOR_NAMES, clamp, leanAlignment } from './util';
 
-export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus' | 'alliances' | 'roles' | 'sway';
+export type OpenPanel = 'billBuilder' | 'staff' | 'party' | 'bills' | 'coalition' | 'ministry' | 'caucus' | 'alliances' | 'roles' | 'sway' | 'districts';
 
 export interface ActionResult {
   text: string;
@@ -392,8 +393,14 @@ export const ACTIONS: ActionDef[] = [
     run: (s) => {
       const sec = [...SECTORS].sort((a, b) => leanAlignment(SECTOR_IDEOLOGY[b], s.player.ideology) - leanAlignment(SECTOR_IDEOLOGY[a], s.player.ideology))[0];
       const ops: Op[] = [{ op: 'approval', sector: sec, d: 2.2 }, { op: 'fame', d: 0.5 }, { op: 'partyStanding', d: 1 }];
+      boostHome(s, 2); // בשיטה מחוזית – חוג בית במחוז הבית מחזק את המפלגה שם
       return run(s, ops, `חוג בית מוצלח בקהל ${SECTOR_NAMES[sec]}.`);
     },
+  },
+  {
+    id: 'districts_map', loc: 'field', icon: '🗺️', label: 'מפת המחוזות', ap: 0,
+    desc: 'מי מוביל בכל מחוז, איפה אפשר לנצח, ולאן כדאי לנסוע. בשיטה מחוזית – זו מפת הבחירות.',
+    run: () => ({ text: '', open: 'districts' }),
   },
   {
     id: 'outreach', loc: 'field', icon: '🤝', label: 'ביקור בקהילה שלא מכירה אותך', ap: 2,
@@ -539,6 +546,7 @@ export const ACTIONS: ActionDef[] = [
     avail: needParty,
     run: (s) => {
       takeStance(s, signatureLean(s), 2.5);
+      boostHome(s, 3);
       return run(s, [{ op: 'fame', d: 3 * mediaPower(s) }, { op: 'partyStanding', d: 2 }], 'הכיכר התמלאה. התמונות מהרחפן בכל מקום.');
     },
   },

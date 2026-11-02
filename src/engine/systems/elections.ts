@@ -13,6 +13,8 @@ import { log } from './report';
 import { afterElection } from './society';
 import { afterMandate, mandatePlan } from './presidency';
 import { applyPledges } from './sway';
+import { allocateBySystem, ensureHomes, pickElected, playerDistrict, systemKind, voterModifier } from './districts';
+import { districtById } from '../data/districts';
 
 export const THRESHOLD = 0.0325;
 
@@ -161,14 +163,17 @@ export function runElection(s: GameState) {
     const noisy = Math.max(0.05, p.poll * (1 + (rand(s) - 0.5) * 0.18));
     votes[p.id] = noisy;
   }
-  // מחוזות בחירה: יתרון מובנה למפלגות הגדולות
-  if (s.rules.districts) for (const id of Object.keys(votes)) votes[id] = Math.pow(votes[id], 1.4);
-  // בחירה ישירה בלי מחוזות: פיצול הפתק – "ראש ממשלה לגדולה, כנסת לקטנה" (כמו 1996)
-  else if (directElection(s)) for (const id of Object.keys(votes)) votes[id] *= votes[id] >= 15 ? 0.85 : votes[id] < 9 ? 1.12 : 1;
+  // בחירה ישירה: פיצול הפתק – "ראש ממשלה לגדולה, כנסת לקטנה" (כמו 1996)
+  if (directElection(s)) for (const id of Object.keys(votes)) votes[id] *= votes[id] >= 15 ? 0.85 : votes[id] < 9 ? 1.12 : 1;
+  // חובת הצבעה וגיל 16: מי שהחוקים האלה מקרבים לקלפי
+  for (const p of Object.values(s.parties)) votes[p.id] *= voterModifier(s, p);
   const totalShare = Object.values(votes).reduce((a, b) => a + b, 0);
   for (const id of Object.keys(votes)) votes[id] = Math.round((votes[id] / totalShare) * turnout);
   const surplus = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.surplusPartner]));
-  const seats = allocateSeats(votes, surplus, 120, (s.rules?.threshold ?? 3.25) / 100);
+  ensureHomes(s);
+  // המרת הקולות למושבים לפי שיטת הבחירות: ארצית, מחוזית או מעורבת
+  const sys = allocateBySystem(s, votes, surplus, () => rand(s));
+  const seats = sys.seats;
   const oldSeats = Object.fromEntries(Object.values(s.parties).map((p) => [p.id, p.seats]));
 
   // הרכב הכנסת החדשה
@@ -195,8 +200,15 @@ export function runElection(s: GameState) {
     p.seats = seats[p.id];
     // אדם יכול לשבת רק במפלגה אחת: מי שכבר נבחר בסיעה אחרת (רשימות לא עקביות) מדולג
     p.list = p.list.filter((id) => id === 'player' || (s.npcs[id] && !taken.has(id)));
-    while (p.list.length < p.seats) spawnCandidate(s, p.id);
-    const elected = p.list.slice(0, p.seats);
+    let elected: string[];
+    if (sys.districtMode) {
+      // שיטה מחוזית/מעורבת: מי שמחוז הבית שלו נכבש נבחר, ולא רק לפי מקום ברשימה
+      elected = pickElected(s, p, sys.wins[p.id] ?? {}, sys.listSeats[p.id] ?? 0, taken);
+      p.list = [...elected, ...p.list.filter((x) => !elected.includes(x))];
+    } else {
+      while (p.list.length < p.seats) spawnCandidate(s, p.id);
+      elected = p.list.slice(0, p.seats);
+    }
     for (const id of elected) taken.add(id);
     for (const id of p.list) if (id !== 'player' && s.npcs[id]) s.npcs[id].partyId = p.id;
     for (const id of elected) {
@@ -230,7 +242,12 @@ export function runElection(s: GameState) {
 
   const playerPos = s.player.listPosition;
   const pmRace = runPmRace(s, votes) ?? undefined;
-  s.lastElection = { week: s.week, knesset: s.knesset, votes, seats, playerElected: s.player.isMK, playerPosition: playerPos, pmRace };
+  s.lastElection = { week: s.week, knesset: s.knesset, votes, seats, playerElected: s.player.isMK, playerPosition: playerPos, pmRace, districts: sys.districts, playerDistrict: playerDistrict(s), system: systemKind(s) };
+  const home = districtById(playerDistrict(s));
+  if (sys.districtMode && ranForKnesset && home) {
+    const mine = s.player.partyId ? sys.districts.find((d) => d.id === home.id)?.seats[s.player.partyId] ?? 0 : 0;
+    log(s, s.player.isMK ? `נבחרת לכנסת${mine ? ` – מחוז ${home.name} נכבש בידי ${s.parties[s.player.partyId!]?.short}` : ' דרך הרשימה הארצית'}.` : `לא נבחרת: ב${home.name} ${mine ? 'המפלגה זכתה, אבל לא בשמך' : 'המפלגה שלך הפסידה'}.`, 'career');
+  }
   if (s.player.isMK) {
     if (!wasMK) {
       s.player.rank = 'mk';
@@ -278,7 +295,7 @@ export function runElection(s: GameState) {
 
   formAfterElection(s, pmRace);
 
-  s.electionWeek = s.week + 208;
+  s.electionWeek = s.week + (s.rules.termWeeks ?? 208);
   s.primariesWeek = s.electionWeek - 12;
 }
 

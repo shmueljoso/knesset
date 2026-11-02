@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BILL_TEMPLATES } from '../engine/data/bills';
 import { ISSUES } from '../engine/data/issues';
 import { WORLD_NAMES } from '../engine/systems/opinion';
+import { SHARE_PRESETS } from '../engine/systems/districts';
 import { SETUP_RULES, SETUP_TRANSFORMS, setupSummary, transformLabel, type StartSetup } from '../engine/systems/setup';
 import type { IssueId, WorldKey } from '../engine/types';
 import { AXES, AXIS_NAMES } from '../engine/util';
@@ -101,6 +102,24 @@ export function WorldSetupSheet({ setup, onChange, onClose, parties }: { setup: 
 
       {tab === 'rules' && (
         <div className="col">
+          <div className="section-label" style={{ marginTop: 0 }}>🗳️ שיטת הבחירות לכנסת</div>
+          <div className="filter-row" style={{ flexWrap: 'wrap' }} data-testid="system-presets">
+            {SHARE_PRESETS.map((x) => (
+              <button key={x.share} className={(setup.rules?.districtShare ?? 0) === x.share ? 'on' : ''} onClick={() => up({ rules: { ...setup.rules, districtShare: x.share } })} data-testid={`share-${Math.round(x.share * 100)}`}>
+                {x.label}
+              </button>
+            ))}
+          </div>
+          <div className="tiny muted">בשיטה מחוזית מנצח מי שהוביל בכל מחוז, ומועמד עם שורשים מקומיים נבחר גם בלי מקום ברשימה.</div>
+          <div className="section-label">📅 אורך הכנסת</div>
+          <div className="filter-row">
+            {[156, 208, 260, 312].map((w) => (
+              <button key={w} className={(setup.rules?.termWeeks ?? 208) === w ? 'on' : ''} onClick={() => up({ rules: { ...setup.rules, termWeeks: w } })}>
+                {w / 52} שנים
+              </button>
+            ))}
+          </div>
+          <div className="section-label">⚖️ עוד כללים</div>
           {SETUP_RULES.map((r) => (
             <label key={r.key} className="card row small" style={{ gap: 8, cursor: 'pointer' }} data-testid={`rule-${r.key}`}>
               <input type="checkbox" checked={!!setup.rules?.[r.key]} onChange={(e) => up({ rules: { ...setup.rules, [r.key]: e.target.checked } })} />

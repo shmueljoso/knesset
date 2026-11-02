@@ -1,7 +1,8 @@
 // סקרים שמתפרסמים כל שבועיים ("כמו בסקרים אמיתיים"), ורוח הציבור שמשתנה לפי מצב המדינה.
 // הסקרים לא רק מוצגים: הם משפיעים על המומנטום, על השותפות בקואליציה ועל המרוצים לראשות הממשלה ולנשיאות.
+import { allocateBySystem, usesDistricts, voterModifier } from './districts';
 import { ISSUES } from '../data/issues';
-import { chance, pick, rand } from '../rng';
+import { chance, makeLocalRng, pick, rand } from '../rng';
 import type { GameState, Ideology, Survey } from '../types';
 import { AXES, avgApproval, clamp, leanAlignment } from '../util';
 import { allocateSeats } from './elections';
@@ -109,10 +110,11 @@ export function makeSurvey(s: GameState): Survey {
   const margin = Math.round((98 / Math.sqrt(pollster.sample)) * 10) / 10;
   const parties = Object.values(s.parties);
   const raw: Record<string, number> = {};
-  for (const p of parties) raw[p.id] = Math.max(0.05, p.poll + leanAlignment(p.ideology, pollster.lean) * 0.6 + (rand(s) - 0.5) * margin * 0.5);
+  for (const p of parties) raw[p.id] = Math.max(0.05, (p.poll + leanAlignment(p.ideology, pollster.lean) * 0.6 + (rand(s) - 0.5) * margin * 0.5) * voterModifier(s, p));
   const tot = Object.values(raw).reduce((a, b) => a + b, 0) || 1;
   const pct = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Math.round((v / tot) * 1000) / 10]));
-  const seats = allocateSeats(pct, {}, 120, (s.rules.threshold ?? 3.25) / 100);
+  // המרה למושבים לפי שיטת הבחירות (בשיטה מחוזית – מפלגה קטנה יכולה לקבל מושבים גם מתחת לחסימה)
+  const seats = usesDistricts(s) ? allocateBySystem(s, pct, {}, makeLocalRng((s.seed ^ (s.week * 131)) | 0)).seats : allocateSeats(pct, {}, 120, (s.rules.threshold ?? 3.25) / 100);
 
   // מי מתאים יותר לראשות הממשלה
   const cands = pmCandidates(s);

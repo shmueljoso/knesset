@@ -1,3 +1,4 @@
+import { ensureHomes } from './systems/districts';
 import { applySetup, type StartSetup } from './systems/setup';
 import { backgroundById } from './data/backgrounds';
 import { guessGender, makeName } from './data/names';
@@ -53,6 +54,8 @@ export interface NewGameOptions {
   asFigure?: { npcId?: string; journalist?: string };
   /** עולם מותאם אישית: כללים, חוקים בתוקף, מצב המדינה וסקרים (systems/setup.ts) */
   setup?: StartSetup | null;
+  /** מחוז הבית (שיטה מחוזית/מעורבת): איפה מתמודדים */
+  district?: string;
 }
 
 export const TRAITS: Trait[] = ['loyal', 'vindictive', 'leaker', 'opportunist', 'principled', 'vain', 'pragmatic'];
@@ -233,6 +236,7 @@ export function createGame(opts: NewGameOptions): GameState {
     apMax: 5,
     rank: opts.partyId ? 'activist' : 'citizen',
     partyId: opts.partyId,
+    district: opts.district ?? null,
     employerId: null,
     isMK: false,
     ministry: null,
@@ -397,6 +401,7 @@ export function createGame(opts: NewGameOptions): GameState {
   if (opts.mod?.afterElection) startAfterElection(s);
   if (opts.mod?.laws?.length) applySetup(s, { laws: opts.mod.laws }, true);
   if (opts.setup) applySetup(s, opts.setup);
+  ensureHomes(s);
   setMediaMode(s, s.settings.media ?? 'fictional');
   if (jr) addNews(s, `${jr.name} עוזב/ת את ${jr.outlet} ונכנס/ת לפוליטיקה`, 'neutral', true, 'באולפן כבר מחפשים מחליף/ה. ברשתות – סערה.', jr.outlet);
   refreshPresence(s);

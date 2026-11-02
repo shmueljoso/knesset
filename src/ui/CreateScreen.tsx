@@ -11,6 +11,8 @@ import { AXES, AXIS_NAMES, ideologyDistance } from '../engine/util';
 import { useStore } from '../store';
 import { Avatar } from './Avatar';
 import { WorldSetupSheet } from './WorldSetup';
+import { HomeDistrictPicker } from './Districts';
+import { DEFAULT_DISTRICT } from '../engine/data/districts';
 import { setupSummary, type StartSetup } from '../engine/systems/setup';
 
 const NAMES_M = ['דניאל כהן', 'יונתן לוי', 'עומר אברהם', 'איתי ברק', 'אליאב שגב'];
@@ -52,6 +54,7 @@ export function CreateScreen() {
   // עולם מותאם אישית (כללים, חוקים, מצב המדינה, סקרים)
   const [setup, setSetup] = useState<StartSetup | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [district, setDistrict] = useState<string>(DEFAULT_DISTRICT);
 
   const seedFor = challenge?.seed ?? figSeed;
   const pool = useMemo(() => (step === 4 && showFigures ? figurePool({ mod: challenge ? null : mod, seed: seedFor, scenario: challenge?.scenario ?? scenario }) : null), [step, showFigures, mod, seedFor, scenario, challenge]);
@@ -89,7 +92,7 @@ export function CreateScreen() {
     const m = mod && early && mod.listsClosed ? earlyStart(mod) : mod;
     // דמות קיימת: אותו עולם בדיוק כמו בתצוגה (בלי "4 חודשים קודם", שמשנה את הרשימות)
     const custom = setup && setupSummary(setup).length ? setup : null;
-    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure, setup: custom });
+    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure, setup: custom, district });
   };
 
   return (
@@ -342,6 +345,7 @@ export function CreateScreen() {
                 parties={(mod ? modToPartyDefs(mod) : PARTY_DEFS).map((p) => ({ id: p.id, name: p.name, color: p.color, poll: mod?.parties.find((x) => x.id === p.id)?.polls ?? (p.seats / 120) * 100 }))}
               />
             )}
+            <HomeDistrictPicker value={district} onChange={setDistrict} />
             {scenario === 'freshman' && (
               <label className="card row small" style={{ gap: 8, marginBottom: 10, borderColor: asLeader ? 'var(--gold)' : undefined }} data-testid="as-leader">
                 <input type="checkbox" checked={asLeader} onChange={(e) => setAsLeader(e.target.checked)} />

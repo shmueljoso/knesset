@@ -2,6 +2,7 @@
 // אירועים וכותרות בודקים כאן אם הם הגיוניים (למשל: בג"ץ לא יכול לפסול פטור שלא קיים, וחרדים
 // לא מאיימים לפרק ממשלה שהם לא חברים בה). פונקציות טהורות – בלי שינוי מצב.
 import type { GameState, Party } from '../types';
+import { systemKind } from './districts';
 
 /** מעמד הגיוס של בני ישיבות */
 export type DraftStatus =
@@ -22,6 +23,9 @@ export interface Facts {
   courtActive: boolean;
   /** פסקת התגברות או צמצום ביקורת – הכנסת יכולה לעקוף פסיקה */
   canOverride: boolean;
+  /** שיטת הבחירות: ארצית, מעורבת או מחוזית (systems/districts.ts) */
+  system: 'pr' | 'mixed' | 'fptp';
+  electoral: boolean;
   shabbatTransit: boolean;
   coreStudies: boolean;
   civilMarriage: boolean;
@@ -63,6 +67,8 @@ export function worldFacts(s: GameState): Facts {
     govLean: lean > 20 ? 'right' : lean < -20 ? 'left' : 'center',
     courtActive: !s.rules.noReview,
     canOverride: !!s.rules.override || !!s.rules.noReview || hasLaw(s, 'override'),
+    system: systemKind(s),
+    electoral: !!s.rules.electoral,
     shabbatTransit: tf(s, 'halacha') === 0 && (tf(s, 'secular') > 0 || hasLaw(s, 'shabbat')),
     coreStudies: hasLaw(s, 'core'),
     civilMarriage: tf(s, 'halacha') === 0 && (tf(s, 'secular') > 0 || hasLaw(s, 'civil')),

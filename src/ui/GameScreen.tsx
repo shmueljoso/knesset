@@ -22,6 +22,7 @@ import { MapView } from './MapView';
 import { HelpSheet, NewsView, PartySheet, SettingsSheet, StaffSheet } from './Panels';
 import { NpcSheet, PeopleView } from './People';
 import { RolesSheet, SwaySheet } from './Roles';
+import { DistrictsSheet } from './Districts';
 import { ElectionModal, ReportModal } from './ReportModal';
 
 function PanelView({ p }: { p: Panel }) {
@@ -76,6 +77,8 @@ function PanelView({ p }: { p: Panel }) {
       return <RolesSheet />;
     case 'sway':
       return <SwaySheet />;
+    case 'districts':
+      return <DistrictsSheet />;
   }
 }
 

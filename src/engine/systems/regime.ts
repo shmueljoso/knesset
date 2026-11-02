@@ -11,6 +11,9 @@ import { addNews } from './news';
 import { log } from './report';
 import { recountSeats } from './seats';
 import { latestSurvey, pmFitOf } from './surveys';
+import { districtShares, systemKind, systemLabel, usesDistricts } from './districts';
+import { DISTRICTS } from '../data/districts';
+import { scheduleEvent } from './issues';
 
 // ---------------- החוק הנורבגי ----------------
 
@@ -219,6 +222,14 @@ export function billBlocked(s: GameState, templateId: string): string | null {
   if (activeScope(s, 'volunteer') >= 2 && ['draft', 'yeshiva'].includes(templateId)) return `${TRANSFORM_INFO.volunteer.icon} אין יותר גיוס חובה – אין על מה לחוקק`;
   const t = templateById(templateId);
   if (t?.rule === 'override' && s.rules.noReview) return 'אין ביקורת שיפוטית – אין מה "להתגבר" עליו';
+  if (t?.rule === 'proportional' && !usesDistricts(s)) return 'השיטה כבר ארצית יחסית';
+  if (t?.rule === 'gerrymander' && !usesDistricts(s)) return 'אין מחוזות – אין מה לשרטט מחדש';
+  if (t?.rule === 'gerrymander' && s.week - Number(s.flags.gerryWeek ?? -999) < 104) return 'הגבולות שורטטו מחדש לאחרונה';
+  if (t?.rule === 'electoral' && s.rules.electoral) return 'כבר בתוקף';
+  if (t?.rule === 'electoral' && !directElection(s)) return 'שיטת האלקטורים דורשת בחירה ישירה לראשות הממשלה או שיטה נשיאותית';
+  if (t?.rule === 'compulsory' && s.rules.compulsory) return 'כבר בתוקף';
+  if (t?.rule === 'age16' && s.rules.age16) return 'כבר בתוקף';
+  if (t?.rule === 'allPrimaries' && s.rules.allPrimaries) return 'כבר בתוקף';
   return null;
 }
 
@@ -299,6 +310,31 @@ export function runPmRace(s: GameState, votes: Record<string, number>): PmRace |
   rounds.push({ candidates: cands, pct: first });
   let best = first.indexOf(Math.max(...first));
   let winner = cands[best];
+  // אלקטורים (כמו בארה"ב): כל מחוז נותן את כל האלקטורים שלו למי שניצח בו, ולא הקולות הארציים קובעים
+  let electoral: PmRace['electoral'];
+  if (s.rules.electoral) {
+    const ds = districtShares(s, votes);
+    const electors: Record<string, number> = Object.fromEntries(cands.map((c) => [c, 0]));
+    const perDistrict: Record<string, string> = {};
+    for (const d of DISTRICTS) {
+      const nz = cands.map((_, i) => noise[i] + (rand(s) - 0.5) * 0.6);
+      const sh = shares(s, cands, parties, ds[d.id] ?? votes, nz);
+      const w = cands[sh.indexOf(Math.max(...sh))];
+      electors[w] += d.seats;
+      perDistrict[d.id] = w;
+    }
+    const popular = winner;
+    const top = Object.entries(electors).sort((a, b) => b[1] - a[1]);
+    winner = top[0][1] === top[1]?.[1] ? popular : top[0][0];
+    electoral = { electors, perDistrict, popular };
+    const pct0 = first[cands.indexOf(winner)];
+    const upset = winner !== popular;
+    addNews(s, `${candName(s, winner)} נבחר/ה לראשות הממשלה בקולות האלקטורים (${electors[winner]} מתוך 120)${upset ? ` – למרות שהפסיד/ה בקולות הארציים: ${pct0}% מול ${first[cands.indexOf(popular)]}%` : ''}`, upset ? 'bad' : winner === 'player' ? 'good' : 'neutral', cands.includes('player'), undefined, 'ערוץ המשכן');
+    if (winner === 'player') log(s, `נבחרת לראשות הממשלה בקולות האלקטורים (${electors.player} מתוך 120).`, 'career');
+    else if (cands.includes('player')) log(s, `הפסדת באלקטורים ל${candName(s, winner)} (${electors.player ?? 0} מול ${electors[winner]}).`, 'career');
+    if (upset) scheduleEvent(s, 'dist_electoral_upset', 2, { winner: candName(s, winner), loser: candName(s, popular), winnerId: winner, loserId: popular });
+    return { rounds, winner, parties, electoral };
+  }
   if (first[best] <= 50 && cands.length > 2) {
     const top = cands.map((c, i) => ({ c, i, p: first[i] })).sort((a, b) => b.p - a.p).slice(0, 2);
     const second = shares(s, top.map((x) => x.c), parties, votes, top.map((x) => noise[x.i]));
@@ -330,7 +366,21 @@ export function activeRuleNotes(s: GameState): { icon: string; title: string; te
     out.push({ icon: '🏛️', title: 'שיטה נשיאותית', text: 'בליל הבחירות יש מרוץ ישיר לראשות הממשלה. הזוכה מרכיב/ה ממשלה גם בלי 61, ומכהן/ת 4 שנים: אין אי-אמון ואין בחירות מוקדמות.' });
   else if (r.directPM)
     out.push({ icon: '🗳️', title: 'בחירה ישירה לראשות הממשלה', text: 'בליל הבחירות יש מרוץ ראש בראש. הזוכה מרכיב/ה, גם אם המפלגה שלו/ה לא הגדולה. אי-אמון מוביל לבחירות, ופיצול הפתק מחליש את המפלגות הגדולות.' });
-  if (r.districts) out.push({ icon: '🗺️', title: 'מחוזות בחירה', text: 'בבחירות המפלגות הגדולות מקבלות יותר מנדטים מחלקן בקולות, והקטנות נמחקות.' });
+  if (usesDistricts(s)) {
+    const k = systemKind(s);
+    out.push({
+      icon: '🗺️',
+      title: `שיטת הבחירות: ${systemLabel(s)}`,
+      text: k === 'fptp'
+        ? 'בכל מחוז מנצח מי שהוביל – המפלגות הגדולות והמרוכזות מקבלות הרבה יותר מחלקן בקולות, וקול למפלגה קטנה ופזורה "הולך לאיבוד". מועמד מקומי חזק יכול להיכנס גם בלי מקום ברשימה.'
+        : 'חלק מהמושבים נקבע במחוזות (המנצח לוקח הכול), והשאר ארצית יחסית עם אחוז חסימה. מפלגות קטנות שמרוכזות במחוז מצליחות להיכנס גם בלי לעבור את החסימה.',
+    });
+  }
+  if (r.electoral) out.push({ icon: '🇺🇸', title: 'אלקטורים לראשות הממשלה', text: 'ראש הממשלה נקבע לפי מחוזות: מי שמנצח במחוז לוקח את כל האלקטורים שלו. אפשר לנצח בלי רוב בקולות הארציים.' });
+  if (r.compulsory) out.push({ icon: '📮', title: 'חובת הצבעה', text: 'אחוזי ההצבעה במגזרים נמוכי ההצבעה (ערבים, מסורתיים) עולים, ומפלגותיהם מתחזקות.' });
+  if (r.age16) out.push({ icon: '🧒', title: 'גיל הצבעה 16', text: 'הצעירים נכנסים לקלפי: חילוניים, שמאלה, ומפלגות חברתיות מתחזקות.' });
+  if (r.allPrimaries) out.push({ icon: '🗳️', title: 'פריימריז חובה', text: 'כל המפלגות בוחרות רשימה בפריימריז: יו"ר חזק פחות שולט ברשימה.' });
+  if ((r.termWeeks ?? 208) !== 208) out.push({ icon: '📅', title: `כנסת של ${Math.round((r.termWeeks ?? 208) / 52)} שנים`, text: 'הבחירות הבאות לפי האורך החדש.' });
   if (r.threshold > 3.25) out.push({ icon: '🚧', title: `אחוז חסימה ${r.threshold}%`, text: `רשימה מתחת ל-${r.threshold}% לא נכנסת לכנסת. מפלגות קטנות נאלצות להתאחד – או נעלמות.` });
   else if (r.threshold < 3.25) out.push({ icon: '🪜', title: `אחוז חסימה ${r.threshold}%`, text: `גם רשימה עם ${r.threshold}% נכנסת לכנסת: יותר מפלגות קטנות, וקואליציות שבירות יותר.` });
   if (r.immunity)

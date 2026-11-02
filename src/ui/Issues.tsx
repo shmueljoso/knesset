@@ -54,6 +54,8 @@ function StateLine() {
     f.arabsInGov ? '🤝 מפלגה ערבית בממשלה' : null,
     `🏛️ ממשלת ${f.govLean === 'right' ? 'ימין' : f.govLean === 'left' ? 'שמאל' : 'מרכז'}`,
     f.courtActive ? (f.canOverride ? '⚖️ בג"ץ – עם פסקת התגברות' : '⚖️ בג"ץ פעיל') : '⚖️ בלי ביקורת שיפוטית',
+    f.system === 'pr' ? null : f.system === 'fptp' ? '🗺️ בחירות מחוזיות' : '🗺️ בחירות מעורבות',
+    f.electoral ? '🇺🇸 אלקטורים' : null,
     f.shabbatTransit ? '🚌 תחבורה בשבת' : null,
     f.civilMarriage ? '💍 נישואים אזרחיים' : null,
     f.coreStudies ? '📐 חובת ליבה' : null,

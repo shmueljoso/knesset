@@ -16,6 +16,7 @@ import { activeJournalists } from '../systems/media';
 import { PRES_EVENTS } from './presidency';
 import { FACT_EVENTS } from './factEvents';
 import { LAW_LIFE_EVENTS } from './lawEvents';
+import { DISTRICT_EVENTS } from './districtEvents';
 import { lawInForce } from '../systems/facts';
 import { draftEnforced, exemptionInPlace, worldFacts } from '../systems/facts';
 
@@ -1094,7 +1095,7 @@ EVENTS.push(
 );
 
 // אירועים שתלויים בעובדות בשטח (חוקים בתוקף, מי בממשלה)
-EVENTS.push(...FACT_EVENTS, ...LAW_LIFE_EVENTS);
+EVENTS.push(...FACT_EVENTS, ...LAW_LIFE_EVENTS, ...DISTRICT_EVENTS);
 
 export const eventById = (id: string) => EVENTS.find((e) => e.id === id) ?? SHOCK_EVENTS.find((e) => e.id === id) ?? TRANSFORM_EVENTS.find((e) => e.id === id) ?? CHAIN_EVENTS.find((e) => e.id === id) ?? PRES_EVENTS.find((e) => e.id === id);
 

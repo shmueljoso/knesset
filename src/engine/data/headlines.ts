@@ -1,6 +1,8 @@
 // כותרות שנולדות ממצב המדינה: כלכלה, ביטחון, סוגיות בוערות, רוח הציבור, כללי המשחק והמהפכות שבתוקף.
 import type { GameState, NewsItem, TransformId } from '../types';
 import { draftEnforced, harediParty, worldFacts } from '../systems/facts';
+import { DISTRICTS } from './districts';
+import { districtShares, localLeader, systemKind, usesDistricts } from '../systems/districts';
 
 export interface HeadlineDef {
   id: string;
@@ -15,6 +17,17 @@ const tf = (s: GameState, id: TransformId) => (s.transforms ?? []).find((t) => t
 const pmName = (s: GameState) => (s.coalition.pmId === 'player' ? s.player.name : s.npcs[s.coalition.pmId]?.name ?? 'ראש הממשלה');
 const toElection = (s: GameState) => s.electionWeek - s.week;
 const smallUnder = (s: GameState) => Object.values(s.parties).filter((p) => p.poll > 0.8 && p.poll < (s.rules.threshold ?? 3.25));
+
+/** המחוז עם ההפרש הקטן ביותר בין שתי המובילות (למשיכת עין בכותרות) */
+function marginalDistrict(s: GameState): { name: string; margin: number } | null {
+  const sh = districtShares(s);
+  let best: { name: string; margin: number } | null = null;
+  for (const d of DISTRICTS) {
+    const m = localLeader(sh[d.id]).margin;
+    if (!best || m < best.margin) best = { name: d.name, margin: m };
+  }
+  return best;
+}
 
 export const HEADLINES: HeadlineDef[] = [
   // ---- כלכלה ----
@@ -57,7 +70,20 @@ export const HEADLINES: HeadlineDef[] = [
   // ---- כללי המשחק ----
   { id: 'direct_race', weight: 3, when: (s) => !!(s.rules.directPM || s.rules.presidential) && toElection(s) <= 30, make: (s) => [['המרוץ לראשות הממשלה: הסקרים צמודים מתמיד', 'neutral', 'בבחירה ישירה, כל נקודה במדד ההתאמה שווה זהב.'], [`${pmName(s)} פותח/ת את הקמפיין האישי: "אתם בוחרים בי, לא במפלגה"`, 'neutral']] },
   { id: 'presidential_power', weight: 1, when: (s) => !!s.rules.presidential, make: (s) => [[`${pmName(s)} חתם/ה על צו נשיאותי – בלי לשאול את הכנסת`, 'neutral', 'בשיטה הנשיאותית, השותפות כבר לא יכולות לאיים בפירוק.']] },
-  { id: 'districts', weight: 1, when: (s) => !!s.rules.districts, make: () => [['המאבק על המחוזות: המפלגות הקטנות מחפשות "מחוז בטוח"', 'neutral']] },
+  { id: 'districts', weight: 2, when: (s) => usesDistricts(s) && toElection(s) <= 60, make: (s) => {
+      const lead = marginalDistrict(s);
+      return [
+        ['המאבק על המחוזות: המפלגות הקטנות מחפשות "מחוז בטוח"', 'neutral'],
+        ['"קול אבוד": סקר מחוזי מראה שמפלגות קטנות ופזורות לא יזכו אפילו במושב אחד', 'neutral'],
+        ...(lead ? [[`המחוז הגורלי: ב${lead.name} ההפרש בין שתי המובילות ${lead.margin} נקודות בלבד`, 'neutral'] as [string, NewsItem['tone']]] : []),
+      ];
+    } },
+  { id: 'fptp_swing', weight: 1, when: (s) => systemKind(s) === 'fptp' && toElection(s) <= 40, make: () => [['בשיטה המחוזית: שבעה מחוזות מתנדנדים יקבעו את הבחירות', 'neutral'], ['יועצי הבחירות: "מי שמנצח מחוז במעט – לוקח את כל המושבים בו"', 'neutral']] },
+  { id: 'mixed_split', weight: 1, when: (s) => systemKind(s) === 'mixed' && toElection(s) <= 40, make: () => [['בשיטה המעורבת: מצביעים מפצלים פתק – מחוז לטובה, רשימה לאידיאולוגיה', 'neutral']] },
+  { id: 'electoral_map', weight: 2, when: (s) => !!s.rules.electoral && toElection(s) <= 40, make: () => [['מפת האלקטורים: ארבעה מחוזות יקבעו מי ראש הממשלה', 'neutral'], ['הקמפיינים עוברים למחוזות המתנדנדים: "כל קול שם שווה יותר"', 'neutral']] },
+  { id: 'gerry', weight: 2, when: (s) => Object.keys(s.gerryBias ?? {}).length > 0 && usesDistricts(s), make: () => [['האופוזיציה: "הגבולות החדשים נתפרו על מידות הקואליציה"', 'bad'], ['עתירה נגד שרטוט המחוזות: "גרימנדר בהצבעה שנייה"', 'neutral']] },
+  { id: 'compulsory', weight: 1, when: (s) => !!s.rules.compulsory, make: () => [['חובת ההצבעה: אחוזי ההצבעה זינקו, והמפלגות הערביות בהתעוררות', 'neutral']] },
+  { id: 'age16', weight: 1, when: (s) => !!s.rules.age16, make: () => [['בני 16 בקלפי: מפלגות מתחרות על הצעירים ברשתות', 'neutral']] },
   { id: 'threshold_up', weight: 1, when: (s) => (s.rules.threshold ?? 3.25) > 3.25 && toElection(s) <= 40, make: (s) => [[`אחוז החסימה החדש (${s.rules.threshold}%) מכה: לפחות שתי מפלגות בסכנת היעלמות`, 'neutral']] },
   { id: 'threshold_down', weight: 1, when: (s) => (s.rules.threshold ?? 3.25) < 3.25 && toElection(s) <= 40, make: () => [['מבול של רשימות חדשות נרשם לבחירות; "כל אחד יכול להיכנס"', 'neutral']] },
   { id: 'norwegian', weight: 1, when: (s) => Object.keys(s.norwegianSwaps ?? {}).length > 0, make: (s) => [[`${Object.keys(s.norwegianSwaps).length} ח"כים "נורבגיים" בכנסת: "מה שהשר אומר – אני מצביע/ה"`, 'neutral']] },

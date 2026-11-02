@@ -10,6 +10,8 @@ import { latestSurvey, surveyName } from '../engine/systems/surveys';
 import { MAX_PROJECTS, PROJECT_INFO } from '../engine/systems/projects';
 import { SECTOR_LABEL, sectorWeights } from '../engine/systems/society';
 import { WORLD_NAMES, pollSeats } from '../engine/systems/opinion';
+import { playerDistrict, seatsEstimate, systemLabel, usesDistricts, districtShares, localLeader } from '../engine/systems/districts';
+import { districtById } from '../engine/data/districts';
 import type { Skill, WorldKey } from '../engine/types';
 import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES, SECTOR_WEIGHTS } from '../engine/util';
 import { useGame, useStore } from '../store';
@@ -156,6 +158,8 @@ export function Dashboard() {
 
         <PowerCard />
 
+        <DistrictCard />
+
         <IssuesCard />
 
         {Object.entries(g.windows ?? {}).some(([, w]) => (w ?? 0) > g.week) && (
@@ -256,7 +260,7 @@ export function Dashboard() {
         <div className="card">
           <div className="card-title">
             <h3>📈 סקרים (מנדטים)</h3>
-            {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {pollSeats(g.parties[p.partyId].poll)}</span>}
+            {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {seatsEstimate(g, p.partyId, pollSeats)}</span>}
           </div>
           {sv && (
             <div className="tiny muted" style={{ marginBottom: 4 }} data-testid="dash-pollster">
@@ -279,7 +283,7 @@ export function Dashboard() {
             <div className="chips" style={{ marginTop: 6 }} data-testid="momentum">
               {movers.map((x) => (
                 <span key={x.id} className={`chip ${(x.momentum ?? 0) > 0 ? 'good' : 'bad'}`}>
-                  {(x.momentum ?? 0) > 0 ? '▲' : '▼'} {x.short} {pollSeats(x.poll, g.rules.threshold)}
+                  {(x.momentum ?? 0) > 0 ? '▲' : '▼'} {x.short} {seatsEstimate(g, x.id, pollSeats)}
                 </span>
               ))}
             </div>
@@ -395,7 +399,7 @@ function PartyStatusCard() {
   const sv = latestSurvey(g);
   const leader = party.leaderId === 'player' ? null : g.npcs[party.leaderId];
   const mineLeader = party.leaderId === 'player';
-  const seats = sv?.seats[party.id] ?? pollSeats(party.poll, g.rules.threshold);
+  const seats = sv?.seats[party.id] ?? seatsEstimate(g, party.id, pollSeats);
   const trend = party.poll - party.base;
   const rebels = party.list.map((id) => g.npcs[id]).filter((n) => n && n.isMK && n.ambition >= 65 && n.influence >= 40);
   const succ = g.succession.find((x) => x.partyId === party.id);
@@ -455,6 +459,37 @@ function StaffAdviceCard() {
           {STAFF_ROLES[t.role].icon} <b>{t.name}:</b> <span className="muted">{t.text}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** המחוז שלך: איפה את/ה מתמודד/ת ומה המצב המקומי (רק בשיטה מחוזית/מעורבת); בשיטה ארצית – כניסה למפה */
+function DistrictCard() {
+  const g = useGame();
+  const open = useStore((st) => st.open);
+  if (g.presidency && g.president?.id === 'player') return null;
+  const dId = playerDistrict(g);
+  const d = districtById(dId)!;
+  const sh = districtShares(g)[dId] ?? {};
+  const lead = localLeader(sh);
+  const my = g.player.partyId;
+  const myShare = my ? sh[my] ?? 0 : 0;
+  return (
+    <div className="card" data-testid="district-card">
+      <div className="card-title">
+        <h3>🗺️ {usesDistricts(g) ? 'המחוז שלך' : 'מפת המחוזות'}</h3>
+        <span className="tiny muted">{systemLabel(g)}</span>
+      </div>
+      {usesDistricts(g) ? (
+        <p className="small" style={{ margin: '0 0 8px' }}>
+          את/ה מתמודד/ת ב<b>{d.name}</b>. {my && lead.id === my ? `המפלגה שלך מובילה (${myShare}%, +${lead.margin})` : `מובילה: ${g.parties[lead.id]?.name} (${sh[lead.id]}%)${my ? `, אתם ${myShare}%` : ''}`}.
+        </p>
+      ) : (
+        <p className="small muted" style={{ margin: '0 0 8px' }}>מי מוביל בכל מחוז, והרכב האוכלוסייה. בשיטה ארצית המחוזות לא משפיעים על המושבים.</p>
+      )}
+      <button className="btn sm block" onClick={() => open({ kind: 'districts' })} data-testid="open-districts">
+        🗺️ למפת המחוזות
+      </button>
     </div>
   );
 }

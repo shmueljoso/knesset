@@ -1,8 +1,11 @@
 import type { Ideology, IssueId, Sector, TransformId, WorldKey } from '../types';
 import { EXTRA_BILLS, RADICAL_BILLS } from './moreBills';
 import { TOPIC_BILLS } from './topicBills';
+import { ELECTORAL_BILLS } from './electoralBills';
 
-export type RuleId = 'threshold' | 'thresholdDown' | 'norwegian' | 'termLimit' | 'override' | 'entrench' | 'equality' | 'immunity';
+export type RuleId =
+  | 'threshold' | 'thresholdDown' | 'norwegian' | 'termLimit' | 'override' | 'entrench' | 'equality' | 'immunity'
+  | 'districts' | 'proportional' | 'electoral' | 'gerrymander' | 'compulsory' | 'age16' | 'termLength' | 'allPrimaries';
 
 /** צד שני של המטבע: השפעה עם תזמון משלה (מחיר מיידי / תועלת מאוחרת), לפעמים רק מהיקף מסוים */
 export interface LawEffect {
@@ -302,6 +305,7 @@ export const BILL_TEMPLATES: BillTemplate[] = [
   },
   ...EXTRA_BILLS,
   ...TOPIC_BILLS,
+  ...ELECTORAL_BILLS,
   ...RADICAL_BILLS,
 ];
 

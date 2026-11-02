@@ -44,7 +44,8 @@ export function playerRoles(s: GameState): Role[] {
     out.push({ id: 'leader', icon: '🪑', title: `יו"ר ${my.name}`, effect: 'היורש/ת מהרשימה נכנס/ת. אם המפלגה מובילה את הממשלה – גם ראשות הממשלה עוברת.', blocked: stepDownBlocked(s) });
   if (p.ministry && p.ministry !== 'pm' && s.coalition.pmId !== 'player')
     out.push({ id: 'ministry', icon: '🗂️', title: 'שר/ה בממשלה', effect: 'התיק עובר לח"כ אחר מהמפלגה. הציבור מעריך מי שמוותר על כיסא.', blocked: null });
-  if (my && my.leaderId === 'player' && isCoalition(s, my.id) && s.coalition.pmId !== 'player')
+  // ראש הממשלה מהמפלגה שלך (למשל נבחר ישירות אחרי איחוד) – אי אפשר לעזוב את הממשלה שהוא עומד בראשה
+  if (my && my.leaderId === 'player' && isCoalition(s, my.id) && s.coalition.pmId !== 'player' && s.npcs[s.coalition.pmId]?.partyId !== my.id)
     out.push({ id: 'coalition', icon: '🚪', title: `${my.short} בקואליציה`, effect: 'המפלגה עוזבת את הממשלה, וכל השרים שלה מתפטרים. ראש הממשלה לא ישכח.', blocked: null, danger: true });
   for (const c of s.committees.filter((c) => c.chairId === 'player'))
     out.push({ id: `chair:${c.id}`, icon: '⚖️', title: `יו"ר ${c.name}`, effect: 'הראשות עוברת לח"כ אחר מהקואליציה. נשאר/ת חבר/ת בוועדה.', blocked: null });

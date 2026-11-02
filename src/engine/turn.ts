@@ -22,6 +22,7 @@ import { tickOutsiders } from './systems/outsiders';
 import { tickSociety } from './systems/society';
 import { repairLeadership, tickFigures } from './systems/figures';
 import { tickLaws } from './systems/lawlife';
+import { tickDistricts } from './systems/districts';
 import { supportersIncome, tickProjects } from './systems/projects';
 import { finishVote, queueBill, queueOtherVote, startVote, tickLegislation } from './systems/legislation';
 import { radicalClimate } from './systems/climate';
@@ -137,6 +138,7 @@ export function endWeek(s: GameState) {
   tickSociety(s);
   tickFigures(s);
   tickLaws(s);
+  tickDistricts(s);
   tickProjects(s);
   tickPartyDynamics(s);
   tickLegislation(s);

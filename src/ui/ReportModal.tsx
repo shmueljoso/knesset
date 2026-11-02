@@ -12,6 +12,7 @@ import { g2 } from './labels';
 import { haptic, keepAwake } from '../platform';
 import { play } from '../sound';
 import { ShareButton } from './ShareButton';
+import { DistrictMap, tilesFrom } from './DistrictMap';
 
 export function ReportModal() {
   const g = useGame();
@@ -172,6 +173,13 @@ function PmRaceCard({ phase }: { phase: number }) {
         );
       })}
       {!final && race.rounds.length > 1 && <p className="suspense tiny">אף מועמד/ת עוד לא חצה/תה את ה-50%…</p>}
+      {final && race.electoral && (
+        <div className="small" style={{ margin: '6px 0' }} data-testid="electoral-count">
+          <b>🇺🇸 אלקטורים:</b>{' '}
+          {Object.entries(race.electoral.electors).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${pmRaceLabel(g, c)} ${n}`).join(' · ')}
+          {race.electoral.popular !== race.winner && <div className="bad tiny">ניצח/ה באלקטורים אבל לא בקולות הארציים!</div>}
+        </div>
+      )}
       {final && (
         <p className="small" style={{ margin: '6px 0 0' }}>
           <b className={race.winner === 'player' ? 'good' : ''}>{pmRaceLabel(g, race.winner)}</b> {race.winner === 'player' ? 'נבחרת לראשות הממשלה!' : 'נבחר/ה לראשות הממשלה'} ומרכיב/ה את הממשלה
@@ -270,6 +278,19 @@ export function ElectionModal() {
           </div>
         )}
         <PmRaceCard phase={phase} />
+        {final && e.districts && e.districts.length > 0 && (
+          <div className="card" style={{ margin: '10px 0' }} data-testid="election-map">
+            <div className="card-title">
+              <h3>🗺️ המפה הפוליטית</h3>
+              <span className="tiny muted">{e.system === 'fptp' ? 'מחוזית' : e.system === 'mixed' ? 'מעורבת' : 'ארצית'}</span>
+            </div>
+            <DistrictMap g={g} tiles={tilesFrom(e.districts)} home={e.playerDistrict} />
+            <p className="tiny muted" style={{ margin: '4px 0 0' }}>
+              {e.system === 'pr' ? 'המפלגה שהובילה בקולות בכל מחוז (בשיטה ארצית המחוזות לא קובעים מושבים).' : 'המפלגה שזכתה ברוב המושבים במחוז: מספר = מושבים של המובילה מתוך כלל המושבים שנקבעו בו.'}
+              {e.system !== 'pr' && e.playerDistrict ? ' 🏠 = מחוז הבית שלך.' : ''}
+            </p>
+          </div>
+        )}
         {!final && (
           <button className="btn sm" style={{ margin: '8px 0' }} onClick={() => setPhase(COUNT_PHASES.length - 1)}>
             ⏩ לתוצאות הסופיות

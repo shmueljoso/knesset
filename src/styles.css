@@ -1150,3 +1150,47 @@ table.results td {
   border: 1px solid var(--line);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
+/* מפת המחוזות (קרטוגרמה סכמטית) */
+.dmap {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 58px;
+  gap: 6px;
+  direction: ltr;
+  margin: 10px 0 4px;
+}
+.dtile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  color: var(--text, #fff);
+  font: inherit;
+  padding: 2px 4px;
+  min-width: 0;
+  cursor: pointer;
+  direction: rtl;
+}
+.dtile.on {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.dtile .dname {
+  font-size: 11px;
+  opacity: 0.9;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dtile .dlead {
+  font-size: 14px;
+  font-weight: 800;
+}
+.dtile .dsub {
+  font-size: 10px;
+  opacity: 0.75;
+}

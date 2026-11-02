@@ -6,7 +6,8 @@ import { rand } from '../rng';
 import type { GameState, IssueId, LawRecord, Sector, WorldKey } from '../types';
 import { clamp, leanAlignment } from '../util';
 import { addNews } from './news';
-import { addWorldEffect } from './opinion';
+import { addMomentum, addWorldEffect } from './opinion';
+import { applyGerrymander, clearGerrymander, districtShare, systemLabel } from './districts';
 import { triggerChains } from './chains';
 import { applyNorwegian, termLimited } from './regime';
 import { log } from './report';
@@ -190,11 +191,70 @@ export function applyRule(s: GameState, rule: NonNullable<ReturnType<typeof temp
     case 'equality':
       s.rules.equality = true;
       break;
+    case 'districts': {
+      s.flags.shareBefore ??= districtShare(s);
+      s.rules.districts = false;
+      s.rules.districtShare = [0.3, 0.5, 1][scope - 1];
+      // המפלגות הגדולות והמרוכזות מתחזקות, הקטנות והפזורות נחלשות – ככל שהשיטה מחוזית יותר
+      for (const p of Object.values(s.parties)) addMomentum(s, p.id, p.seats >= 20 ? scope * 0.9 : p.seats > 0 && p.seats <= 8 ? -scope * 0.7 : 0);
+      addNews(s, `שיטת הבחירות השתנתה: ${systemLabel(s)}`, 'neutral', false, 'מעכשיו גם המחוז שלך קובע.', 'ערוץ המשכן');
+      if (s.week > 0) scheduleEvent(s, 'dist_system_changed', 3, { title: systemLabel(s) });
+      break;
+    }
+    case 'proportional':
+      s.flags.shareBeforeProp = districtShare(s);
+      s.rules.districts = false;
+      s.rules.districtShare = 0;
+      clearGerrymander(s);
+      addNews(s, 'חזרה לשיטה הארצית היחסית: המחוזות בוטלו', 'neutral', false, 'מפלגות קטנות נושמות לרווחה.', 'ערוץ המשכן');
+      break;
+    case 'electoral':
+      s.rules.electoral = true;
+      if (!s.rules.presidential && !s.rules.directPM) {
+        s.rules.directPM = true;
+        s.flags.electoralForcedDirect = true;
+      }
+      addNews(s, 'ראש הממשלה ייבחר באלקטורים: מי שמנצח במחוז לוקח את כולו', 'neutral', false, 'אפשר לנצח גם בלי רוב בקולות הארציים.', 'ערוץ המשכן');
+      break;
+    case 'gerrymander':
+      applyGerrymander(s, scope);
+      s.flags.gerryWeek = s.week;
+      addNews(s, 'הכנסת אישרה שרטוט מחדש של גבולות המחוזות', 'bad', false, 'האופוזיציה: "גרימנדר – מדביקים את המחוזות לטובת הקואליציה".', 'ערוץ המשכן');
+      if (s.week > 0) scheduleEvent(s, 'dist_gerry_outcry', 2, { title: templateById('redistrict').title });
+      break;
+    case 'compulsory':
+      s.rules.compulsory = true;
+      addNews(s, 'חובת הצבעה: מי שלא יצביע – ייקנס', 'neutral', false, 'מפלגות שמגייסות מגזרים שנעדרים מהקלפי – בהתעוררות.', 'ערוץ המשכן');
+      break;
+    case 'age16':
+      s.rules.age16 = true;
+      for (const p of Object.values(s.parties)) addMomentum(s, p.id, leanAlignment(p.ideology, { econ: -30, religion: -40, security: -25 }) * 1.1);
+      addNews(s, 'גיל ההצבעה ירד ל-16: מאות אלפי בני נוער נכנסים לקלפי', 'neutral', false, undefined, 'ערוץ המשכן');
+      break;
+    case 'termLength': {
+      const before = s.rules.termWeeks ?? 208;
+      s.flags.termBefore = before;
+      s.rules.termWeeks = [156, 260, 312][scope - 1];
+      const next = s.electionWeek + (s.rules.termWeeks - before);
+      if (next > s.week + 20) {
+        s.electionWeek = next;
+        s.primariesWeek = next - 12;
+      }
+      addNews(s, `הכנסת תכהן ${Math.round(s.rules.termWeeks / 52)} שנים: הבחירות הבאות בעוד ${s.electionWeek - s.week} שבועות`, 'neutral', false, undefined, 'ערוץ המשכן');
+      break;
+    }
+    case 'allPrimaries': {
+      s.rules.allPrimaries = true;
+      s.flags.primBefore = Object.values(s.parties).filter((p) => !p.primaries).map((p) => p.id).join(',');
+      for (const p of Object.values(s.parties)) p.primaries = true;
+      addNews(s, 'חוק המפלגות: כל הרשימות ייבחרו בפריימריז', 'neutral', false, 'יו"רים מתלוננים שאיבדו שליטה ברשימה.', 'ערוץ המשכן');
+      break;
+    }
   }
   log(s, `כללי המשחק השתנו: ${templateById(ruleTemplate(rule)).title}`, 'system');
 }
 
-const ruleTemplate = (rule: string) => ({ threshold: 'threshold', thresholdDown: 'threshold_down', norwegian: 'norwegian', termLimit: 'termlimit', override: 'override', entrench: 'basic_entrench', equality: 'basic_dignity', immunity: 'immunity' })[rule] ?? rule;
+const ruleTemplate = (rule: string) => ({ threshold: 'threshold', thresholdDown: 'threshold_down', norwegian: 'norwegian', termLimit: 'termlimit', override: 'override', entrench: 'basic_entrench', equality: 'basic_dignity', immunity: 'immunity', districts: 'elect_districts', proportional: 'elect_proportional', electoral: 'elect_college', gerrymander: 'redistrict', compulsory: 'compulsory_vote', age16: 'vote_age_16', termLength: 'term_length', allPrimaries: 'all_primaries' })[rule] ?? rule;
 
 /** בג"ץ פסל חוק שמשנה את כללי המשחק – הכלל חוזר לקדמותו */
 function revertRule(s: GameState, rule: NonNullable<ReturnType<typeof templateById>['rule']>) {
@@ -223,6 +283,38 @@ function revertRule(s: GameState, rule: NonNullable<ReturnType<typeof templateBy
     case 'immunity':
       s.rules.immunity = 0;
       break;
+    case 'districts':
+      s.rules.districtShare = Number(s.flags.shareBefore ?? 0);
+      delete s.flags.shareBefore;
+      break;
+    case 'proportional':
+      s.rules.districtShare = Number(s.flags.shareBeforeProp ?? 0);
+      break;
+    case 'electoral':
+      s.rules.electoral = false;
+      if (s.flags.electoralForcedDirect) {
+        s.rules.directPM = false;
+        delete s.flags.electoralForcedDirect;
+      }
+      break;
+    case 'gerrymander':
+      clearGerrymander(s);
+      break;
+    case 'compulsory':
+      s.rules.compulsory = false;
+      break;
+    case 'age16':
+      s.rules.age16 = false;
+      break;
+    case 'termLength':
+      s.rules.termWeeks = Number(s.flags.termBefore ?? 208);
+      break;
+    case 'allPrimaries': {
+      s.rules.allPrimaries = false;
+      const was = new Set(String(s.flags.primBefore ?? '').split(',').filter(Boolean));
+      for (const p of Object.values(s.parties)) if (was.has(p.id)) p.primaries = false;
+      break;
+    }
   }
 }
 

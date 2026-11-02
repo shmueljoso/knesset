@@ -75,6 +75,8 @@ export interface Npc {
   outside?: string;
   /** התחייב/ה לרוץ בבחירות הבאות ברשימה של מפלגה אחרת (systems/sway.ts, applyPledges) */
   pledgedTo?: string;
+  /** מחוז הבית (נקבע בבחירות, systems/districts.ts) */
+  district?: string;
 }
 
 export interface Party {
@@ -248,6 +250,8 @@ export interface Player {
   background: BackgroundId;
   avatar: AvatarSpec;
   ideology: Ideology;
+  /** מחוז הבית: איפה את/ה מתמודד/ת בשיטה מחוזית */
+  district?: string | null;
   fame: number;
   approval: Record<Sector, number>;
   reputation: number;
@@ -338,6 +342,11 @@ export interface ElectionResult {
   playerPosition: number | null;
   /** בחירה ישירה / שיטה נשיאותית: המרוץ לראשות הממשלה */
   pmRace?: PmRace;
+  /** התוצאות לפי מחוז (תמיד: אחוזים; מושבים רק בשיטה מחוזית/מעורבת) */
+  districts?: DistrictResult[];
+  /** מחוז הבית של השחקן בבחירות האלה ושיטת הבחירות */
+  playerDistrict?: string;
+  system?: string;
 }
 
 /** סקר שפורסם: מנדטים, מדד ההתאמה לראשות הממשלה, ושאלות נוספות */
@@ -388,12 +397,21 @@ export interface Succession {
   oldLeader: string;
 }
 
+/** תוצאות מחוז בבחירות: אחוזי הקולות, ומושבים שנקבעו במחוז (שיטה מחוזית/מעורבת) */
+export interface DistrictResult {
+  id: string;
+  shares: Record<string, number>;
+  seats: Record<string, number>;
+}
+
 export interface PmRace {
   /** סבב ראשון, ואם אף אחד לא עבר 50% – סבב שני בין שני המובילים */
   rounds: { candidates: string[]; pct: number[] }[];
   winner: string;
   /** המפלגה של כל מועמד/ת */
   parties: Record<string, string>;
+  /** שיטת האלקטורים: אלקטורים לכל מועמד/ת, מי זכה בכל מחוז, ומי ניצח בקולות הארציים */
+  electoral?: { electors: Record<string, number>; perDistrict: Record<string, string>; popular: string };
 }
 
 export interface GameState {
@@ -452,6 +470,10 @@ export interface GameState {
   customEvents: CustomEvent[];
   /** החוק הנורבגי: שר/ה → מי שנכנס/ה לכנסת במקומו/ה */
   norwegianSwaps: Record<string, string>;
+  /** עבודה מקומית במחוזות: מחוז → מפלגה → נקודות אחוז (דועך עם הזמן) */
+  districtBias: Record<string, Record<string, number>>;
+  /** שרטוט גבולות לטובת הקואליציה (חוק הגבולות): מחוז → מפלגה → נקודות אחוז, קבוע עד שהחוק מבוטל */
+  gerryBias: Record<string, Record<string, number>>;
   /** הרכב האוכלוסייה: מכפיל לכל מגזר (1 = כמו בתחילת המשחק) */
   demo: Record<Sector, number>;
   /** הרכב האוכלוסייה בבחירות האחרונות – הסקרים זזים לפי ההפרש */
@@ -558,6 +580,18 @@ export interface Rules {
   immunity?: number; // חסינות מחקירה: 1 ראש ממשלה, 2 + שרים, 3 כל הח"כים
   norwegianLimit?: number; // החוק הנורבגי: כמה שרים מכל סיעה מפנים מושב
   termLimitScope?: 1 | 2 | 3; // הגבלת כהונה: 3 קדנציות / 2 רצופות / 2 לכל החיים
+  /** שיטת הבחירות: איזה חלק מהמושבים נקבע במחוזות (0 = ארצית יחסית, 1 = כל המושבים במחוזות כמו בריטניה, בינוני = מעורבת) */
+  districtShare?: number;
+  /** אלקטורים: ראש הממשלה נבחר לפי מחוזות (כמו בארה"ב) ולא לפי הקולות הארציים */
+  electoral?: boolean;
+  /** אורך הכנסת בשבועות (ברירת מחדל 208 = 4 שנים) */
+  termWeeks?: number;
+  /** חובת הצבעה: אחוזי ההצבעה במגזרים נמוכי ההצבעה עולים */
+  compulsory?: boolean;
+  /** גיל הצבעה 16: הצעירים (חילוניים ושמאלה) מתחזקים */
+  age16?: boolean;
+  /** פריימריז חובה בכל המפלגות */
+  allPrimaries?: boolean;
 }
 
 export interface Caucus {

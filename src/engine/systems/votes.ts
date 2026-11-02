@@ -1,3 +1,4 @@
+import { districtPull } from './districts';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
 import { rand } from '../rng';
 import type { Bill, BillStage, GameState, Ideology, Npc, VoteResult } from '../types';
@@ -71,6 +72,14 @@ export function partyLine(s: GameState, partyId: string, b: Bill): Line {
   // חסינות: מפלגת ראש הממשלה בעד, האופוזיציה נגד
   if (rule === 'immunity') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'for' : isCoalition(s, partyId) ? 'free' : 'against';
   if (rule === 'norwegian') return isCoalition(s, partyId) ? 'for' : 'against';
+  if (rule === 'districts') return p.seats >= 18 ? 'for' : p.seats <= 10 ? 'against' : 'free';
+  if (rule === 'proportional') return p.seats <= 10 ? 'for' : p.seats >= 20 ? 'against' : 'free';
+  if (rule === 'electoral') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'for' : isCoalition(s, partyId) ? 'free' : 'against';
+  if (rule === 'gerrymander') return isCoalition(s, partyId) ? 'for' : 'against';
+  if (rule === 'compulsory') return leanAlignment(p.ideology, { econ: -30, religion: -20 }) > 0.2 || (p.sectors.arab ?? 0) >= 0.6 ? 'for' : 'free';
+  if (rule === 'age16') return leanAlignment(p.ideology, { religion: -40, econ: -30 }) > 0.2 ? 'for' : leanAlignment(p.ideology, { religion: -40, econ: -30 }) < -0.2 ? 'against' : 'free';
+  if (rule === 'termLength') return isCoalition(s, partyId) ? 'for' : 'against';
+  if (rule === 'allPrimaries') return p.primaries ? 'for' : 'against';
   if (rule === 'termLimit') return partyId === (s.npcs[s.coalition.pmId]?.partyId ?? s.player.partyId) ? 'against' : isCoalition(s, partyId) ? 'free' : 'for';
   if (isCoalition(s, partyId)) {
     if (b.govPosition === 'support') return 'for';
@@ -98,6 +107,8 @@ export function mkProbs(s: GameState, n: Npc, b: Bill, line: Line): SeatProb {
   const align = leanAlignment(n.ideology, effectiveLean(s, b));
   let score = line === 'for' ? 1.3 : line === 'against' ? -1.3 : 0;
   score += align * (n.traits.includes('principled') ? 1.7 : 1.1);
+  // שיטה מחוזית: ח"כ שחי מהמחוז שלו מצביע גם לפי מה שהחוק עושה לאנשי המחוז
+  score += districtPull(s, n, templateById(b.templateId).sectors);
   if (b.sponsor === 'player') {
     score += (n.attitude / 100) * 0.9;
     if (n.pledges.includes(b.id)) score += n.traits.includes('loyal') ? 3 : n.traits.includes('opportunist') ? 1.2 : 2;

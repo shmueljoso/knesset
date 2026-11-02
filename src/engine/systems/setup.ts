@@ -9,10 +9,10 @@ import { recomputeStability } from './coalition';
 import { applyRule } from './issues';
 import { WORLD_NAMES } from './opinion';
 
-export type SetupRuleKey = 'presidential' | 'directPM' | 'districts' | 'norwegian' | 'termLimit' | 'override' | 'noReview' | 'packedCourt';
+export type SetupRuleKey = 'presidential' | 'directPM' | 'norwegian' | 'termLimit' | 'override' | 'noReview' | 'packedCourt' | 'electoral' | 'compulsory' | 'age16' | 'allPrimaries';
 
 export interface StartSetup {
-  rules?: Partial<Pick<Rules, SetupRuleKey | 'threshold'>>;
+  rules?: Partial<Pick<Rules, SetupRuleKey | 'threshold' | 'districtShare' | 'termWeeks'>>;
   /** חוקים שכבר בתוקף בפתיחה */
   laws?: { id: string; scope: 1 | 2 | 3 }[];
   /** מהפכות שכבר קרו */
@@ -29,7 +29,10 @@ export interface StartSetup {
 export const SETUP_RULES: { key: SetupRuleKey; label: string; desc: string }[] = [
   { key: 'presidential', label: '🏛️ שיטה נשיאותית', desc: 'ראש הממשלה נבחר/ת ישירות ולא תלוי/ה בקואליציה. אין אי-אמון ואין בחירות מוקדמות.' },
   { key: 'directPM', label: '🗳️ בחירה ישירה (1996)', desc: 'פתק נפרד לראשות הממשלה, ואי-אמון מוביל לבחירות.' },
-  { key: 'districts', label: '🗺️ מחוזות בחירה', desc: 'בונוס למפלגות הגדולות.' },
+  { key: 'electoral', label: '🇺🇸 אלקטורים לראשות הממשלה', desc: 'ראש הממשלה נקבע לפי מחוזות: המנצח במחוז לוקח את כל האלקטורים שלו.' },
+  { key: 'compulsory', label: '📮 חובת הצבעה', desc: 'מגזרים עם הצבעה נמוכה מצביעים יותר.' },
+  { key: 'age16', label: '🧒 גיל הצבעה 16', desc: 'הצעירים נכנסים לקלפי.' },
+  { key: 'allPrimaries', label: '🗳️ פריימריז חובה', desc: 'כל המפלגות בוחרות רשימה בפריימריז.' },
   { key: 'norwegian', label: '🔁 החוק הנורבגי', desc: 'שרים מפנים את המושב לבא/ה ברשימה.' },
   { key: 'termLimit', label: '⏳ הגבלת כהונה', desc: 'ראש ממשלה מוגבל/ת במספר קדנציות.' },
   { key: 'override', label: '⚖️ פסקת התגברות', desc: 'הכנסת יכולה לחוקק מחדש חוק שנפסל.' },
@@ -63,8 +66,19 @@ export function applySetup(s: GameState, setup: StartSetup, fromMod = false) {
   // כללים: אחרי החוקים, כדי שהבחירה המפורשת תקבע
   const r = setup.rules ?? {};
   if (typeof r.threshold === 'number') s.rules.threshold = clamp(r.threshold, 0, 15);
+  if (typeof r.districtShare === 'number') {
+    s.rules.districtShare = clamp(r.districtShare, 0, 1);
+    s.rules.districts = false;
+  }
+  if (typeof r.termWeeks === 'number') {
+    s.rules.termWeeks = clamp(Math.round(r.termWeeks), 104, 364);
+    s.electionWeek = s.week + Math.max(30, s.electionWeek - s.week + (s.rules.termWeeks - 208));
+    s.primariesWeek = s.electionWeek - 12;
+  }
   for (const { key } of SETUP_RULES) if (r[key] !== undefined) (s.rules as unknown as Record<string, boolean>)[key] = !!r[key];
   if (s.rules.presidential && s.rules.directPM) s.rules.directPM = false;
+  if (s.rules.electoral && !s.rules.presidential && !s.rules.directPM) s.rules.directPM = true;
+  if (s.rules.allPrimaries) for (const p of Object.values(s.parties)) p.primaries = true;
   if (s.rules.directPM || s.rules.presidential) s.coalition.minoritySince = null;
   if (s.rules.presidential && !s.transforms.some((x) => x.id === 'presidential')) s.transforms.push({ id: 'presidential', week: 0, scope: 2, sponsor: 'history' });
   if (s.rules.noReview && !s.transforms.some((x) => x.id === 'sovereignty')) s.transforms.push({ id: 'sovereignty', week: 0, scope: 3, sponsor: 'history' });
@@ -95,6 +109,8 @@ export function setupSummary(setup: StartSetup | null | undefined): string[] {
   const out: string[] = [];
   for (const { key, label } of SETUP_RULES) if (setup.rules?.[key]) out.push(label);
   if (typeof setup.rules?.threshold === 'number') out.push(`📊 חסימה ${setup.rules.threshold}%`);
+  if (typeof setup.rules?.districtShare === 'number' && setup.rules.districtShare > 0) out.push(`🗺️ ${Math.round(setup.rules.districtShare * 100)}% מהמושבים במחוזות`);
+  if (typeof setup.rules?.termWeeks === 'number' && setup.rules.termWeeks !== 208) out.push(`📅 כנסת של ${Math.round(setup.rules.termWeeks / 52)} שנים`);
   for (const l of setup.laws ?? []) {
     try {
       out.push(`${templateById(l.id).icon} ${templateById(l.id).title}`);
