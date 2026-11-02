@@ -63,6 +63,7 @@ test('why it happened: the sheet and the weekly report', async ({ page }) => {
   await page.locator('.sheet button[aria-label="סגירה"]').click();
   await page.getByRole('button', { name: /סיום שבוע/ }).first().click();
   await expect(page.locator('.event-card')).toContainText('למה זה קרה – אצלך');
+  await expect(page.getByTestId('front-page')).toContainText('המשכן היומי');
   await shot(page, '123-report-why');
 });
 

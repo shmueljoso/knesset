@@ -40,6 +40,15 @@ export function Home() {
     <div className="scroll">
       <div className="page home" data-testid="home">
         <div className="card home-head">
+          <div className={`kbanner ${g.week % 2 ? 'night' : ''}`} aria-hidden="true">
+            <i className="kb-cloud" />
+            <i className="kb-cloud b" />
+            <div className="kb-pole" />
+            <div className="kb-flag" />
+            <div className="kb-building" />
+            <div className="kb-ground" />
+            <span className="kb-text">{g.week % 2 ? '🌙 ערב בכנסת' : '☀️ בוקר בגבעת רם'}</span>
+          </div>
           <div className="spread">
             <div>
               <div className="tiny muted">

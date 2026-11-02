@@ -23,6 +23,8 @@ export function tilesFrom(results: DistrictResult[] | Record<string, Record<stri
 /** קרטוגרמה סכמטית של ישראל: אריח לכל מחוז, צבוע בצבע המפלגה המובילה */
 export function DistrictMap({ g, tiles, selected, home, onSelect }: { g: GameState; tiles: MapTile[]; selected?: string | null; home?: string; onSelect?: (id: string) => void }) {
   return (
+    <div className="dmap-wrap">
+      <IsraelBackdrop />
     <div className="dmap" data-testid="district-map">
       {DISTRICTS.map((d) => {
         const t = tiles.find((x) => x.id === d.id);
@@ -47,5 +49,41 @@ export function DistrictMap({ g, tiles, selected, home, onSelect }: { g: GameSta
         );
       })}
     </div>
+      <span className="dm-sea-label">הים התיכון</span>
+    </div>
+  );
+}
+
+/** רקע מצויר: הים (עם גלים זזים), צורת הארץ, הכנרת, ים המלח והחוד של אילת */
+function IsraelBackdrop() {
+  return (
+    <svg className="dm-bg" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="dmSea" x1="0" x2="1">
+          <stop offset="0" stopColor="#0b3a66" />
+          <stop offset="1" stopColor="#1565a8" />
+        </linearGradient>
+        <linearGradient id="dmLand" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#2f5132" />
+          <stop offset="0.55" stopColor="#5b5a35" />
+          <stop offset="1" stopColor="#8a6b3c" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="100" height="140" fill="url(#dmSea)" />
+      <g className="dm-waves" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" fill="none">
+        {[10, 30, 50, 70, 90, 110].map((y) => (
+          <path key={y} d={`M2 ${y} q2 -2 4 0 t4 0`} />
+        ))}
+      </g>
+      <path
+        d="M7 0 L100 0 L100 129 L72 129 L62 139 L58 139 L48 129 L10 129 L5 118 L6 104 L4 88 L6 72 L5 56 L7 40 L5 24 L7 10 Z"
+        fill="url(#dmLand)"
+        stroke="#c8b98a"
+        strokeWidth="0.8"
+      />
+      <ellipse className="dm-lake" cx="96" cy="30" rx="2.4" ry="4.5" fill="#3b82f6" />
+      <ellipse className="dm-lake" cx="98" cy="96" rx="1.8" ry="8" fill="#60a5fa" />
+      <circle cx="60" cy="137" r="1.3" fill="#fbbf24" />
+    </svg>
   );
 }

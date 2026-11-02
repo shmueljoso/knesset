@@ -14,6 +14,7 @@ import { play } from '../sound';
 import { ShareButton } from './ShareButton';
 import { DistrictMap, tilesFrom } from './DistrictMap';
 import { WhyList } from './Why';
+import { Chamber, ElectionStudio, FrontPage } from './Stage';
 
 export function ReportModal() {
   const g = useGame();
@@ -38,7 +39,18 @@ export function ReportModal() {
     <div className="event-overlay">
       <div className="event-card">
         <div className="tiny gold" style={{ fontWeight: 700 }}>סיכום שבוע {r.week + 1}</div>
-        <h2>{dateLabel(g)}</h2>
+        <FrontPage
+          g={g}
+          date={dateLabel(g)}
+          headline={myNews[0]?.headline ?? important[important.length - 1]?.text ?? 'שבוע שקט במשכן'}
+          sub={myNews[1]?.headline ?? (r.drivers?.[0] ? `במדינה: ${r.drivers[0]}` : undefined)}
+          photo={myNews.length > 0}
+          items={rows.slice(0, 4).map(([label, a, b, d]) => {
+            const v = b - a;
+            const s = d ? v.toFixed(1) : String(Math.round(v));
+            return { label, v: Math.abs(v) < (d ? 0.05 : 0.5) ? '—' : `${v > 0 ? '▲' : '▼'}${s.replace('-', '')}`, tone: Math.abs(v) < (d ? 0.05 : 0.5) ? '' : v > 0 ? 'good' : 'bad' };
+          })}
+        />
         <div className="kpi" style={{ marginTop: 12 }}>
           {rows.map(([label, a, b, d]) => (
             <div key={label}>
@@ -253,10 +265,8 @@ export function ElectionModal() {
       <div className="event-overlay">
         <div className="event-card" style={{ textAlign: 'center' }}>
           <div className="tiny gold" style={{ fontWeight: 700 }}>🗳️ ליל הבחירות לכנסת ה-{e.knesset}</div>
-          <p className="muted" style={{ margin: '16px 0 4px' }}>21:59 · הקלפיות נסגרות. כל המפלגות מחזיקות את הנשימה.</p>
-          <div className="beat" style={{ fontSize: 72, fontWeight: 900, color: 'var(--gold)' }} data-testid="exit-countdown">
-            {countdown}
-          </div>
+          <ElectionStudio g={g} rows={[]} phaseLabel="הקלפיות נסגרות" time="21:59" countdown={countdown} />
+          <p className="muted" style={{ margin: '4px 0' }}>21:59 · הקלפיות נסגרות. כל המפלגות מחזיקות את הנשימה.</p>
           <p className="suspense">המדגם בעוד רגע…</p>
           <button className="btn sm" style={{ marginTop: 10 }} onClick={() => setPhase(COUNT_PHASES.length - 1)}>
             ⏩ לתוצאות הסופיות
@@ -291,10 +301,13 @@ export function ElectionModal() {
         <div className="count-bar">
           <i style={{ width: `${[8, 30, 65, 92, 100][phase]}%` }} />
         </div>
+        <ElectionStudio g={g} rows={rows.map((r) => ({ id: r.p.id, short: r.p.short, color: r.p.color, seats: r.seats }))} phaseLabel={COUNT_PHASES[phase].label} time={COUNT_PHASES[phase].time} />
         {!final && <p className="suspense" style={{ margin: '4px 0' }}>{phase === 0 ? 'זה רק מדגם – הכל עוד יכול להשתנות' : 'הספירה נמשכת…'}</p>}
         {final && (
           <div style={{ margin: '12px 0' }}>
-            <Hemicycle />
+            <Chamber>
+              <Hemicycle />
+            </Chamber>
           </div>
         )}
         <PmRaceCard phase={phase} />

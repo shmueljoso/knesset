@@ -27,6 +27,7 @@ import { SCANDAL_STAGES } from '../engine/systems/scandals';
 import { MissionsCard, PowerCard } from './PowerMap';
 import { PresidentCard } from './President';
 import { RivalsCard } from './Rivals';
+import { Chamber } from './Stage';
 
 const LADDER: { rank: string; label: string }[] = [
   { rank: 'activist', label: 'פעיל' },
@@ -252,7 +253,9 @@ export function Dashboard() {
               <h3>🏛️ הכנסת ה-{g.knesset}</h3>
               <span className="small muted">יציבות קואליציה {Math.round(g.coalition.stability)}</span>
             </div>
-            <Hemicycle onSeat={(id) => open({ kind: 'npc', id })} />
+            <Chamber>
+              <Hemicycle onSeat={(id) => open({ kind: 'npc', id })} />
+            </Chamber>
             <HemicycleLegend />
             <div style={{ marginTop: 10 }}>
               <Meter label="יציבות הקואליציה" value={g.coalition.stability} color={g.coalition.stability < 30 ? 'var(--bad)' : g.coalition.stability < 50 ? 'var(--warn)' : 'var(--good)'} />

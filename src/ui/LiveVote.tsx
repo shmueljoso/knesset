@@ -5,6 +5,7 @@ import { useGame, useStore } from '../store';
 import { Hemicycle, VOTE_NAMES } from './Charts';
 import { haptic, keepAwake } from '../platform';
 import { play } from '../sound';
+import { Chamber, VoteBoard } from './Stage';
 
 const KIND_LABEL = { own: 'ההצעה שלך', other: 'הצבעה במליאה', budget: 'חוק התקציב – אם ייפול: בחירות', noconf: 'אי-אמון – 61 קולות מפילים את הממשלה' } as const;
 const ICON = { for: '✅', against: '❌', abstain: '✋', absent: '🚪' } as const;
@@ -97,20 +98,22 @@ export function LiveVoteModal() {
         <div className="count-bar">
           <i style={{ width: `${(n / total) * 100}%` }} />
         </div>
-        <div style={{ margin: '10px 0 4px' }}>
+        <VoteBoard
+          knesset={g.knesset}
+          title={b ? b.title : 'הצבעה'}
+          forN={count('for')}
+          against={count('against')}
+          abstain={count('abstain')}
+          absent={count('absent')}
+          open={!done}
+          need={need}
+          beat={urgent && close}
+        />
+        <Chamber>
           <Hemicycle votes={votes} highlight={lv.flipped} />
-        </div>
-        <div className="spread" style={{ fontSize: 28, fontWeight: 900 }}>
-          <span className={`good ${urgent && close ? 'beat' : ''}`} data-testid="live-for">{count('for')}</span>
-          <span className="tiny muted" style={{ alignSelf: 'center' }}>
-            {done ? 'הספירה הסתיימה' : `נספרו ${n}/${total}`}
-          </span>
-          <span className={`bad ${urgent && close ? 'beat' : ''}`}>{count('against')}</span>
-        </div>
-        <div className="spread tiny muted">
-          <span>בעד</span>
-          <span>נמנעים {count('abstain')} · נעדרים {count('absent')}</span>
-          <span>נגד</span>
+        </Chamber>
+        <div className="tiny muted" style={{ textAlign: 'center' }}>
+          {done ? 'הספירה הסתיימה' : `נספרו ${n}/${total}`}
         </div>
         {lv.majority && (
           <div className="meter" style={{ marginTop: 6, height: 8, background: 'var(--line)', borderRadius: 99, position: 'relative' }}>

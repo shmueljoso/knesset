@@ -39,6 +39,7 @@ test('own bill: live vote counts seat by seat', async ({ page }) => {
   await page.getByRole('button', { name: /להעלות להצבעה במליאה/ }).click();
   await expect(page.getByTestId('live-vote')).toBeVisible();
   await expect(page.getByTestId('live-vote')).toContainText('נספרו');
+  await expect(page.getByTestId('vote-board')).toContainText('ההצבעה פתוחה');
   await page.waitForTimeout(1500);
   await shot(page, '70-live-vote');
   await page.getByRole('button', { name: /לדלג לתוצאה/ }).click();
@@ -87,6 +88,7 @@ test('election night: exit poll, then the count', async ({ page }) => {
   await load(page, g);
   await expect(page.getByTestId('exit-countdown')).toBeVisible();
   await expect(page.getByTestId('count-phase')).toContainText('מדגם', { timeout: 10000 });
+  await expect(page.getByTestId('election-studio')).toBeVisible();
   await shot(page, '74-exit-poll');
   await page.getByRole('button', { name: /לתוצאות הסופיות/ }).click();
   await expect(page.getByTestId('count-phase')).toContainText('תוצאות סופיות');

@@ -1790,3 +1790,497 @@ table.results td {
     animation: none !important;
   }
 }
+
+/* ---- לוח ההצבעה האלקטרוני ---- */
+.voteboard {
+  margin: 10px 0 6px;
+  background: linear-gradient(180deg, #0b0f14, #121820);
+  border: 3px solid #3a2f22;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px #000, 0 6px 18px rgba(0, 0, 0, 0.5);
+  padding: 8px 10px;
+}
+.vb-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #fbbf24;
+  font-family: ui-monospace, monospace;
+  overflow: hidden;
+}
+.vb-lamp {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.vb-lamp.open {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: sc-pulse 1s ease-in-out infinite;
+}
+.vb-lamp.closed {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+.vb-status {
+  flex: none;
+  font-weight: 700;
+}
+.vb-marquee {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.vb-marquee span {
+  display: inline-block;
+  animation: sc-ticker 18s linear infinite;
+}
+.vb-digits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.led-cell {
+  background: #05070a;
+  border-radius: 8px;
+  text-align: center;
+  padding: 4px 0 2px;
+  border: 1px solid #1f2933;
+}
+.led-label {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.led {
+  display: inline-block;
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  animation: led-flick 0.25s ease-out;
+}
+.led-cell.for .led {
+  color: #4ade80;
+  text-shadow: 0 0 10px #22c55e, 0 0 2px #bbf7d0;
+}
+.led-cell.against .led {
+  color: #f87171;
+  text-shadow: 0 0 10px #ef4444, 0 0 2px #fecaca;
+}
+.led-cell.abstain .led {
+  color: #fbbf24;
+  text-shadow: 0 0 10px #f59e0b;
+}
+@keyframes led-flick {
+  from {
+    opacity: 0.4;
+    filter: brightness(1.8);
+  }
+}
+.vb-foot {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ---- אולם המליאה ---- */
+.chamber {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 10px 6px 30px;
+  margin: 6px 0;
+  background: radial-gradient(ellipse at 50% 100%, #4a3720 0%, #2a1f14 45%, #120d08 100%);
+  border: 1px solid #3a2f22;
+}
+.ch-wall {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 14px, transparent 14px 28px);
+}
+.ch-arc {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 20px;
+  height: 92%;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(120, 85, 45, 0.55), rgba(70, 50, 28, 0.35) 60%, transparent 72%);
+}
+.ch-seats {
+  position: relative;
+  z-index: 1;
+}
+.ch-seats svg circle {
+  transition: fill 0.35s, r 0.2s;
+}
+.ch-podium {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 70px;
+  height: 26px;
+  background: linear-gradient(180deg, #6b4a2a, #3d2a17);
+  border-radius: 8px 8px 0 0;
+  border-top: 2px solid #c8a46a;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  z-index: 2;
+}
+
+/* ---- אולפן ליל הבחירות ---- */
+.estudio {
+  height: 190px;
+  margin: 8px 0;
+}
+.es-clock {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 12px;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  font-size: 13px;
+  color: #e2e8f0;
+  z-index: 4;
+}
+.es-screen {
+  position: absolute;
+  top: 34px;
+  left: 6%;
+  right: 6%;
+  bottom: 34px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(29, 78, 216, 0.55), rgba(14, 165, 233, 0.25));
+  box-shadow: 0 0 26px rgba(56, 189, 248, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  z-index: 2;
+  padding: 6px 8px 4px;
+}
+.es-count {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: #fff;
+}
+.es-count b {
+  font-size: 64px;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 0 22px rgba(232, 195, 122, 0.8);
+}
+.es-bars {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 4px;
+}
+.es-bar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+.es-bar i {
+  display: block;
+  width: 70%;
+  border-radius: 4px 4px 0 0;
+  transition: height 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  animation: es-grow 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+}
+@keyframes es-grow {
+  from {
+    height: 0 !important;
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+.es-bar b {
+  font-size: 13px;
+  color: #fff;
+}
+.es-bar span {
+  font-size: 9.5px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.es-bar.mine b,
+.es-bar.mine span {
+  color: var(--gold);
+}
+
+/* ---- עמוד ראשון ---- */
+.frontpage {
+  margin: 8px 0 4px;
+  background: #f5f0e4;
+  color: #1c1917;
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.02) 0 1px, transparent 1px 3px);
+  animation: fp-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes fp-in {
+  from {
+    transform: rotate(-4deg) scale(0.9);
+    opacity: 0;
+  }
+}
+.fp-mast {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.fp-mast b {
+  font-family: 'Frank Ruhl Libre', 'David', serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.fp-ed {
+  font-size: 9.5px;
+  color: #57534e;
+}
+.fp-rule {
+  border-top: 3px double #1c1917;
+  margin: 4px 0 8px;
+}
+.fp-body {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.fp-photo {
+  margin: 0;
+  text-align: center;
+  filter: grayscale(0.6) contrast(1.1);
+}
+.fp-photo figcaption {
+  font-size: 9px;
+  color: #57534e;
+}
+.fp-head {
+  font-family: 'Frank Ruhl Libre', 'David', serif;
+  font-size: 20px;
+  line-height: 1.2;
+  margin: 0;
+  color: #0c0a09;
+}
+.fp-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #44403c;
+}
+.fp-cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+  border-top: 1px solid #a8a29e;
+  padding-top: 6px;
+}
+.fp-col {
+  text-align: center;
+  font-size: 10px;
+  color: #57534e;
+}
+.fp-col b {
+  display: block;
+  font-size: 14px;
+  color: #1c1917;
+}
+.fp-col b.good {
+  color: #15803d;
+}
+.fp-col b.bad {
+  color: #b91c1c;
+}
+
+/* ---- מפת ישראל ---- */
+.dmap-wrap {
+  position: relative;
+  padding: 8px 6px 34px 30px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 10px 0 4px;
+}
+.dmap-wrap .dmap {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+.dm-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.dm-waves {
+  animation: dm-wave 4s ease-in-out infinite alternate;
+}
+@keyframes dm-wave {
+  to {
+    transform: translate(3px, 2px);
+  }
+}
+.dm-lake {
+  animation: sc-pulse 5s ease-in-out infinite;
+}
+.dm-sea-label {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%) rotate(180deg);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 2px;
+}
+.dmap-wrap .dtile {
+  backdrop-filter: blur(1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* ---- באנר הכנסת במסך הבית ---- */
+.kbanner {
+  position: relative;
+  height: 92px;
+  margin: -14px -16px 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 55%, #93c5fd 100%);
+  border-radius: 14px 14px 0 0;
+}
+.kbanner.night {
+  background: linear-gradient(180deg, #020617 0%, #1e1b4b 60%, #312e81 100%);
+}
+.kb-cloud {
+  position: absolute;
+  top: 12px;
+  width: 54px;
+  height: 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  animation: kb-drift 38s linear infinite;
+}
+.kb-cloud::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  width: 24px;
+  height: 18px;
+  border-radius: 50%;
+  background: inherit;
+}
+.kb-cloud.b {
+  top: 30px;
+  width: 40px;
+  animation-duration: 52s;
+  animation-delay: -20s;
+  opacity: 0.7;
+}
+.night .kb-cloud {
+  opacity: 0.15;
+}
+@keyframes kb-drift {
+  from {
+    transform: translateX(-80px);
+  }
+  to {
+    transform: translateX(560px);
+  }
+}
+.kb-building {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 170px;
+  height: 44px;
+  background: linear-gradient(180deg, #e7dcc0, #c9b88f);
+  box-shadow: 0 -2px 0 #f5ecd6;
+}
+.kb-building::before {
+  content: '';
+  position: absolute;
+  inset: 8px 8px 0;
+  background: repeating-linear-gradient(90deg, #8a7a55 0 6px, transparent 6px 14px);
+  opacity: 0.55;
+}
+.night .kb-building::before {
+  background: repeating-linear-gradient(90deg, #fde68a 0 6px, transparent 6px 14px);
+  opacity: 0.6;
+}
+.kb-pole {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  width: 2px;
+  height: 38px;
+  background: #e5e7eb;
+}
+.kb-flag {
+  position: absolute;
+  bottom: 66px;
+  left: calc(50% + 2px);
+  width: 26px;
+  height: 17px;
+  background: linear-gradient(180deg, #fff 0 18%, #1d4ed8 18% 28%, #fff 28% 72%, #1d4ed8 72% 82%, #fff 82%);
+  transform-origin: left center;
+  animation: kb-wave 2.4s ease-in-out infinite;
+}
+@keyframes kb-wave {
+  0%,
+  100% {
+    transform: skewY(0deg) scaleX(1);
+  }
+  50% {
+    transform: skewY(-6deg) scaleX(0.92);
+  }
+}
+.kb-ground {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  height: 8px;
+  background: #3f6212;
+}
+.kb-text {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 12px;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .voteboard *,
+  .chamber *,
+  .estudio *,
+  .frontpage,
+  .dmap-wrap *,
+  .kbanner * {
+    animation: none !important;
+  }
+}
+.dmap-wrap .dtile[data-testid='dtile-negev'] {
+  border-radius: 10px 10px 40% 40% / 10px 10px 70% 70%;
+}
