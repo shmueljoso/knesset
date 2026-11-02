@@ -23,8 +23,9 @@ test('start the 2026 election scenario as a sitting MK', async ({ page }) => {
   await page.getByRole('button', { name: /יוצאים לדרך/ }).click();
   await expect(page.locator('.hud')).toBeVisible();
   await page.locator('.tabbar').getByText('לוח').click();
-  await expect(page.locator('.page')).toContainText('בחירות בעוד 3 שבועות');
   await expect(page.locator('.page')).toContainText('בנימין נתניהו');
+  await page.getByTestId('dash-tab-me').click();
+  await expect(page.locator('.page')).toContainText('בחירות בעוד 3 שבועות');
   await shot(page, '41-scenario-dashboard');
 });
 

@@ -4,6 +4,7 @@ import { AllianceSheet, GuideSheet } from './Alliances';
 import { PollsSheet } from './Media';
 import { ToolsSheet } from './Tools';
 import { Dashboard } from './Dashboard';
+import { Home } from './Home';
 import { LegacyModal } from './Legacy';
 import { LiveVoteModal } from './LiveVote';
 import { PrimariesNight } from './PrimariesNight';
@@ -19,7 +20,7 @@ import { Hud, TabBar } from './Hud';
 import { BillBuilder, BillSheet, LegislationView, VoteSheet } from './Legislation';
 import { LocationSheet } from './LocationSheet';
 import { MapView } from './MapView';
-import { HelpSheet, NewsView, PartySheet, SettingsSheet, StaffSheet } from './Panels';
+import { HelpSheet, PartySheet, SettingsSheet, StaffSheet } from './Panels';
 import { NpcSheet, PeopleView } from './People';
 import { RolesSheet, SwaySheet } from './Roles';
 import { DistrictsSheet } from './Districts';
@@ -111,13 +112,13 @@ export function GameScreen() {
   return (
     <>
       <Hud />
+      {tab === 'home' && <Home />}
       {tab === 'map' && <MapView />}
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'people' && <PeopleView />}
       {tab === 'laws' && (g.presidency && g.president?.id === 'player' ? <PresidencyView /> : <LegislationView />)}
-      {tab === 'news' && <NewsView />}
       <TabBar />
-      {tab === 'map' && !top && <NegotiationBanner />}
+      {(tab === 'map' || tab === 'home') && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
       {g.flags.showPresident && g.presidentRace?.winner ? <PresidentRace /> : g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
       <Toasts />

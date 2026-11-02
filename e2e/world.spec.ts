@@ -28,11 +28,14 @@ test('dashboard shows missions, power map and burning issues', async ({ page }) 
   onLawPassed(g, { templateId: 'housing', title: 'חוק הדיור בהישג יד', scope: 2, sponsor: 'player' });
   await load(page, g);
   await page.locator('.tabbar').getByText('לוח').click();
-  await expect(page.locator('.page')).toContainText('משימות');
-  await expect(page.locator('.page')).toContainText('מפת הכוח');
   await expect(page.locator('.page')).toContainText('סוגיות בוערות');
+  await page.getByTestId('dash-tab-me').click();
+  await expect(page.locator('.page')).toContainText('משימות');
+  await page.getByTestId('dash-tab-power').click();
+  await expect(page.locator('.page')).toContainText('מפת הכוח');
   await page.getByText('מפת הכוח').scrollIntoViewIfNeeded();
   await shot(page, '30-power');
+  await page.getByTestId('dash-tab-national').click();
   await page.getByText('סוגיות בוערות').scrollIntoViewIfNeeded();
   await shot(page, '31-issues');
 });

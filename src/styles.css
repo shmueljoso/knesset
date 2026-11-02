@@ -1194,3 +1194,80 @@ table.results td {
   font-size: 10px;
   opacity: 0.75;
 }
+
+/* ---- מסך הבית ולשוניות הלוח ---- */
+.stat {
+  cursor: pointer;
+}
+.stat .ap-pips {
+  margin: 1px 0 0;
+}
+.subtabs {
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  z-index: 4;
+}
+.subtabs button {
+  position: relative;
+  padding: 7px 4px;
+  font-size: 12.5px;
+}
+.subtabs .badge {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -4px;
+  background: var(--bad);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  font-weight: 700;
+}
+.home .rec {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.home .rec:first-of-type {
+  border-top: none;
+  padding-top: 2px;
+}
+.home .rec .chips {
+  margin-top: 4px;
+}
+.list-item.alert.bad {
+  border-color: var(--bad);
+}
+.list-item.alert.warn {
+  border-color: var(--warn);
+}
+.list-item.alert.good {
+  border-color: var(--good);
+}
+.list-item.alert:disabled {
+  cursor: default;
+}
+.home-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.hstat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+  text-align: center;
+}
+.hstat b {
+  display: block;
+  font-size: 17px;
+}
+.hstat span {
+  font-size: 11px;
+  color: var(--muted);
+}

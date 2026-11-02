@@ -33,6 +33,7 @@ test('party leader opens alliances, sees a merger forecast and proposes', async 
   const g = leaderGame();
   const target = g.parties.smol.name;
   await load(page, g);
+  await page.locator('.tabbar').getByText('מפה').click();
   await page.getByRole('button', { name: /פעולות כאן/ }).click();
   await expect(page.locator('.sheet').last()).toContainText('➕');
   await page.getByRole('button', { name: /איחודים ובריתות/ }).click();

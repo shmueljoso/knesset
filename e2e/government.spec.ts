@@ -56,6 +56,7 @@ test('minister launches a program and holds a cabinet meeting', async ({ page })
   g.player.location = 'ministry';
   await loadState(page, g);
   await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-power').click();
   await expect(page.locator('.page')).toContainText('שרת הבינוי והשיכון');
   await page.getByRole('button', { name: /שרת הבינוי והשיכון/ }).click();
   await expect(page.locator('.sheet')).toContainText('תכניות דגל');

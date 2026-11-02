@@ -3,10 +3,21 @@ import { useGame, useStore } from '../store';
 import { Avatar } from './Avatar';
 import { careerTitle } from './labels';
 
+/** הסבר קצר לכל מדד – מוצג בלחיצה */
+export const STAT_HELP = {
+  ap: ['⏳ זמן: נקודות פעולה לשבוע', 'כל פעולה עולה זמן. בסוף השבוע הזמן מתמלא מחדש.'],
+  fame: ['📣 מוכרות: כמה הציבור מכיר אותך', 'עולה מנאומים, ראיונות ופוסטים. בלי מוכרות אין קולות – אבל גם הטעויות נשמעות יותר.'],
+  approval: ['🪞 תדמית: מה הציבור חושב עלייך (ממוצע המגזרים)', 'עולה מעבודת שטח וחוגי בית, יורדת משערוריות. קובעת כמה המפלגה מרוויחה ממך בסקרים.'],
+  reputation: ['🎖️ מוניטין: כמה עמיתים סומכים עלייך', 'עולה מעבודה בוועדות ומחקר. פותח דלתות לתפקידים ולשיתופי פעולה.'],
+  capital: ['💎 הון פוליטי: טובות שאפשר לממש', 'מגייסים אותו בעזרה לאחרים ומוציאים על חוקים, בריתות והשפעה מאחורי הקלעים.'],
+} as const;
+
 export function Hud() {
   const g = useGame();
   const open = useStore((s) => s.open);
+  const toast = useStore((s) => s.toast);
   const p = g.player;
+  const explain = (k: keyof typeof STAT_HELP) => toast(STAT_HELP[k][0], 'neutral', [STAT_HELP[k][1]]);
   return (
     <header className="hud">
       <div className="hud-top">
@@ -28,30 +39,31 @@ export function Hud() {
         </button>
       </div>
       <div className="hud-stats">
-        <div className="stat" title="נקודות זמן לשבוע">
+        <button className="stat" onClick={() => explain('ap')} aria-label="זמן">
           <b>{p.ap}</b>
           <div className="ap-pips">
             {Array.from({ length: p.apMax }, (_, i) => (
               <i key={i} className={`ap-pip ${i < p.ap ? '' : 'off'}`} />
             ))}
           </div>
-        </div>
-        <div className="stat">
+          <span>זמן</span>
+        </button>
+        <button className="stat" onClick={() => explain('fame')}>
           <b>{Math.round(p.fame)}</b>
           <span>מוכרות</span>
-        </div>
-        <div className="stat">
+        </button>
+        <button className="stat" onClick={() => explain('approval')}>
           <b>{Math.round(avgApproval(g))}</b>
           <span>תדמית</span>
-        </div>
-        <div className="stat">
+        </button>
+        <button className="stat" onClick={() => explain('reputation')}>
           <b>{Math.round(p.reputation)}</b>
           <span>מוניטין</span>
-        </div>
-        <div className="stat">
+        </button>
+        <button className="stat" onClick={() => explain('capital')}>
           <b>{Math.round(p.capital)}</b>
           <span>הון פוליטי</span>
-        </div>
+        </button>
       </div>
     </header>
   );
@@ -65,11 +77,11 @@ export function TabBar() {
   const freshNews = g.news.filter((n) => n.week >= g.week - 1 && n.aboutPlayer).length;
   const pres = !!g.presidency && g.president?.id === 'player';
   const tabs = [
+    { id: 'home', ico: '🏠', label: 'בית' },
     { id: 'map', ico: '🗺️', label: 'מפה' },
-    { id: 'dashboard', ico: '📊', label: 'לוח' },
+    { id: 'dashboard', ico: '📊', label: 'לוח', badge: freshNews },
     { id: 'people', ico: '👥', label: 'אנשים' },
     pres ? ({ id: 'laws', ico: '🏛️', label: 'נשיאות', badge: g.player.ap } as const) : ({ id: 'laws', ico: '📜', label: 'חקיקה', badge: votable } as const),
-    { id: 'news', ico: '📰', label: 'חדשות', badge: freshNews },
   ] as const;
   return (
     <nav className="tabbar">

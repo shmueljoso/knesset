@@ -42,7 +42,8 @@ test('full poll sheet from the dashboard', async ({ page }) => {
 
 test('papers: each paper has its own front page', async ({ page }) => {
   await load(page, game());
-  await page.locator('.tabbar').getByText('חדשות').click();
+  await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-news').click();
   await page.getByRole('button', { name: /🗞️ עיתונים/ }).click();
   await page.getByRole('button', { name: /המבשר הנאמן/ }).click();
   await expect(page.getByTestId('paper-haredi')).toBeVisible();

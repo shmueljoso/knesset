@@ -33,16 +33,25 @@ test('grassroots aide: create, act, end weeks, persist', async ({ page }) => {
   await page.waitForTimeout(300);
   await shot(page, '03-map');
 
+  await expect(page.getByTestId('home-recs')).toBeVisible();
+  await shot(page, '03b-home');
+  await page.locator('.tabbar').getByText('מפה').click();
   await page.getByRole('button', { name: /פעולות כאן/ }).click();
   await expect(page.locator('.sheet')).toBeVisible();
   await shot(page, '04-location');
   await page.locator('.sheet .action-item:not([disabled])').nth(1).click();
   await closeSheets(page);
 
-  for (const tab of ['לוח', 'אנשים', 'חקיקה', 'חדשות']) {
+  for (const tab of ['לוח', 'אנשים', 'חקיקה']) {
     await page.locator('.tabbar').getByText(tab).click();
     await page.waitForTimeout(150);
     await shot(page, `05-tab-${tab}`);
+  }
+  await page.locator('.tabbar').getByText('לוח').click();
+  for (const sub of ['power', 'me', 'news']) {
+    await page.getByTestId(`dash-tab-${sub}`).click();
+    await page.waitForTimeout(150);
+    await shot(page, `05-dash-${sub}`);
   }
   await page.locator('.tabbar').getByText('מפה').click();
 

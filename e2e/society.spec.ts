@@ -65,6 +65,7 @@ test('long-term projects show on the dashboard', async ({ page }) => {
   g.flags.machine = 2;
   await load(page, g);
   await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-me').click();
   await expect(page.getByTestId('projects')).toContainText('סיור שטח');
   await expect(page.getByTestId('assets')).toContainText('מכונה ארגונית ברמה 2');
   await page.getByTestId('projects').scrollIntoViewIfNeeded();
@@ -111,7 +112,9 @@ test('polls: pollster is visible and what-if polls show', async ({ page }) => {
   await load(page, g);
   await page.locator('.tabbar').getByText('לוח').click();
   await expect(page.getByTestId('dash-pollster')).toContainText('סקר');
+  await page.getByTestId('dash-tab-power').click();
   await expect(page.getByTestId('party-status')).toBeVisible();
+  await page.getByTestId('dash-tab-national').click();
   await page.getByTestId('open-polls').click();
   await expect(page.getByTestId('pollster-tabs')).toBeVisible();
   await expect(page.getByTestId('hypos')).toContainText('אם');

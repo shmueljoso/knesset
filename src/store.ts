@@ -7,7 +7,9 @@ import type { ModFile } from './engine/mods';
 import { autoBackup, haptic, safetyBackup } from './platform';
 import { cloudAutoSync } from './online';
 
-export type Tab = 'map' | 'dashboard' | 'people' | 'laws' | 'news';
+export type Tab = 'home' | 'map' | 'dashboard' | 'people' | 'laws' | 'news';
+/** לשוניות המשנה של הלוח */
+export type DashTab = 'national' | 'power' | 'me' | 'news';
 export type Panel =
   | { kind: 'location'; id: string }
   | { kind: 'npc'; id: string }
@@ -86,6 +88,8 @@ interface Store {
   setEventResult: (r: { lines: string[]; success: boolean; title: string } | null) => void;
   game: GameState | null;
   tab: Tab;
+  dashTab: DashTab;
+  setDashTab: (t: DashTab) => void;
   panels: Panel[];
   toasts: Toast[];
   showReport: boolean;
@@ -119,12 +123,14 @@ export const useStore = create<Store>((set, get) => ({
   eventResult: null,
   setEventResult: (eventResult) => set({ eventResult }),
   game: null,
-  tab: 'map',
+  tab: 'home',
+  dashTab: 'national',
+  setDashTab: (dashTab) => set({ dashTab }),
   panels: [],
   toasts: [],
   showReport: false,
   setScreen: (screen) => set({ screen }),
-  setTab: (tab) => set({ tab, panels: [] }),
+  setTab: (tab) => (tab === 'news' ? set({ tab: 'dashboard', dashTab: 'news', panels: [] }) : set({ tab, panels: [] })),
   open: (p) => set((st) => ({ panels: [...st.panels, p] })),
   close: () => set((st) => ({ panels: st.panels.slice(0, -1) })),
   closeAll: () => set({ panels: [] }),
@@ -132,19 +138,19 @@ export const useStore = create<Store>((set, get) => ({
     safetyBackup(get().game ?? loadSaved(), 'לפני משחק חדש');
     const game = createGame(o);
     persist(game);
-    set({ game, screen: 'game', tab: 'map', panels: [], showReport: false });
+    set({ game, screen: 'game', tab: 'home', panels: [], showReport: false });
   },
   loadGame: (raw) => {
     safetyBackup(get().game ?? loadSaved(), 'לפני טעינה');
     const game = migrate(structuredClone(raw));
     repairLeadership(game);
     persist(game);
-    set({ game, screen: 'game', tab: 'map', panels: [], showReport: false, eventResult: null });
+    set({ game, screen: 'game', tab: 'home', panels: [], showReport: false, eventResult: null });
   },
   continueGame: () => {
     const game = loadSaved();
     if (!game) return false;
-    set({ game, screen: 'game', tab: 'map', panels: [] });
+    set({ game, screen: 'game', tab: 'home', panels: [] });
     return true;
   },
   act: (fn) => {

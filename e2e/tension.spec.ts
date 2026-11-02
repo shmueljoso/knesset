@@ -62,6 +62,7 @@ test('interview: three live questions', async ({ page }) => {
   g.player.location = 'studio';
   g.player.ap = 5;
   await load(page, g);
+  await page.locator('.tabbar').getByText('מפה').click();
   await page.getByRole('button', { name: /פעולות כאן/ }).click();
   await page.getByRole('button', { name: /ראיון באולפן/ }).click();
   await expect(page.locator('.event-card')).toContainText('שאלה 1/3');
@@ -76,7 +77,8 @@ test('interview: three live questions', async ({ page }) => {
 
 test('newspapers, gossip and polls', async ({ page }) => {
   await load(page, mk());
-  await page.locator('.tabbar').getByText('חדשות').click();
+  await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-news').click();
   await page.getByRole('button', { name: /עיתונים/ }).click();
   await expect(page.getByTestId('gossip')).toBeVisible();
   await expect(page.locator('.page')).toContainText('ישראל בבוקר');

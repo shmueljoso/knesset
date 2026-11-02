@@ -27,6 +27,7 @@ async function load(page: Page, g: GameState) {
   await page.goto('/');
   await page.getByRole('button', { name: /המשך משחק/ }).click();
   await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-power').click();
 }
 
 test('my roles: resign from the Knesset', async ({ page }) => {

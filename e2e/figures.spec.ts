@@ -36,7 +36,8 @@ test('a famous journalist enters politics, with real media and bylined columns',
   await page.getByRole('button', { name: 'המשך ←' }).click();
   await page.getByRole('button', { name: /יוצאים לדרך/ }).click();
   await expect(page.locator('.hud')).toContainText('עמית סגל');
-  await page.locator('.tabbar').getByText('חדשות').click();
+  await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-news').click();
   await expect(page.locator('.page')).toContainText('נכנס/ת לפוליטיקה');
   await page.getByLabel('תפריט').click();
   await expect(page.getByTestId('media-real')).toHaveClass(/on/);

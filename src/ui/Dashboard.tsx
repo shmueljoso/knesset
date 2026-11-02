@@ -14,7 +14,9 @@ import { playerDistrict, seatsEstimate, systemLabel, usesDistricts, districtShar
 import { districtById } from '../engine/data/districts';
 import type { Skill, WorldKey } from '../engine/types';
 import { AXES, AXIS_NAMES, SECTORS, SECTOR_NAMES, SECTOR_WEIGHTS } from '../engine/util';
-import { useGame, useStore } from '../store';
+import { useGame, useStore, type DashTab } from '../store';
+import { NewsView } from './Panels';
+import { nextGoal } from '../engine/systems/advisor';
 import { Hemicycle, HemicycleLegend, LineChart } from './Charts';
 import { Meter } from './common';
 import { g2 } from './labels';
@@ -34,15 +36,19 @@ const LADDER: { rank: string; label: string }[] = [
   { rank: 'minister', label: 'שר' },
   { rank: 'pm', label: 'רה"מ' },
 ];
+const DASH_TABS: [DashTab, string][] = [
+  ['national', '🇮🇱 ארצי'],
+  ['power', '🏛️ כוח'],
+  ['me', '🧭 אני'],
+  ['news', '📰 חדשות'],
+];
+
 const RANK_IDX: Record<string, number> = { citizen: -1, activist: 0, aide: 1, candidate: 2, mk: 3, chair: 4, minister: 5 };
 
 export function Dashboard() {
   const g = useGame();
   const open = useStore((s) => s.open);
   const p = g.player;
-  const idx = g.coalition.pmId === 'player' ? 6 : RANK_IDX[p.rank];
-  const toElection = g.electionWeek - g.week;
-  const toPrimaries = g.primariesWeek - g.week;
   const ruleNotes = activeRuleNotes(g);
   const sv = latestSurvey(g);
   const sw = sectorWeights(g);
@@ -67,324 +73,364 @@ export function Dashboard() {
     .slice(0, 5);
   const ph = g.playerHistory.slice(-30);
 
-  let goal = '';
-  if (g.presidency && g.president?.id === 'player') goal = 'לאחד את העם ולהשאיר את המדינה במצב טוב: פעולות שבועיות ויוזמות בלשונית "נשיאות".';
-  else if (!p.partyId && !p.isMK) goal = 'הצטרף/י למפלגה או הקם/י אחת – במטה המפלגה.';
-  else if (!p.isMK && !p.wantsList && toPrimaries > 0) goal = `הגש/י מועמדות לרשימה במטה המפלגה (הרשימות נסגרות בעוד ${toPrimaries} שבועות).`;
-  else if (!p.isMK && p.wantsList && toPrimaries > 0) goal = 'בנה/י תמיכה לקראת הרכבת הרשימה: כנסי מתפקדים, קמפיין, ותמיכת ח"כים בכירים.';
-  else if (!p.isMK) goal = `הבחירות בעוד ${toElection} שבועות. כל נקודת תדמית חשובה.`;
-  else if (g.negotiation) goal = 'משא ומתן קואליציוני בעיצומו – פתח/י אותו מהמפה.';
-  else if (g.coalition.pmId === 'player') goal = 'לשמור על הקואליציה, להעביר את סעיפי ההסכם ואת התקציב – ולשרוד עד הבחירות.';
-  else if (p.ministry) goal = 'להשיק תכניות דגל, להעלות את ביצועי המשרד – ולבנות בסיס לראשות המפלגה.';
-  else if (!g.bills.some((b) => b.sponsor === 'player')) goal = 'הגש/י הצעת חוק ראשונה – באגף הלשכות.';
-  else if (!p.achievements.includes('first_law')) goal = 'העבר/י חוק בשלוש קריאות. גייס/י תומכים לפני כל הצבעה.';
-  else if (g.player.partyId && g.parties[g.player.partyId].leaderId === 'player') goal = 'כיו"ר מפלגה: להגדיל את המפלגה בסקרים – הגדולה בגוש מקבלת את המנדט להרכיב ממשלה.';
-  else goal = 'בנה/י כוח: ראשות ועדה, תיק בממשלה, ובסוף – התמודדות על ראשות המפלגה (במטה).';
+
+  const dashTab = useStore((s) => s.dashTab);
+  const setDashTab = useStore((s) => s.setDashTab);
+  const pres = !!g.presidency && g.president?.id === 'player';
+  const freshNews = g.news.filter((n) => n.week >= g.week - 1 && n.aboutPlayer).length;
+  const subtabs = (
+    <div className="subtabs seg" role="tablist">
+      {DASH_TABS.map(([id, label]) => (
+        <button key={id} className={dashTab === id ? 'on' : ''} onClick={() => setDashTab(id)} data-testid={`dash-tab-${id}`} role="tab" aria-selected={dashTab === id}>
+          {label}
+          {id === 'news' && freshNews ? <span className="badge">{freshNews}</span> : null}
+        </button>
+      ))}
+    </div>
+  );
+  if (dashTab === 'news')
+    return (
+      <>
+        {subtabs}
+        <NewsView />
+      </>
+    );
 
   return (
+    <>
+      {subtabs}
     <div className="scroll">
       <div className="page dash">
-        <div className="card">
-          <div className="card-title">
-            <h3>🧭 המסלול שלך</h3>
-            <span className="small muted">{SESSION_NAMES[sessionOf(g)]}</span>
-          </div>
-          <div className="row" style={{ gap: 4 }}>
-            {LADDER.map((l, i) => (
-              <div key={l.rank} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ height: 6, borderRadius: 4, background: i <= idx ? 'var(--gold)' : 'var(--line)' }} />
-                <div className="tiny" style={{ marginTop: 4, color: i === idx ? 'var(--gold)' : 'var(--muted)', fontWeight: i === idx ? 800 : 400 }}>
-                  {l.label}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="small" style={{ margin: '12px 0 0' }}>
-            🎯 <b>היעד הבא:</b> {goal}
-          </p>
-          <div className="chips" style={{ marginTop: 10 }}>
-            <span className="chip gold">בחירות בעוד {toElection} שבועות</span>
-            {toPrimaries > 0 && <span className="chip">סגירת רשימות בעוד {toPrimaries} שבועות</span>}
-            {p.listPosition && <span className="chip good">מקום {p.listPosition} ברשימה</span>}
-            {p.defector && <span className="chip bad">פורש – מוגבל בכנסת הזו</span>}
-            {!inSession(g) && <span className="chip">פגרה – אין הצבעות</span>}
-          </div>
-        </div>
-
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn grow" onClick={() => open({ kind: 'roles' })} data-testid="dash-roles">
-            🚪 התפקידים שלי
-          </button>
-          {!(g.presidency && g.president?.id === 'player') && (
-            <button className="btn grow" onClick={() => open({ kind: 'sway' })} data-testid="dash-sway">
-              🎭 מאחורי הקלעים
-            </button>
-          )}
-        </div>
-
-        <StaffAdviceCard />
-
-        {!(g.presidency && g.president?.id === 'player') && <StancesCard />}
-
-        <PresidentCard />
-
-        <div className="card">
-          <div className="card-title">
-            <h3>🏛️ הכנסת ה-{g.knesset}</h3>
-            <span className="small muted">יציבות קואליציה {Math.round(g.coalition.stability)}</span>
-          </div>
-          <Hemicycle onSeat={(id) => open({ kind: 'npc', id })} />
-          <HemicycleLegend />
-          <div style={{ marginTop: 10 }}>
-            <Meter label="יציבות הקואליציה" value={g.coalition.stability} color={g.coalition.stability < 30 ? 'var(--bad)' : g.coalition.stability < 50 ? 'var(--warn)' : 'var(--good)'} />
-          </div>
-          <p className="tiny muted" style={{ margin: '8px 0 0' }}>
-            ★ = קואליציה. {p.partyId ? (isCoalition(g, p.partyId) ? 'המפלגה שלך בקואליציה.' : 'המפלגה שלך באופוזיציה.') : ''}
-          </p>
-        </div>
-
-        {g.scandal && (
-          <div className="card" style={{ borderColor: 'var(--bad)' }}>
-            <h3>🚨 פרשת {g.scandal.source}</h3>
-            <p className="small" style={{ margin: '6px 0' }}>
-              שלב {g.scandal.stage}/5: <b>{SCANDAL_STAGES[g.scandal.stage]}</b>
-            </p>
-            <Meter label="חום התיק" value={g.scandal.heat} color="var(--bad)" />
-            <p className="tiny muted" style={{ margin: '6px 0 0' }}>שיתוף פעולה מקרר את התיק. אחרי כתב אישום – משפט. הרשעה מסיימת את הקריירה.</p>
-          </div>
-        )}
-
-        <MissionsCard />
-
-        <PowerCard />
-
-        <DistrictCard />
-
-        <IssuesCard />
-
-        {Object.entries(g.windows ?? {}).some(([, w]) => (w ?? 0) > g.week) && (
-          <div className="card" data-testid="windows">
+        {dashTab === 'national' && (
+          <>
+          <div className="card">
             <div className="card-title">
-              <h3>🪟 חלונות הזדמנויות</h3>
+              <h3>📈 סקרים (מנדטים)</h3>
+              {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {seatsEstimate(g, p.partyId, pollSeats)}</span>}
             </div>
-            {Object.entries(g.windows)
-              .filter(([, w]) => (w ?? 0) > g.week)
-              .map(([id, w]) => (
-                <div key={id} className="small" style={{ marginBottom: 4 }}>
+            {sv && (
+              <div className="tiny muted" style={{ marginBottom: 4 }} data-testid="dash-pollster">
+                📊 סקר <b>{pollsterName(g, sv.pollster)}</b> · {g.week - sv.week <= 0 ? 'השבוע' : `לפני ${g.week - sv.week} שבועות`}
+              </div>
+            )}
+            {sv && (
+              <div className="small" style={{ marginBottom: 6 }}>
+                <span className="muted">👑 מתאים/ה לראשות הממשלה: </span>
+                {sv.pmFit.slice(0, 3).map((x, i) => (
+                  <span key={x.id} style={{ fontWeight: x.id === 'player' ? 800 : 400 }}>
+                    {i > 0 ? ' · ' : ''}
+                    {x.id === 'player' ? p.name : surveyName(g, x.id)} {x.pct}%
+                  </span>
+                ))}
+              </div>
+            )}
+            <LineChart series={series} xLabels={hist.map((h) => shortDateLabel(g, h.week))} yMax={40} />
+            {movers.length > 0 && (
+              <div className="chips" style={{ marginTop: 6 }} data-testid="momentum">
+                {movers.map((x) => (
+                  <span key={x.id} className={`chip ${(x.momentum ?? 0) > 0 ? 'good' : 'bad'}`}>
+                    {(x.momentum ?? 0) > 0 ? '▲' : '▼'} {x.short} {seatsEstimate(g, x.id, pollSeats)}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="tiny faint" style={{ margin: '6px 0 0' }}>מתחת ל-{g.rules.threshold}% (כ-4 מנדטים) – הרשימה לא נכנסת לכנסת. ▲▼ = מגמה חזקה (הייפ או קריסה).</p>
+            <button className="btn sm block" style={{ marginTop: 8 }} onClick={() => open({ kind: 'polls' })} data-testid="open-polls">
+              📊 לסקר המלא{sv ? ` (${sv.pollster})` : ''}
+            </button>
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🇮🇱 מצב המדינה</h3>
+            </div>
+            {(Object.keys(g.world) as WorldKey[]).map((k) => (
+              <Meter key={k} label={WORLD_NAMES[k]} value={g.world[k]} color={g.world[k] >= 55 ? 'var(--good)' : g.world[k] < 40 ? 'var(--bad)' : 'var(--warn)'} />
+            ))}
+            {g.effects.length > 0 && (
+              <p className="tiny muted" style={{ margin: '8px 0 0' }}>
+                השפעות פעילות: {[...new Set(g.effects.map((e) => e.source))].filter((x) => x !== 'event').join(' · ') || 'אירועים אחרונים'}
+              </p>
+            )}
+          </div>
+
+            <DistrictCard />
+
+            <IssuesCard />
+
+          {Object.entries(g.windows ?? {}).some(([, w]) => (w ?? 0) > g.week) && (
+            <div className="card" data-testid="windows">
+              <div className="card-title">
+                <h3>🪟 חלונות הזדמנויות</h3>
+              </div>
+              {Object.entries(g.windows)
+                .filter(([, w]) => (w ?? 0) > g.week)
+                .map(([id, w]) => (
+                  <div key={id} className="small" style={{ marginBottom: 4 }}>
+                    <b>
+                      {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].icon} {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].name}
+                    </b>{' '}
+                    <span className="tiny muted">עוד {(w ?? 0) - g.week} שבועות</span>
+                  </div>
+                ))}
+              <p className="tiny muted" style={{ margin: '6px 0 0' }}>אחרי זעזוע, רעיון שהיה הזוי נשמע פתאום אפשרי. חקיקה ← 🌋 מהפכות. גם הממשלה עלולה לנסות.</p>
+            </div>
+          )}
+
+          {g.transforms?.length > 0 && (
+            <div className="card" data-testid="transforms">
+              <div className="card-title">
+                <h3>🧭 מדינה אחרת</h3>
+              </div>
+              {g.transforms.map((x) => (
+                <div key={x.id} className="small" style={{ marginBottom: 6 }}>
                   <b>
-                    {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].icon} {TRANSFORM_INFO[id as keyof typeof TRANSFORM_INFO].name}
+                    {TRANSFORM_INFO[x.id].icon} {TRANSFORM_INFO[x.id].name}
                   </b>{' '}
-                  <span className="tiny muted">עוד {(w ?? 0) - g.week} שבועות</span>
+                  <span className="tiny muted">(מאז {shortDateLabel(g, x.week)}{x.sponsor === 'player' ? ' · ביוזמתך' : ''})</span>
+                  <div className="muted">{TRANSFORM_INFO[x.id].now}</div>
                 </div>
               ))}
-            <p className="tiny muted" style={{ margin: '6px 0 0' }}>אחרי זעזוע, רעיון שהיה הזוי נשמע פתאום אפשרי. חקיקה ← 🌋 מהפכות. גם הממשלה עלולה לנסות.</p>
-          </div>
-        )}
-
-        {g.transforms?.length > 0 && (
-          <div className="card" data-testid="transforms">
-            <div className="card-title">
-              <h3>🧭 מדינה אחרת</h3>
             </div>
-            {g.transforms.map((x) => (
-              <div key={x.id} className="small" style={{ marginBottom: 6 }}>
-                <b>
-                  {TRANSFORM_INFO[x.id].icon} {TRANSFORM_INFO[x.id].name}
-                </b>{' '}
-                <span className="tiny muted">(מאז {shortDateLabel(g, x.week)}{x.sponsor === 'player' ? ' · ביוזמתך' : ''})</span>
-                <div className="muted">{TRANSFORM_INFO[x.id].now}</div>
+          )}
+
+          {ruleNotes.length > 0 && (
+            <div className="card" data-testid="rules">
+              <div className="card-title">
+                <h3>📜 כללי המשחק בתוקף</h3>
               </div>
-            ))}
-          </div>
-        )}
-
-        {ruleNotes.length > 0 && (
-          <div className="card" data-testid="rules">
-            <div className="card-title">
-              <h3>📜 כללי המשחק בתוקף</h3>
-            </div>
-            {ruleNotes.map((x) => (
-              <div key={x.title} className="small" style={{ marginBottom: 6 }}>
-                <b>
-                  {x.icon} {x.title}
-                </b>
-                <div className="muted">{x.text}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {g.projects?.length > 0 && (
-          <div className="card" data-testid="projects">
-            <div className="card-title">
-              <h3>🚧 מיזמים פעילים</h3>
-              <span className="tiny muted">{g.projects.length}/{MAX_PROJECTS}</span>
-            </div>
-            {g.projects.map((x) => (
-              <Meter key={x.id} label={`${PROJECT_INFO[x.kind].icon} ${PROJECT_INFO[x.kind].name}${x.sector ? ` · ${SECTOR_LABEL[x.sector]}` : ''} · עוד ${Math.max(0, x.start + x.weeks - g.week)} שבועות`} value={g.week - x.start} max={x.weeks} color="var(--gold)" />
-            ))}
-          </div>
-        )}
-
-        {(g.flags.machine || g.flags.supporters) && (
-          <div className="card small" data-testid="assets">
-            <b>🏗️ נכסים שבנית</b>
-            <div className="muted">
-              {g.flags.machine ? `מכונה ארגונית ברמה ${String(g.flags.machine)}/5` : ''}
-              {g.flags.machine && g.flags.supporters ? ' · ' : ''}
-              {g.flags.supporters ? `מועדון תומכים ברמה ${String(g.flags.supporters)}/3 (+${(Number(g.flags.supporters) * 1.5).toFixed(1)} אלף ₪ בשבוע)` : ''}
-            </div>
-          </div>
-        )}
-
-        <div className="card" data-testid="demography">
-          <div className="card-title">
-            <h3>🌍 הרכב האוכלוסייה</h3>
-            <span className="tiny muted">משתנה עם השנים</span>
-          </div>
-          {SECTORS.map((sec) => {
-            const now = sw[sec] * 100;
-            const was = SECTOR_WEIGHTS[sec] * 100;
-            const d = now - was;
-            return (
-              <Meter key={sec} label={`${SECTOR_NAMES[sec]}${Math.abs(d) >= 0.3 ? ` ${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(1)}` : ''}`} value={now} max={45} color={d > 0.3 ? 'var(--good)' : d < -0.3 ? 'var(--bad)' : 'var(--muted)'} suffix="%" />
-            );
-          })}
-          <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = שינוי מאז תחילת המשחק. מפלגות שנשענות על מגזר שגדל מתחזקות בסקרים.</p>
-        </div>
-
-        <PartyStatusCard />
-
-        <GovernmentCard />
-
-        <div className="card">
-          <div className="card-title">
-            <h3>📈 סקרים (מנדטים)</h3>
-            {p.partyId && <span className="small gold">{g.parties[p.partyId].short}: {seatsEstimate(g, p.partyId, pollSeats)}</span>}
-          </div>
-          {sv && (
-            <div className="tiny muted" style={{ marginBottom: 4 }} data-testid="dash-pollster">
-              📊 סקר <b>{pollsterName(g, sv.pollster)}</b> · {g.week - sv.week <= 0 ? 'השבוע' : `לפני ${g.week - sv.week} שבועות`}
-            </div>
-          )}
-          {sv && (
-            <div className="small" style={{ marginBottom: 6 }}>
-              <span className="muted">👑 מתאים/ה לראשות הממשלה: </span>
-              {sv.pmFit.slice(0, 3).map((x, i) => (
-                <span key={x.id} style={{ fontWeight: x.id === 'player' ? 800 : 400 }}>
-                  {i > 0 ? ' · ' : ''}
-                  {x.id === 'player' ? p.name : surveyName(g, x.id)} {x.pct}%
-                </span>
-              ))}
-            </div>
-          )}
-          <LineChart series={series} xLabels={hist.map((h) => shortDateLabel(g, h.week))} yMax={40} />
-          {movers.length > 0 && (
-            <div className="chips" style={{ marginTop: 6 }} data-testid="momentum">
-              {movers.map((x) => (
-                <span key={x.id} className={`chip ${(x.momentum ?? 0) > 0 ? 'good' : 'bad'}`}>
-                  {(x.momentum ?? 0) > 0 ? '▲' : '▼'} {x.short} {seatsEstimate(g, x.id, pollSeats)}
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="tiny faint" style={{ margin: '6px 0 0' }}>מתחת ל-{g.rules.threshold}% (כ-4 מנדטים) – הרשימה לא נכנסת לכנסת. ▲▼ = מגמה חזקה (הייפ או קריסה).</p>
-          <button className="btn sm block" style={{ marginTop: 8 }} onClick={() => open({ kind: 'polls' })} data-testid="open-polls">
-            📊 לסקר המלא{sv ? ` (${sv.pollster})` : ''}
-          </button>
-        </div>
-
-        <div className="card">
-          <div className="card-title">
-            <h3>🪞 התדמית שלך</h3>
-            <span className="small muted">מוכרות {Math.round(p.fame)}</span>
-          </div>
-          {SECTORS.map((sec) => (
-            <Meter key={sec} label={SECTOR_NAMES[sec]} value={p.approval[sec]} color={p.approval[sec] >= 55 ? 'var(--good)' : p.approval[sec] < 45 ? 'var(--bad)' : 'var(--muted)'} />
-          ))}
-          <div style={{ height: 8 }} />
-          <Meter label="עקביות" value={p.consistency} color="var(--gold)" />
-          <Meter label="מעמד במפלגה" value={p.partyStanding} color="var(--gold)" />
-          {ph.length > 2 && (
-            <div style={{ marginTop: 12 }}>
-              <LineChart
-                height={130}
-                yMax={100}
-                xLabels={ph.map((h) => shortDateLabel(g, h.week))}
-                series={[
-                  { name: 'מוכרות', color: '#5aa9ff', values: ph.map((h) => h.fame) },
-                  { name: 'תדמית', color: '#e8c37a', values: ph.map((h) => h.approval) },
-                  { name: 'מוניטין', color: '#c084fc', values: ph.map((h) => h.reputation) },
-                ]}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="card-title">
-            <h3>🇮🇱 מצב המדינה</h3>
-          </div>
-          {(Object.keys(g.world) as WorldKey[]).map((k) => (
-            <Meter key={k} label={WORLD_NAMES[k]} value={g.world[k]} color={g.world[k] >= 55 ? 'var(--good)' : g.world[k] < 40 ? 'var(--bad)' : 'var(--warn)'} />
-          ))}
-          {g.effects.length > 0 && (
-            <p className="tiny muted" style={{ margin: '8px 0 0' }}>
-              השפעות פעילות: {[...new Set(g.effects.map((e) => e.source))].filter((x) => x !== 'event').join(' · ') || 'אירועים אחרונים'}
-            </p>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="card-title">
-            <h3>🧾 חובות וטובות</h3>
-            <span className="small muted">{p.debts.length}</span>
-          </div>
-          {p.debts.length === 0 && <p className="small muted" style={{ margin: 0 }}>אף אחד לא חייב לך, ואתה לא חייב לאף אחד. עדיין.</p>}
-          {p.debts.map((d) => (
-            <button key={d.id} className="list-item" onClick={() => open({ kind: 'npc', id: d.npcId })}>
-              <span style={{ fontSize: 20 }}>{d.dir === 'owes_player' ? '🟢' : '🔴'}</span>
-              <div className="grow">
-                <b className="small">{g.npcs[d.npcId]?.name}</b>
-                <div className="tiny muted">
-                  {d.dir === 'owes_player' ? 'חייב לך' : 'אתה חייב'} · {d.reason}
+              {ruleNotes.map((x) => (
+                <div key={x.title} className="small" style={{ marginBottom: 6 }}>
+                  <b>
+                    {x.icon} {x.title}
+                  </b>
+                  <div className="muted">{x.text}</div>
                 </div>
-              </div>
-              <span className="tiny faint">לפני {g.week - d.week} ש׳</span>
+              ))}
+            </div>
+          )}
+
+          <div className="card" data-testid="demography">
+            <div className="card-title">
+              <h3>🌍 הרכב האוכלוסייה</h3>
+              <span className="tiny muted">משתנה עם השנים</span>
+            </div>
+            {SECTORS.map((sec) => {
+              const now = sw[sec] * 100;
+              const was = SECTOR_WEIGHTS[sec] * 100;
+              const d = now - was;
+              return (
+                <Meter key={sec} label={`${SECTOR_NAMES[sec]}${Math.abs(d) >= 0.3 ? ` ${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(1)}` : ''}`} value={now} max={45} color={d > 0.3 ? 'var(--good)' : d < -0.3 ? 'var(--bad)' : 'var(--muted)'} suffix="%" />
+              );
+            })}
+            <p className="tiny faint" style={{ margin: '6px 0 0' }}>▲▼ = שינוי מאז תחילת המשחק. מפלגות שנשענות על מגזר שגדל מתחזקות בסקרים.</p>
+          </div>
+
+          </>
+        )}
+
+        {dashTab === 'power' && (
+          <>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn grow" onClick={() => open({ kind: 'roles' })} data-testid="dash-roles">
+              🚪 התפקידים שלי
             </button>
-          ))}
-        </div>
-
-        <div className="card">
-          <div className="card-title">
-            <h3>🎓 מיומנויות</h3>
+            {!(g.presidency && g.president?.id === 'player') && (
+              <button className="btn grow" onClick={() => open({ kind: 'sway' })} data-testid="dash-sway">
+                🎭 מאחורי הקלעים
+              </button>
+            )}
           </div>
-          {(Object.keys(p.skills) as Skill[]).map((k) => (
-            <Meter key={k} label={SKILL_NAMES[k]} value={p.skills[k]} color="#5aa9ff" />
-          ))}
-        </div>
 
-        <div className="card">
-          <div className="card-title">
-            <h3>🧭 {g2(g, 'העמדות שלך', 'העמדות שלך')}</h3>
+            <PresidentCard />
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🏛️ הכנסת ה-{g.knesset}</h3>
+              <span className="small muted">יציבות קואליציה {Math.round(g.coalition.stability)}</span>
+            </div>
+            <Hemicycle onSeat={(id) => open({ kind: 'npc', id })} />
+            <HemicycleLegend />
+            <div style={{ marginTop: 10 }}>
+              <Meter label="יציבות הקואליציה" value={g.coalition.stability} color={g.coalition.stability < 30 ? 'var(--bad)' : g.coalition.stability < 50 ? 'var(--warn)' : 'var(--good)'} />
+            </div>
+            <p className="tiny muted" style={{ margin: '8px 0 0' }}>
+              ★ = קואליציה. {p.partyId ? (isCoalition(g, p.partyId) ? 'המפלגה שלך בקואליציה.' : 'המפלגה שלך באופוזיציה.') : ''}
+            </p>
           </div>
-          {AXES.map((ax) => (
-            <div key={ax} style={{ marginBottom: 12 }}>
-              <div className="spread tiny muted">
-                <span>{AXIS_NAMES[ax][2]}</span>
-                <b style={{ color: 'var(--text)' }}>{AXIS_NAMES[ax][0]}</b>
-                <span>{AXIS_NAMES[ax][1]}</span>
+
+          {g.scandal && (
+            <div className="card" style={{ borderColor: 'var(--bad)' }}>
+              <h3>🚨 פרשת {g.scandal.source}</h3>
+              <p className="small" style={{ margin: '6px 0' }}>
+                שלב {g.scandal.stage}/5: <b>{SCANDAL_STAGES[g.scandal.stage]}</b>
+              </p>
+              <Meter label="חום התיק" value={g.scandal.heat} color="var(--bad)" />
+              <p className="tiny muted" style={{ margin: '6px 0 0' }}>שיתוף פעולה מקרר את התיק. אחרי כתב אישום – משפט. הרשעה מסיימת את הקריירה.</p>
+            </div>
+          )}
+
+            <GovernmentCard />
+
+            <PartyStatusCard />
+
+            <PowerCard />
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🧾 חובות וטובות</h3>
+              <span className="small muted">{p.debts.length}</span>
+            </div>
+            {p.debts.length === 0 && <p className="small muted" style={{ margin: 0 }}>אף אחד לא חייב לך, ואתה לא חייב לאף אחד. עדיין.</p>}
+            {p.debts.map((d) => (
+              <button key={d.id} className="list-item" onClick={() => open({ kind: 'npc', id: d.npcId })}>
+                <span style={{ fontSize: 20 }}>{d.dir === 'owes_player' ? '🟢' : '🔴'}</span>
+                <div className="grow">
+                  <b className="small">{g.npcs[d.npcId]?.name}</b>
+                  <div className="tiny muted">
+                    {d.dir === 'owes_player' ? 'חייב לך' : 'אתה חייב'} · {d.reason}
+                  </div>
+                </div>
+                <span className="tiny faint">לפני {g.week - d.week} ש׳</span>
+              </button>
+            ))}
+          </div>
+
+          </>
+        )}
+
+        {dashTab === 'me' && (
+          <>
+            <PathCard />
+
+            <StaffAdviceCard />
+
+            {!pres && <StancesCard />}
+
+            <MissionsCard />
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🪞 התדמית שלך</h3>
+              <span className="small muted">מוכרות {Math.round(p.fame)}</span>
+            </div>
+            {SECTORS.map((sec) => (
+              <Meter key={sec} label={SECTOR_NAMES[sec]} value={p.approval[sec]} color={p.approval[sec] >= 55 ? 'var(--good)' : p.approval[sec] < 45 ? 'var(--bad)' : 'var(--muted)'} />
+            ))}
+            <div style={{ height: 8 }} />
+            <Meter label="עקביות" value={p.consistency} color="var(--gold)" />
+            <Meter label="מעמד במפלגה" value={p.partyStanding} color="var(--gold)" />
+            {ph.length > 2 && (
+              <div style={{ marginTop: 12 }}>
+                <LineChart
+                  height={130}
+                  yMax={100}
+                  xLabels={ph.map((h) => shortDateLabel(g, h.week))}
+                  series={[
+                    { name: 'מוכרות', color: '#5aa9ff', values: ph.map((h) => h.fame) },
+                    { name: 'תדמית', color: '#e8c37a', values: ph.map((h) => h.approval) },
+                    { name: 'מוניטין', color: '#c084fc', values: ph.map((h) => h.reputation) },
+                  ]}
+                />
               </div>
-              <div className="axis" style={{ marginTop: 5, direction: 'rtl' }}>
-                <span className="mark" style={{ right: `${(100 - p.ideology[ax]) / 2}%`, transform: 'translateX(50%)' }} />
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🎓 מיומנויות</h3>
+            </div>
+            {(Object.keys(p.skills) as Skill[]).map((k) => (
+              <Meter key={k} label={SKILL_NAMES[k]} value={p.skills[k]} color="#5aa9ff" />
+            ))}
+          </div>
+
+          <div className="card">
+            <div className="card-title">
+              <h3>🧭 {g2(g, 'העמדות שלך', 'העמדות שלך')}</h3>
+            </div>
+            {AXES.map((ax) => (
+              <div key={ax} style={{ marginBottom: 12 }}>
+                <div className="spread tiny muted">
+                  <span>{AXIS_NAMES[ax][2]}</span>
+                  <b style={{ color: 'var(--text)' }}>{AXIS_NAMES[ax][0]}</b>
+                  <span>{AXIS_NAMES[ax][1]}</span>
+                </div>
+                <div className="axis" style={{ marginTop: 5, direction: 'rtl' }}>
+                  <span className="mark" style={{ right: `${(100 - p.ideology[ax]) / 2}%`, transform: 'translateX(50%)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {g.projects?.length > 0 && (
+            <div className="card" data-testid="projects">
+              <div className="card-title">
+                <h3>🚧 מיזמים פעילים</h3>
+                <span className="tiny muted">{g.projects.length}/{MAX_PROJECTS}</span>
+              </div>
+              {g.projects.map((x) => (
+                <Meter key={x.id} label={`${PROJECT_INFO[x.kind].icon} ${PROJECT_INFO[x.kind].name}${x.sector ? ` · ${SECTOR_LABEL[x.sector]}` : ''} · עוד ${Math.max(0, x.start + x.weeks - g.week)} שבועות`} value={g.week - x.start} max={x.weeks} color="var(--gold)" />
+              ))}
+            </div>
+          )}
+
+          {(g.flags.machine || g.flags.supporters) && (
+            <div className="card small" data-testid="assets">
+              <b>🏗️ נכסים שבנית</b>
+              <div className="muted">
+                {g.flags.machine ? `מכונה ארגונית ברמה ${String(g.flags.machine)}/5` : ''}
+                {g.flags.machine && g.flags.supporters ? ' · ' : ''}
+                {g.flags.supporters ? `מועדון תומכים ברמה ${String(g.flags.supporters)}/3 (+${(Number(g.flags.supporters) * 1.5).toFixed(1)} אלף ₪ בשבוע)` : ''}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          </>
+        )}
 
         <div style={{ marginTop: 14 }}>
           <NextWeekButton block />
         </div>
+      </div>
+    </div>
+    </>
+  );
+}
+
+/** המסלול שלך: סולם הקריירה, היעד הבא ותאריכים קרובים */
+export function PathCard() {
+  const g = useGame();
+  const p = g.player;
+  const idx = g.coalition.pmId === 'player' ? 6 : RANK_IDX[p.rank];
+  const toElection = g.electionWeek - g.week;
+  const toPrimaries = g.primariesWeek - g.week;
+  const goal = nextGoal(g);
+  return (
+    <div className="card">
+      <div className="card-title">
+        <h3>🧭 המסלול שלך</h3>
+        <span className="small muted">{SESSION_NAMES[sessionOf(g)]}</span>
+      </div>
+      <div className="row" style={{ gap: 4 }}>
+        {LADDER.map((l, i) => (
+          <div key={l.rank} style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ height: 6, borderRadius: 4, background: i <= idx ? 'var(--gold)' : 'var(--line)' }} />
+            <div className="tiny" style={{ marginTop: 4, color: i === idx ? 'var(--gold)' : 'var(--muted)', fontWeight: i === idx ? 800 : 400 }}>
+              {l.label}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="small" style={{ margin: '12px 0 0' }}>
+        🎯 <b>היעד הבא:</b> {goal}
+      </p>
+      <div className="chips" style={{ marginTop: 10 }}>
+        <span className="chip gold">בחירות בעוד {toElection} שבועות</span>
+        {toPrimaries > 0 && <span className="chip">סגירת רשימות בעוד {toPrimaries} שבועות</span>}
+        {p.listPosition && <span className="chip good">מקום {p.listPosition} ברשימה</span>}
+        {p.defector && <span className="chip bad">פורש – מוגבל בכנסת הזו</span>}
+        {!inSession(g) && <span className="chip">פגרה – אין הצבעות</span>}
       </div>
     </div>
   );

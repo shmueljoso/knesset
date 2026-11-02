@@ -25,8 +25,8 @@ export function handleBack(): 'closed' | 'tab' | 'title' | 'blocked' | 'exit' {
       st.close();
       return 'closed';
     }
-    if (st.tab !== 'map') {
-      st.setTab('map');
+    if (st.tab !== 'home') {
+      st.setTab('home');
       return 'tab';
     }
   }

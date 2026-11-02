@@ -60,6 +60,7 @@ function president(): GameState {
 test('declare candidacy early and run a campaign', async ({ page }) => {
   await load(page, game());
   await page.locator('.tabbar').getByText('לוח').click();
+  await page.getByTestId('dash-tab-power').click();
   await expect(page.getByTestId('pres-card')).toContainText('נשיאות המדינה');
   await page.getByTestId('pres-open').click();
   await shot(page, '110-president-before');

@@ -11,14 +11,14 @@ const opts: NewGameOptions = {
 };
 
 describe('android back button', () => {
-  it('closes panels, then goes to the map, then to the title, then exits', () => {
+  it('closes panels, then goes home, then to the title, then exits', () => {
     const g = createGame(opts);
     g.eventQueue = [];
     useStore.setState({ game: g, screen: 'game', tab: 'people', panels: [{ kind: 'settings' }], showReport: false });
     expect(handleBack()).toBe('closed');
     expect(useStore.getState().panels).toHaveLength(0);
     expect(handleBack()).toBe('tab');
-    expect(useStore.getState().tab).toBe('map');
+    expect(useStore.getState().tab).toBe('home');
     expect(handleBack()).toBe('title');
     expect(useStore.getState().screen).toBe('title');
     expect(handleBack()).toBe('exit');
