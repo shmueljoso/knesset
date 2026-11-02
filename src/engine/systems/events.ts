@@ -1,3 +1,4 @@
+import { withCause } from '../why';
 import { addStat } from '../stats';
 import { EVENTS, debtCollectCandidate, eventById, type EventChoice, type GameEvent } from '../data/events';
 import { applyOps, fill, registerSpecial, type Ctx, type Op } from '../ops';
@@ -70,13 +71,15 @@ export function resolveEvent(s: GameState, idx: number): { lines: string[]; succ
   let success = true;
   const lines: string[] = [];
   if (c.chance) success = rand(s) < clamp(c.chance.p(s, cur.ctx), 0.05, 0.95);
-  if (success) {
-    lines.push(...applyOps(s, choiceOps(s, c, cur.ctx), cur.ctx));
-    if (c.result) lines.unshift(c.result);
-  } else {
-    lines.push(...applyOps(s, c.chance!.fail, cur.ctx));
-    lines.unshift(c.chance!.failText);
-  }
+  withCause(s, `📌 ${fill(s, cur.ev.title, cur.ctx)}`, () => {
+    if (success) {
+      lines.push(...applyOps(s, choiceOps(s, c, cur.ctx), cur.ctx));
+      if (c.result) lines.unshift(c.result);
+    } else {
+      lines.push(...applyOps(s, c.chance!.fail, cur.ctx));
+      lines.unshift(c.chance!.failText);
+    }
+  });
   log(s, `${fill(s, cur.ev.title, cur.ctx)} – ${c.label}`, 'event');
   return { lines, success };
 }

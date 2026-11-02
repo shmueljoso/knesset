@@ -17,5 +17,10 @@ export function snapshot(s: GameState): Snapshot {
 
 export function log(s: GameState, text: string, kind: 'action' | 'event' | 'system' | 'vote' | 'career' = 'system') {
   s.log.push({ week: s.week, text, kind });
+  // רגעי קריירה נשמרים גם לגלריה (היומן נחתך)
+  if (kind === 'career' && s.moments) {
+    s.moments.push({ week: s.week, icon: '⭐', text });
+    if (s.moments.length > 120) s.moments.shift();
+  }
   if (s.log.length > 400) s.log.splice(0, s.log.length - 400);
 }

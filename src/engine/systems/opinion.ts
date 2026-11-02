@@ -1,3 +1,4 @@
+import { noteWhy } from '../why';
 import { rand } from '../rng';
 import { driftTowards } from './stances';
 import { salienceMultiplier } from './issues';
@@ -102,20 +103,43 @@ export function updatePolls(s: GameState) {
   const gov = govSatisfaction(s);
   const parties = Object.values(s.parties);
   for (const p of parties) {
+    const mine = p.id === s.player.partyId;
+    const parts: [string, number][] = [];
     let target = p.base * demoFactor(s, p.sectors);
+    if (mine) parts.push(['🌍 הרכב האוכלוסייה', target - p.base]);
     const inCoal = s.coalition.parties.includes(p.id);
+    const t0 = target;
     target *= 1 + (inCoal ? gov * 0.18 : -gov * 0.1);
+    if (mine) parts.push([inCoal ? '🏛️ שביעות רצון מהממשלה' : '🏛️ אכזבה/שביעות רצון מהממשלה', target - t0]);
     // "קול אבוד": ככל שאחוז החסימה גבוה יותר, בוחרים נרתעים ממפלגות קטנות; כשהוא יורד – הם מעזים (ביחס ל-3.25%)
     if (!p.playerFounded && p.base < 6) target *= 1 + 0.25 * (1 - (s.rules.threshold ?? 3.25) / 3.25);
-    if (p.playerFounded) target = playerElectoralAppeal(s) + (p.absorbed ?? 0);
-    else if (p.id === s.player.partyId) target += playerSeatContribution(s)?.pct ?? 0;
+    if (p.playerFounded) {
+      target = playerElectoralAppeal(s) + (p.absorbed ?? 0);
+      if (mine) parts.splice(0, parts.length, ['🙋 כוח המשיכה שלך', target - p.base]);
+    } else if (mine) {
+      const c = playerSeatContribution(s)?.pct ?? 0;
+      target += c;
+      parts.push(['🙋 התדמית שלך', c]);
+    }
     // מומנטום: הייפ או קריסה זמניים, שדועכים אם לא מתחזקים
     const m = p.momentum ?? 0;
     // רוח הציבור: מלחמה מושכת ימינה, יוקר מחיה – לרווחה וכו'
-    if (!p.playerFounded) target += moodPull(s, p.ideology) * Math.min(1, p.base / 4);
+    if (!p.playerFounded) {
+      const mp = moodPull(s, p.ideology) * Math.min(1, p.base / 4);
+      target += mp;
+      if (mine) parts.push(['🌬️ רוח הציבור', mp]);
+    }
     target = Math.max(0.2, target + m);
+    if (mine) parts.push(['📈 מומנטום (הייפ/קריסה)', m]);
     if (m) p.momentum = Math.abs(m) < 0.05 ? 0 : m * 0.95;
-    p.poll = Math.max(0, p.poll + (target - p.poll) * 0.12 + (rand(s) - 0.5) * 0.35);
+    const noise = (rand(s) - 0.5) * 0.35;
+    if (mine) {
+      // הסקר זז 12% מהמרחק ליעד: הבסיס (מה שהמפלגה "שווה") + כל מה שמזיז אותו
+      noteWhy(s, 'poll', (p.base - p.poll) * 0.12, '🔁 משיכה חזרה לבסיס');
+      for (const [c, d] of parts) noteWhy(s, 'poll', d * 0.12, c);
+      noteWhy(s, 'poll', noise, '🎲 טעות דגימה');
+    }
+    p.poll = Math.max(0, p.poll + (target - p.poll) * 0.12 + noise);
   }
   // נרמול ל-100%. הבסיס עצמו מתעדכן רק בבחירות, כדי למנוע סחף מצטבר.
   normalizePolls(s);

@@ -42,6 +42,7 @@ const HELPS: Record<string, Need[]> = {
   lobby: ['money'],
   interview: ['fame', 'approval'],
   oped: ['reputation', 'fame'],
+  debate: ['fame', 'approval'],
   social: ['fame'],
   fundraise: ['money'],
   members: ['standing', 'campaign'],

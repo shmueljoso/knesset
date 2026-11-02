@@ -274,6 +274,17 @@ export function SettingsSheet() {
         <div className="muted">הישגים: {g.player.achievements.length ? g.player.achievements.map((a) => ({ first_law: 'חוק ראשון', elected: 'נבחר/ה לכנסת', chair: 'יו"ר ועדה', minister: 'שר/ה', leader: 'יו"ר מפלגה', pm: 'ראשות הממשלה' })[a] ?? a).join(' · ') : 'עדיין אין'}</div>
       </div>
       <div className="card small" style={{ marginTop: 10 }}>
+        <b>🎮 סגנון משחק</b>
+        <div className="tiny muted">פשוט: אירועים אקראיים קטנים מוכרעים בשבילך לפי העמדות שלך (רואים אותם בסיכום השבוע), והלוח מציג רק את העיקר. מומחה: כל החלטה וכל נתון.</div>
+        <div className="filter-row" style={{ marginTop: 6 }}>
+          {([[true, '🙂 פשוט'], [false, '🧠 מומחה']] as const).map(([v, label]) => (
+            <button key={label} data-testid={`mode-${v ? 'simple' : 'expert'}`} className={!!g.settings?.simple === v ? 'on' : ''} onClick={() => act((s) => void (s.settings = { ...s.settings, simple: v }))}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="card small" style={{ marginTop: 10 }}>
         <b>🌪️ רמת דרמה</b>
         <div className="tiny muted">כמה טלטלות: מפלגות חדשות, מלחמות, כתבי אישום, פילוגים.</div>
         <div className="filter-row" style={{ marginTop: 6 }}>

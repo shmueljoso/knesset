@@ -11,6 +11,7 @@ import { makeSurvey } from './systems/surveys';
 import { snapshot } from './systems/report';
 import { refreshPresence } from './systems/presence';
 import { ensurePhase3, pickAgenda } from './migrate';
+import { startSeason } from './systems/seasons';
 import { checkMissions } from './systems/missions';
 import { formAfterElection } from './systems/elections';
 import { addNews } from './systems/news';
@@ -43,6 +44,8 @@ export interface NewGameOptions {
   seed?: number;
   mod?: ModFile | null;
   drama?: Drama;
+  /** מצב פשוט (אירועים קטנים מוכרעים אוטומטית) */
+  simple?: boolean;
   /** מזהה "אתגר השבוע" (כולם משחקים את אותו עולם) – נשמר ב-flags.challenge */
   challenge?: string;
   /** ח"כ טרי/ה שמתחיל/ה כיו"ר המפלגה (במקום היו"ר הנוכחי/ת) */
@@ -291,7 +294,7 @@ export function createGame(opts: NewGameOptions): GameState {
     gameOver: null,
   } as Partial<GameState> as GameState;
   ensurePhase3(s);
-  s.settings = { drama: opts.drama ?? 'normal', dynamics: 'normal', media: opts.mod?.realPeople ? 'real' : 'fictional' };
+  s.settings = { drama: opts.drama ?? 'normal', dynamics: 'normal', media: opts.mod?.realPeople ? 'real' : 'fictional', ...(opts.simple ? { simple: true } : {}) };
 
   if (opts.partyId) {
     const party = parties[opts.partyId];
@@ -421,6 +424,8 @@ export function createGame(opts: NewGameOptions): GameState {
   });
   // הסקר הראשון כבר מחכה בלוח
   s.surveys = [makeSurvey(s)];
+  // עונת היכרות: יעדים לפי התפקיד שבו מתחילים
+  startSeason(s, 1);
   return s;
 }
 

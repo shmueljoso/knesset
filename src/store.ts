@@ -26,6 +26,8 @@ export type Panel =
   | { kind: 'account' }
   | { kind: 'leaderboard' }
   | { kind: 'stances' }
+  | { kind: 'why' }
+  | { kind: 'moments' }
   | { kind: OpenPanel };
 
 export interface Toast {

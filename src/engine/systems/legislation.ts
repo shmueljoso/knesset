@@ -1,3 +1,4 @@
+import { withCause } from '../why';
 import { addStat } from '../stats';
 import { inSession } from '../calendar';
 import { SCOPE_FACTOR, templateById } from '../data/bills';
@@ -247,6 +248,10 @@ export function startVote(s: GameState, b: Bill, kind: LiveVote['kind'] = 'own',
 
 /** סגירת ההצבעה והחלת התוצאה */
 export function finishVote(s: GameState): { text: string; result: VoteResult } | null {
+  return withCause(s, '🗳️ הצבעה במליאה', () => finishVoteInner(s));
+}
+
+function finishVoteInner(s: GameState): { text: string; result: VoteResult } | null {
   const lv = s.liveVote;
   if (!lv) return null;
   s.liveVote = null;

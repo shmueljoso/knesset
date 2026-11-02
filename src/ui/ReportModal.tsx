@@ -13,6 +13,7 @@ import { haptic, keepAwake } from '../platform';
 import { play } from '../sound';
 import { ShareButton } from './ShareButton';
 import { DistrictMap, tilesFrom } from './DistrictMap';
+import { WhyList } from './Why';
 
 export function ReportModal() {
   const g = useGame();
@@ -70,9 +71,28 @@ export function ReportModal() {
             </div>
           </>
         )}
+        {g.autoDecisions?.some((d) => d.week === r.week) && (
+          <>
+            <div className="section-label">🤖 הוחלט בשבילך (מצב פשוט)</div>
+            {g.autoDecisions
+              .filter((d) => d.week === r.week)
+              .map((d, i) => (
+                <p key={i} className="small" style={{ margin: '0 0 6px' }} data-testid="auto-decision">
+                  <b>{d.title}</b> → {d.choice}
+                  {d.line ? <span className="tiny muted"> · {d.line}</span> : null}
+                </p>
+              ))}
+          </>
+        )}
+        {r.why && r.why.length > 0 && (
+          <>
+            <div className="section-label">למה זה קרה – אצלך</div>
+            <WhyList items={r.why} compact />
+          </>
+        )}
         {r.drivers && r.drivers.length > 0 && (
           <>
-            <div className="section-label">למה זה קרה</div>
+            <div className="section-label">למה זה קרה – במדינה</div>
             {r.drivers.map((d, i) => (
               <p key={i} className="tiny muted" style={{ margin: '0 0 3px' }}>
                 ↳ {d}

@@ -137,6 +137,8 @@ export interface Settings {
   media?: 'fictional' | 'real';
   /** עולם מותאם אישית: הערכים נקבעו בפתיחה ואי אפשר לערוך אותם במשחק (systems/setup.ts) */
   locked?: boolean;
+  /** מצב פשוט: אירועים אקראיים קטנים מוכרעים אוטומטית (systems/autopilot.ts), והלוח מסתיר כרטיסים מתקדמים */
+  simple?: boolean;
 }
 
 export type ProjectKind = 'tour' | 'branches' | 'ads' | 'supporters';
@@ -317,6 +319,57 @@ export interface Snapshot {
   playerPartyPoll: number | null;
 }
 
+/** מדדים שהדוח מסביר */
+export type WhyKey = 'fame' | 'approval' | 'reputation' | 'partyStanding' | 'capital' | 'money' | 'poll';
+/** תרומה של גורם (פעולה/אירוע/שלב שבועי) לשינוי במדד */
+export interface WhyEntry {
+  k: WhyKey;
+  c: string;
+  d: number;
+}
+
+/** החלטה שהתקבלה אוטומטית במצב פשוט */
+export interface AutoDecision {
+  week: number;
+  title: string;
+  choice: string;
+  line: string;
+}
+
+export type SeasonGoalKind = 'fame' | 'approval' | 'reputation' | 'standing' | 'capital' | 'laws' | 'bills' | 'seats' | 'stability' | 'ministry' | 'onList' | 'allies' | 'unity';
+export interface SeasonGoal {
+  kind: SeasonGoalKind;
+  target: number;
+  /** הערך בתחילת העונה */
+  from: number;
+  text: string;
+  done: boolean;
+  week?: number;
+}
+/** עונה: שנה עם 3 יעדים (systems/seasons.ts) */
+export interface Season {
+  n: number;
+  start: number;
+  goals: SeasonGoal[];
+}
+export interface SeasonReview {
+  n: number;
+  start: number;
+  end: number;
+  grade: string;
+  done: number;
+  total: number;
+  goals: { text: string; done: boolean }[];
+  laws: number;
+  fameDelta: number;
+}
+
+export interface Moment {
+  week: number;
+  icon: string;
+  text: string;
+}
+
 export interface WeekReport {
   week: number;
   before: Snapshot;
@@ -325,6 +378,8 @@ export interface WeekReport {
   worldBefore: World;
   worldAfter: World;
   drivers?: string[];
+  /** למה זה קרה: מי הזיז כל מדד */
+  why?: WhyEntry[];
 }
 
 export interface LogEntry {
@@ -472,6 +527,16 @@ export interface GameState {
   norwegianSwaps: Record<string, string>;
   /** עבודה מקומית במחוזות: מחוז → מפלגה → נקודות אחוז (דועך עם הזמן) */
   districtBias: Record<string, Record<string, number>>;
+  /** "למה זה קרה" של השבוע הנוכחי (systems: why.ts); מתאפס בסוף השבוע */
+  whyLog: WhyEntry[];
+  /** החלטות שהטייס האוטומטי קיבל במצב פשוט */
+  autoDecisions: AutoDecision[];
+  season: Season;
+  seasonLog: SeasonReview[];
+  /** היריב/ה הקבוע/ה ובעל/ת הברית (systems/rivals.ts) */
+  rivals: { nemesis?: string; nemesisSince?: number; ally?: string; allySince?: number };
+  /** רגעי שיא בקריירה (גלריה) */
+  moments: Moment[];
   /** שרטוט גבולות לטובת הקואליציה (חוק הגבולות): מחוז → מפלגה → נקודות אחוז, קבוע עד שהחוק מבוטל */
   gerryBias: Record<string, Record<string, number>>;
   /** הרכב האוכלוסייה: מכפיל לכל מגזר (1 = כמו בתחילת המשחק) */

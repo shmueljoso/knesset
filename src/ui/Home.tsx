@@ -9,6 +9,9 @@ import { useGame, useStore, type Panel } from '../store';
 import { Chips } from './common';
 import { NextWeekButton } from './MapView';
 import { careerTitle } from './labels';
+import { SeasonCard } from './Season';
+import { RivalsCard } from './Rivals';
+import { MissionsCard } from './PowerMap';
 
 /** מסך הבית: מה דחוף, מה כדאי לעשות השבוע ומה המצב – הכול בלחיצה אחת */
 export function Home() {
@@ -99,12 +102,23 @@ export function Home() {
           </div>
         )}
 
+        <SeasonCard />
+
+        {!pres && (g.rivals?.nemesis || g.rivals?.ally) && <RivalsCard />}
+
+        {g.season?.n === 1 && <MissionsCard />}
+
         <div className="card" data-testid="home-status">
           <div className="card-title">
             <h3>📋 המצב שלך</h3>
-            <button className="btn sm ghost" onClick={() => setTab('dashboard')}>
-              ללוח ←
-            </button>
+            <div className="row" style={{ gap: 6 }}>
+              <button className="btn sm ghost" onClick={() => open({ kind: 'why' })} data-testid="open-why">
+                ❓ למה?
+              </button>
+              <button className="btn sm ghost" onClick={() => setTab('dashboard')}>
+                ללוח ←
+              </button>
+            </div>
           </div>
           <div className="home-stats">
             <Stat v={Math.round(p.fame)} label="מוכרות" />

@@ -19,6 +19,7 @@ function game(): GameState {
   }
   g.eventQueue = [];
   g.report = null;
+  delete g.flags.showSeason; // סיכום העונה (שבוע 52) לא רלוונטי כאן
   return g;
 }
 

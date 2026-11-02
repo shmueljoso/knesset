@@ -24,6 +24,9 @@ import { HelpSheet, PartySheet, SettingsSheet, StaffSheet } from './Panels';
 import { NpcSheet, PeopleView } from './People';
 import { RolesSheet, SwaySheet } from './Roles';
 import { DistrictsSheet } from './Districts';
+import { WhySheet } from './Why';
+import { SeasonModal } from './Season';
+import { MomentsSheet } from './Rivals';
 import { ElectionModal, ReportModal } from './ReportModal';
 
 function PanelView({ p }: { p: Panel }) {
@@ -80,6 +83,10 @@ function PanelView({ p }: { p: Panel }) {
       return <SwaySheet />;
     case 'districts':
       return <DistrictsSheet />;
+    case 'why':
+      return <WhySheet />;
+    case 'moments':
+      return <MomentsSheet />;
   }
 }
 
@@ -120,7 +127,7 @@ export function GameScreen() {
       <TabBar />
       {(tab === 'map' || tab === 'home') && !top && <NegotiationBanner />}
       {top && <PanelView key={panels.length + top.kind} p={top} />}
-      {g.flags.showPresident && g.presidentRace?.winner ? <PresidentRace /> : g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
+      {g.flags.showPresident && g.presidentRace?.winner ? <PresidentRace /> : g.gameOver ? <LegacyModal /> : g.liveVote ? <LiveVoteModal /> : g.flags.showElection ? <ElectionModal /> : g.flags.showSeason && !showReport ? <SeasonModal /> : g.flags.showPrimaries && g.lastPrimaries ? <PrimariesNight /> : showReport && g.report ? <ReportModal /> : g.eventQueue.length > 0 || eventResult ? <EventModal /> : null}
       <Toasts />
     </>
   );

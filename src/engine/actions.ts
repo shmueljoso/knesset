@@ -1,3 +1,5 @@
+import { withCause } from './why';
+import { debateOpponent, startDebate, startWhip, whipBill } from './data/rivalEvents';
 import { boostHome } from './systems/districts';
 import { activeJournalists, pollsterName } from './systems/media';
 import { addStat } from './stats';
@@ -201,6 +203,12 @@ export const ACTIONS: ActionDef[] = [
     run: (s) => run(s, [{ op: 'partyStanding', d: 3 }, { op: 'att', who: '@leader', d: 3 }], 'השתתפת בישיבת הסיעה ותמכת בקו של היו"ר.'),
   },
   {
+    id: 'whip', loc: 'factions', icon: '🎯', label: 'ציד קולות להצעה שלך', ap: 1,
+    desc: 'שלושה ח"כים מתלבטים, דקה במסדרון עם כל אחד: הבטחה, טובה, שכנוע או לחץ.',
+    avail: all(needMK, needSession, (s) => (whipBill(s) ? null : 'אין הצעה שלך שמחכה להצבעה')),
+    run: (s) => (startWhip(s) ? { text: 'יוצאים למסדרונות. שלושה ח"כים, שלוש הזדמנויות.', good: true } : { text: 'לא נמצאו ח"כים מתלבטים.', good: false }),
+  },
+  {
     id: 'dissent', loc: 'factions', icon: '✊', label: 'ביקורת פנימית', ap: 1,
     desc: 'לומר ליו"ר בפנים מה שאחרים לוחשים. בונה עקביות ותומכים – ויריבים.',
     avail: all(needParty, needMK),
@@ -275,6 +283,15 @@ export const ACTIONS: ActionDef[] = [
       if (pool.length) s.flags.ivHost = pool[Math.floor(rand(s) * pool.length)].id;
       s.eventQueue.push({ eventId: 'iv_issue', ctx: interviewCtx(s, 1) });
       return { text: 'האור האדום נדלק. אתם בשידור.' };
+    },
+  },
+  {
+    id: 'debate', loc: 'studio', icon: '🎙️', label: 'עימות טלוויזיוני', ap: 2,
+    desc: 'שלושה סבבים מול היריב/ה (או יו"ר מפלגה מתחרה). התקפה, תכנית, הומור או הגנה – מי שקורא/ת את היריב/ה מנצח/ת.',
+    avail: (s) => (s.player.fame < 25 ? 'צריך מוכרות 25 כדי שיזמינו אותך לעימות' : debateOpponent(s) ? null : 'אין מול מי להתעמת'),
+    run: (s) => {
+      const name = startDebate(s);
+      return name ? { text: `העימות מול ${name} מתחיל. מצלמה, אור – פעולה.`, good: true } : { text: 'העימות בוטל.', good: false };
     },
   },
   {
@@ -662,9 +679,11 @@ export function performAction(s: GameState, id: string): ActionResult {
   if (blocked) return { text: blocked, good: false };
   s.player.ap -= a.ap;
   s.counters[`act_${a.id}`] = (s.counters[`act_${a.id}`] ?? 0) + 1;
-  if (a.money) s.player.money -= a.money;
-  if (a.capital) s.player.capital -= a.capital;
-  const res = a.run(s);
+  const res = withCause(s, `${a.icon} ${a.label}`, () => {
+    if (a.money) s.player.money -= a.money;
+    if (a.capital) s.player.capital -= a.capital;
+    return a.run(s);
+  });
   const done = checkMissions(s);
   if (done.length) res.lines = [...(res.lines ?? []), ...done.map((d) => `✅ משימה הושלמה: ${d}`)];
   if (res.text && !res.open) log(s, `${a.label}: ${res.text}`, 'action');

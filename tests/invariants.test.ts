@@ -99,6 +99,7 @@ export const rulesSetup = (sd: number) => (g: GameState) => {
 export function run(seed: number, opts: NewGameOptions, weeks: number, setup?: (s: GameState) => void, stopOn?: (v: string) => boolean, onStop?: (s: GameState, hist: string[]) => void, onStep?: (s: GameState, hist: string[]) => void): { violations: { week: number; action: string; v: string; trace: string }[]; actions: Record<string, number> } {
   const s = createGame(opts);
   setup?.(s);
+  if (seed % 3 === 1) s.settings.simple = true; // מצב פשוט: אירועים קטנים מוכרעים לבד
   const r = makeLocalRng(seed * 7919 + 13);
   const violations: { week: number; action: string; v: string; trace: string }[] = [];
   const hist: string[] = [];

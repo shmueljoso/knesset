@@ -45,6 +45,7 @@ export function CreateScreen() {
   const [modErr, setModErr] = useState<string[]>([]);
   const [early, setEarly] = useState(false);
   const [drama, setDrama] = useState<Drama>('normal');
+  const [simple, setSimple] = useState(false);
   const [asLeader, setAsLeader] = useState(false);
   // לשחק כדמות קיימת: אותו seed בתצוגה ובמשחק, כדי שהשמות והמקומות ברשימה יהיו זהים
   const [figSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
@@ -92,7 +93,7 @@ export function CreateScreen() {
     const m = mod && early && mod.listsClosed ? earlyStart(mod) : mod;
     // דמות קיימת: אותו עולם בדיוק כמו בתצוגה (בלי "4 חודשים קודם", שמשנה את הרשימות)
     const custom = setup && setupSummary(setup).length ? setup : null;
-    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure, setup: custom, district });
+    newGame({ ...who, background: journalistId ? 'journalist' : background, ideology, partyId, scenario, avatar, mod: figure ? mod : m, drama, simple, asLeader: !figure && scenario === 'freshman' && asLeader, seed: figure ? figSeed : undefined, asFigure, setup: custom, district });
   };
 
   return (
@@ -309,6 +310,14 @@ export function CreateScreen() {
                   )}
                 </div>
               )}
+              <div className="small muted" style={{ margin: '10px 0 6px' }}>סגנון משחק</div>
+              <div className="filter-row">
+                {([[true, '🙂 פשוט – אירועים קטנים מוכרעים בשבילי'], [false, '🧠 מומחה – כל החלטה']] as const).map(([v, label]) => (
+                  <button key={label} className={simple === v ? 'on' : ''} onClick={() => setSimple(v)} data-testid={`create-${v ? 'simple' : 'expert'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               <div className="small muted" style={{ margin: '10px 0 6px' }}>רמת דרמה (טלטלות, מפלגות חדשות, משברים)</div>
               <div className="filter-row">
                 {([['calm', '🌤️ רגוע'], ['normal', '⛅ רגיל'], ['wild', '🌪️ פרוע']] as [Drama, string][]).map(([id, label]) => (

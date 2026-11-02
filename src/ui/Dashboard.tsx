@@ -26,6 +26,7 @@ import { IssuesCard } from './Issues';
 import { SCANDAL_STAGES } from '../engine/systems/scandals';
 import { MissionsCard, PowerCard } from './PowerMap';
 import { PresidentCard } from './President';
+import { RivalsCard } from './Rivals';
 
 const LADDER: { rank: string; label: string }[] = [
   { rank: 'activist', label: 'פעיל' },
@@ -100,7 +101,7 @@ export function Dashboard() {
     <>
       {subtabs}
     <div className="scroll">
-      <div className="page dash">
+      <div className={`page dash${g.settings?.simple ? ' simple' : ''}`}>
         {dashTab === 'national' && (
           <>
           <div className="card">
@@ -210,7 +211,7 @@ export function Dashboard() {
             </div>
           )}
 
-          <div className="card" data-testid="demography">
+          <div className="card adv" data-testid="demography">
             <div className="card-title">
               <h3>🌍 הרכב האוכלוסייה</h3>
               <span className="tiny muted">משתנה עם השנים</span>
@@ -244,6 +245,8 @@ export function Dashboard() {
 
             <PresidentCard />
 
+            {!pres && <RivalsCard />}
+
           <div className="card">
             <div className="card-title">
               <h3>🏛️ הכנסת ה-{g.knesset}</h3>
@@ -276,7 +279,7 @@ export function Dashboard() {
 
             <PowerCard />
 
-          <div className="card">
+          <div className="card adv">
             <div className="card-title">
               <h3>🧾 חובות וטובות</h3>
               <span className="small muted">{p.debts.length}</span>
@@ -336,7 +339,7 @@ export function Dashboard() {
             )}
           </div>
 
-          <div className="card">
+          <div className="card adv">
             <div className="card-title">
               <h3>🎓 מיומנויות</h3>
             </div>
@@ -345,7 +348,7 @@ export function Dashboard() {
             ))}
           </div>
 
-          <div className="card">
+          <div className="card adv">
             <div className="card-title">
               <h3>🧭 {g2(g, 'העמדות שלך', 'העמדות שלך')}</h3>
             </div>

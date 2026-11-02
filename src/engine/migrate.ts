@@ -2,6 +2,7 @@ import { BILL_TEMPLATES } from './data/bills';
 import { ISSUES } from './data/issues';
 import { makeLocalRng } from './rng';
 import { checkMissions } from './systems/missions';
+import { startSeason } from './systems/seasons';
 import type { GameState, IssueId, Npc } from './types';
 import { leanAlignment } from './util';
 
@@ -42,6 +43,12 @@ export function ensurePhase3(g: GameState) {
   g.windows ??= {};
   g.norwegianSwaps ??= {};
   g.districtBias ??= {};
+  g.whyLog ??= [];
+  g.autoDecisions ??= [];
+  g.seasonLog ??= [];
+  g.rivals ??= {};
+  g.moments ??= [];
+  if (!g.season) startSeason(g, 1);
   g.gerryBias ??= {};
   g.player.district ??= null;
   g.surveys ??= [];

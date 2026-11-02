@@ -1,3 +1,7 @@
+import { tickRivals } from './systems/rivals';
+import { tickSeason } from './systems/seasons';
+import { autoResolveFrom } from './systems/autopilot';
+import { summarizeWhy, withCause } from './why';
 import { isBudgetDeadline } from './calendar';
 import { chance, pick } from './rng';
 import { onBudgetPassed, tickCoalition, tickNegotiation } from './systems/coalition';
@@ -111,12 +115,17 @@ export function endWeek(s: GameState) {
   const worldBefore = { ...s.world };
   const p = s.player;
 
-  p.money += weeklyIncome(s);
-  // מחזור החדשות שוכח, ומוניטין גבוה נשחק לאט
-  if (p.fame > 20) p.fame = Math.max(20, p.fame - 0.2 - p.fame * 0.006);
-  if (p.reputation > 60) p.reputation -= 0.15;
-  if (p.money > 300) p.money -= (p.money - 300) * 0.02; // הוצאות מטה ופעילות
-  tickStaff(s);
+  const T = (cause: string, fn: () => void) => withCause(s, cause, fn);
+  T('💼 הכנסה שבועית', () => {
+    p.money += weeklyIncome(s);
+    if (p.money > 300) p.money -= (p.money - 300) * 0.02; // הוצאות מטה ופעילות
+  });
+  T('📰 המחזור החדשותי שוכח', () => {
+    // מחזור החדשות שוכח, ומוניטין גבוה נשחק לאט
+    if (p.fame > 20) p.fame = Math.max(20, p.fame - 0.2 - p.fame * 0.006);
+    if (p.reputation > 60) p.reputation -= 0.15;
+  });
+  T('👥 הצוות שלך', () => tickStaff(s));
   // "למה זה קרה": מה הזיז את מצב המדינה השבוע
   const agg: Record<string, number> = {};
   for (const e of s.effects) {
@@ -132,33 +141,33 @@ export function endWeek(s: GameState) {
       const [src, key] = k.split('|');
       return `${src}: ${WORLD_NAMES[key as keyof typeof WORLD_NAMES]} ${v > 0 ? '+' : ''}${v.toFixed(1)}`;
     });
-  tickWorld(s);
+  T('🇮🇱 מצב המדינה', () => tickWorld(s));
   updatePolls(s);
-  tickSurveys(s);
-  tickSociety(s);
-  tickFigures(s);
-  tickLaws(s);
-  tickDistricts(s);
-  tickProjects(s);
-  tickPartyDynamics(s);
-  tickLegislation(s);
-  tickIssues(s);
-  tickNpcs(s);
-  tickScandal(s);
-  tickCareer(s);
+  T('📊 סקר שפורסם', () => tickSurveys(s));
+  T('🌍 שינויים בחברה', () => tickSociety(s));
+  T('🧑‍🤝‍🧑 דמויות ומפלגות', () => tickFigures(s));
+  T('📜 חוקים בתוקף', () => tickLaws(s));
+  T('🗺️ המחוזות', () => tickDistricts(s));
+  T('🚧 מיזמים', () => tickProjects(s));
+  T('🏛️ המפלגה שלך', () => tickPartyDynamics(s));
+  T('📜 חקיקה', () => tickLegislation(s));
+  T('🔥 סוגיות בוערות', () => tickIssues(s));
+  T('👤 ח"כים ואנשים', () => tickNpcs(s));
+  T('🚨 הפרשה', () => tickScandal(s));
+  T('⭐ הקריירה', () => tickCareer(s));
   tickPresident(s);
-  tickCampaign(s);
+  T('📣 הקמפיין', () => tickCampaign(s));
   tickPresidency(s);
   if (!s.negotiation) applyNorwegian(s);
 
   // קואליציה, משא ומתן ומשרד
   tickNegotiation(s);
-  if (!s.negotiation) tickCoalition(s);
+  if (!s.negotiation) T('🤝 הקואליציה', () => tickCoalition(s));
   if (s.flags.npcNoConfidence) {
     queueOtherVote(s, String(s.flags.npcNoConfidence), 'no_confidence', 2);
     delete s.flags.npcNoConfidence;
   }
-  tickMinistry(s);
+  T('🏢 המשרד', () => tickMinistry(s));
   // שלושה שבועות לפני התקציב: משא ומתן עם השותפות
   if (isBudgetDeadline(s, s.week + 3) && !s.negotiation && p.isMK) {
     if (s.coalition.pmId === 'player' || p.ministry === 'finance') s.eventQueue.push({ eventId: 'budget_talks', ctx: {} });
@@ -182,12 +191,16 @@ export function endWeek(s: GameState) {
   }
 
   decayRelationships(s);
-  checkMissions(s);
+  T('✅ משימות', () => checkMissions(s));
+  T('🏁 יעדי העונה', () => tickSeason(s));
+  tickRivals(s);
   releaseScheduled(s);
+  const q0 = s.eventQueue.length;
   rollEvents(s);
-  rollShocks(s);
+  autoResolveFrom(s, q0);
+  T('⚡ טלטלה', () => rollShocks(s));
   governmentRevolution(s);
-  worldNews(s);
+  T('🗞️ טורים ופרשנים', () => worldNews(s));
 
   s.week += 1;
   if (s.week === s.primariesWeek) {
@@ -219,7 +232,9 @@ export function endWeek(s: GameState) {
     worldBefore,
     worldAfter: { ...s.world },
     drivers,
+    why: summarizeWhy(s, before, after),
   };
+  s.whyLog = [];
   s.weekStart = after;
   if (p.money < -50 && !s.flags.debtWarned) {
     s.flags.debtWarned = true;

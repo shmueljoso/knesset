@@ -1,3 +1,4 @@
+import { withCause } from './why';
 import { addStat } from './stats';
 import { chance, rand } from './rng';
 import { addNews } from './systems/news';
@@ -51,6 +52,11 @@ export function interactionBlocked(s: GameState, n: Npc, it: InteractionDef): st
 }
 
 export function interact(s: GameState, npcId: string, id: InteractionId): { text: string; good: boolean } {
+  const it = INTERACTIONS.find((x) => x.id === id);
+  return withCause(s, it ? `${it.icon} ${it.label}` : id, () => interactInner(s, npcId, id));
+}
+
+function interactInner(s: GameState, npcId: string, id: InteractionId): { text: string; good: boolean } {
   const n = s.npcs[npcId];
   const it = INTERACTIONS.find((x) => x.id === id)!;
   const blocked = interactionBlocked(s, n, it);
