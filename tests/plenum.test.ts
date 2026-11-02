@@ -171,7 +171,7 @@ describe('live votes', () => {
       finishVote(s);
     }
     expect(tried).toBeGreaterThan(0);
-  });
+  }, 60_000); // סורק זרעים עד שמוצא הצבעה צמודה – על מכונות איטיות (CI) 5 שניות לא מספיקות
 
   it('player votes on someone else\'s law; defying the party line costs standing', () => {
     const s = createGame(base);
